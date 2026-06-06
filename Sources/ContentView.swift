@@ -15074,6 +15074,8 @@ struct SidebarWorkspaceSnapshotBuilder {
         let branchLinesContainBranch: Bool
         let pullRequestRows: [PullRequestDisplay]
         let listeningPorts: [Int]
+        let statusDotColorHex: String?
+        let compactRowPathText: String
 
     }
 }
@@ -16501,6 +16503,14 @@ struct TabItemView: View, Equatable {
             return pullRequestDisplays(orderedPanelIds: orderedPanelIds)
         }()
 
+        let statusDotColorHex = CompactRowStatusResolver.dotColorHex(
+            for: tab.sidebarStatusEntriesInDisplayOrder()
+        )
+        let compactRowPathText: String = {
+            guard let primary = tab.sidebarDirectoriesInDisplayOrder().first else { return "" }
+            return SidebarPathFormatter.shortenedPath(primary)
+        }()
+
         return SidebarWorkspaceSnapshotBuilder.Snapshot(
             presentationKey: workspaceSnapshotPresentationKey,
             title: tab.title,
@@ -16522,7 +16532,9 @@ struct TabItemView: View, Equatable {
             branchDirectoryLines: branchDirectoryLines,
             branchLinesContainBranch: branchLinesContainBranch,
             pullRequestRows: pullRequestRows,
-            listeningPorts: detailVisibility.showsPorts ? tab.listeningPorts : []
+            listeningPorts: detailVisibility.showsPorts ? tab.listeningPorts : [],
+            statusDotColorHex: statusDotColorHex,
+            compactRowPathText: compactRowPathText
         )
     }
 
