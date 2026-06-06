@@ -102,6 +102,7 @@ struct FileExplorerPanelView: NSViewRepresentable {
     let onOpenFilePreview: (String) -> Void
     var presentation: FileExplorerPanelPresentation = .files
     var placement: FileExplorerPanelPlacement = .rightSidebar
+    var showsHeader: Bool = true
     var onFocus: (() -> Void)?
     var onContainerChange: ((FileExplorerContainerView?) -> Void)?
 
@@ -117,7 +118,11 @@ struct FileExplorerPanelView: NSViewRepresentable {
     }
 
     func makeNSView(context: Context) -> FileExplorerContainerView {
-        let container = FileExplorerContainerView(coordinator: context.coordinator, presentation: presentation)
+        let container = FileExplorerContainerView(
+            coordinator: context.coordinator,
+            presentation: presentation,
+            showsHeader: showsHeader
+        )
         context.coordinator.containerView = container
         context.coordinator.onContainerChange?(container)
         return container
@@ -733,6 +738,7 @@ final class FileExplorerContainerView: NSView {
         }
     }
     private var presentation: FileExplorerPanelPresentation
+    private let showsHeader: Bool
     private let coordinator: FileExplorerPanelView.Coordinator
     private let searchDebounceDelayMilliseconds = 200
     private let searchBarVisibleHeight: CGFloat = 48
@@ -748,6 +754,7 @@ final class FileExplorerContainerView: NSView {
     init(
         coordinator: FileExplorerPanelView.Coordinator,
         presentation: FileExplorerPanelPresentation,
+        showsHeader: Bool = true,
         searchController: (any FileSearchControlling)? = nil
     ) {
         headerView = FileExplorerHeaderView()
@@ -762,6 +769,7 @@ final class FileExplorerContainerView: NSView {
         loadingIndicator = NSProgressIndicator()
         self.searchController = searchController ?? FileSearchController()
         self.presentation = presentation
+        self.showsHeader = showsHeader
         self.coordinator = coordinator
 
         super.init(frame: .zero)
@@ -769,7 +777,9 @@ final class FileExplorerContainerView: NSView {
 
         // Header
         headerView.translatesAutoresizingMaskIntoConstraints = false
-        addSubview(headerView)
+        if showsHeader {
+            addSubview(headerView)
+        }
 
         // Search bar
         searchBarView.translatesAutoresizingMaskIntoConstraints = false
@@ -927,12 +937,18 @@ final class FileExplorerContainerView: NSView {
         }
 
         searchBarHeightConstraint = searchBarView.heightAnchor.constraint(equalToConstant: 0)
+        if showsHeader {
+            NSLayoutConstraint.activate([
+                headerView.topAnchor.constraint(equalTo: topAnchor),
+                headerView.leadingAnchor.constraint(equalTo: leadingAnchor),
+                headerView.trailingAnchor.constraint(equalTo: trailingAnchor),
+            ])
+        }
+        let searchBarTopConstraint = showsHeader
+            ? searchBarView.topAnchor.constraint(equalTo: headerView.bottomAnchor)
+            : searchBarView.topAnchor.constraint(equalTo: topAnchor)
         NSLayoutConstraint.activate([
-            headerView.topAnchor.constraint(equalTo: topAnchor),
-            headerView.leadingAnchor.constraint(equalTo: leadingAnchor),
-            headerView.trailingAnchor.constraint(equalTo: trailingAnchor),
-
-            searchBarView.topAnchor.constraint(equalTo: headerView.bottomAnchor),
+            searchBarTopConstraint,
             searchBarView.leadingAnchor.constraint(equalTo: leadingAnchor),
             searchBarView.trailingAnchor.constraint(equalTo: trailingAnchor),
             searchBarHeightConstraint,
@@ -1059,7 +1075,9 @@ final class FileExplorerContainerView: NSView {
         let normalizedStatus = statusMessage?.trimmingCharacters(in: .whitespacesAndNewlines)
         let hasStatus = normalizedStatus?.isEmpty == false
         let canShowTree = hasContent && !hasStatus
-        headerView.isHidden = !hasContent && !hasStatus
+        if showsHeader {
+            headerView.isHidden = !hasContent && !hasStatus
+        }
         updateSearchLayout(hasContent: canShowTree, isLoading: isLoading)
         let searchCanShow = isSearchVisible && canShowTree && !isLoading
         emptyLabel.stringValue = hasStatus
