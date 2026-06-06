@@ -1,5 +1,4 @@
 import CoreGraphics
-import Foundation
 import Testing
 
 #if canImport(cmux_DEV)
@@ -33,6 +32,6 @@ import Testing
 
     @Test func fallsBackForNonFiniteFraction() {
         let f = SidebarExplorerSplit.clampedSessionFraction(.nan, availableHeight: 800)
-        #expect(f.isFinite)
+        #expect(f == SidebarExplorerSplit.fallbackFraction)
     }
 }
