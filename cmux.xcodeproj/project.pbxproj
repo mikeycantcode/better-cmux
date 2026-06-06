@@ -533,6 +533,8 @@
 		E3309A0D /* SplitEqualizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = E3309A0E /* SplitEqualizer.swift */; };
 		F6355600A1B2C3D4E5F60718 /* SSHStartupSignalLifecycleTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F6355601A1B2C3D4E5F60718 /* SSHStartupSignalLifecycleTests.swift */; };
 		F20F85FC5900550685FA33AD /* StackAuth in Frameworks */ = {isa = PBXBuildFile; productRef = A8BD195031FC4B82B4354297 /* StackAuth */; };
+		SB00010000000000000000001 /* StagedDiffStats.swift in Sources */ = {isa = PBXBuildFile; fileRef = SB00010000000000000000002 /* StagedDiffStats.swift */; };
+		SB00020000000000000000001 /* StagedDiffStatsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = SB00020000000000000000002 /* StagedDiffStatsTests.swift */; };
 		D35B71010000000000000001 /* StartupBreadcrumbLog.swift in Sources */ = {isa = PBXBuildFile; fileRef = D35B71010000000000000002 /* StartupBreadcrumbLog.swift */; };
 		A5001303 /* SurfaceSearchOverlay.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5001301 /* SurfaceSearchOverlay.swift */; };
 		C9A5720BC9A5720BC9A5720B /* TabItemView+WorkspaceGroups.swift in Sources */ = {isa = PBXBuildFile; fileRef = C9A5720CC9A5720CC9A5720C /* TabItemView+WorkspaceGroups.swift */; };
@@ -1211,6 +1213,8 @@
 		C510C1E00000000000000001 /* SocketOperationTelemetry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SocketOperationTelemetry.swift; sourceTree = "<group>"; };
 		E3309A0E /* SplitEqualizer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SplitEqualizer.swift; sourceTree = "<group>"; };
 		F6355601A1B2C3D4E5F60718 /* SSHStartupSignalLifecycleTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SSHStartupSignalLifecycleTests.swift; sourceTree = "<group>"; };
+		SB00010000000000000000002 /* StagedDiffStats.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatusBar/StagedDiffStats.swift; sourceTree = "<group>"; };
+		SB00020000000000000000002 /* StagedDiffStatsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StagedDiffStatsTests.swift; sourceTree = "<group>"; };
 		D35B71010000000000000002 /* StartupBreadcrumbLog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = App/StartupBreadcrumbLog.swift; sourceTree = "<group>"; };
 		A5001301 /* SurfaceSearchOverlay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Find/SurfaceSearchOverlay.swift; sourceTree = "<group>"; };
 		C9A5720CC9A5720CC9A5720C /* TabItemView+WorkspaceGroups.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "TabItemView+WorkspaceGroups.swift"; sourceTree = "<group>"; };
@@ -1589,6 +1593,7 @@
 				F0A1B2C3D4E5F60000000002 /* SidebarCompactRowModeSettings.swift */,
 				F45B3F4EAB4F49479BFCF661 /* CompactRowStatusResolver.swift */,
 				283AD9DC66FA4727AA4A7F1B /* SidebarExplorerSplit.swift */,
+				SB00010000000000000000002 /* StagedDiffStats.swift */,
 				4B0E301ACD9E4F8995BC5CE7 /* SidebarFileExplorerPanel.swift */,
 				EA1F00000000000000000004 /* SidebarDirectoryText.swift */,
 				D7AB34300000000000000004 /* SidebarBonsplitTabWorkspaceDropOverlay.swift */,
@@ -2054,6 +2059,7 @@
 				F0A1B2C3D4E5F60000000004 /* SidebarCompactRowModeSettingsTests.swift */,
 				8E2FECB526A443939C4A38B1 /* CompactRowStatusResolverTests.swift */,
 				E3241A8A01884A0F9C93B1D8 /* SidebarExplorerSplitTests.swift */,
+				SB00020000000000000000002 /* StagedDiffStatsTests.swift */,
 				42092CDB2109E250F7F2A76E /* TabManagerUnitTests.swift */,
 				C9A57002C9A57002C9A57002 /* WorkspaceGroupTests.swift */,
 				FEED49850000000000000002 /* FeedEventClassificationTests.swift */,
@@ -2759,6 +2765,7 @@
 				988C6A036BA56EA5759A95A0 /* SidebarWorkspaceSnapshotRefreshPolicy.swift in Sources */,
 				A5001226 /* SocketControlMode+Display.swift in Sources */,
 				E3309A0D /* SplitEqualizer.swift in Sources */,
+				SB00010000000000000000001 /* StagedDiffStats.swift in Sources */,
 				D35B71010000000000000001 /* StartupBreadcrumbLog.swift in Sources */,
 				A5001303 /* SurfaceSearchOverlay.swift in Sources */,
 				C9A5720BC9A5720BC9A5720B /* TabItemView+WorkspaceGroups.swift in Sources */,
@@ -3068,6 +3075,7 @@
 				62270F3DCECB4787D789CCE3 /* SidebarWorkspaceSnapshotRefreshPolicyTests.swift in Sources */,
 				F8000000A1B2C3D4E5F60718 /* SocketControlPasswordStoreTests.swift in Sources */,
 				F6355600A1B2C3D4E5F60718 /* SSHStartupSignalLifecycleTests.swift in Sources */,
+				SB00020000000000000000001 /* StagedDiffStatsTests.swift in Sources */,
 				2BB56A710BB1FC50367E5BCF /* TabManagerSessionSnapshotTests.swift in Sources */,
 				B6BF3DC98DB1495E57900199 /* TabManagerUnitTests.swift in Sources */,
 				C7A507000000000000000002 /* TaskManagerResourcesTests.swift in Sources */,
