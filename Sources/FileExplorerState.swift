@@ -38,14 +38,16 @@ final class FileExplorerState: ObservableObject {
         set { setMode(newValue) }
     }
 
-    init(persistenceKeyPrefix: String = "fileExplorer") {
+    init(persistenceKeyPrefix: String = "fileExplorer", defaultVisible: Bool = false) {
         self.persistenceKeyPrefix = persistenceKeyPrefix
         // The mode key historically lives under "rightSidebar.mode" for the
         // default (right sidebar) instance; preserve it for back-compat and
         // give any other instance its own prefixed mode key.
         self.modeKey = persistenceKeyPrefix == "fileExplorer" ? "rightSidebar.mode" : "\(persistenceKeyPrefix).mode"
         let defaults = UserDefaults.standard
-        self.isVisible = defaults.bool(forKey: "\(persistenceKeyPrefix).isVisible")
+        self.isVisible = defaults.object(forKey: "\(persistenceKeyPrefix).isVisible") == nil
+            ? defaultVisible
+            : defaults.bool(forKey: "\(persistenceKeyPrefix).isVisible")
         let storedWidth = defaults.double(forKey: "\(persistenceKeyPrefix).width")
         self.width = storedWidth > 0 ? CGFloat(storedWidth) : 220
         let storedPosition = defaults.double(forKey: "\(persistenceKeyPrefix).dividerPosition")

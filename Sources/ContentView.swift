@@ -1086,7 +1086,7 @@ struct ContentView: View {
     @StateObject private var fileExplorerStore = FileExplorerStore()
     @StateObject private var sessionIndexStore = SessionIndexStore()
     @StateObject private var leftFileExplorerStore = FileExplorerStore()
-    @StateObject private var leftFileExplorerState = FileExplorerState(persistenceKeyPrefix: "sidebar.fileExplorer")
+    @StateObject private var leftFileExplorerState = FileExplorerState(persistenceKeyPrefix: "sidebar.fileExplorer", defaultVisible: true)
     @StateObject private var selectedWorkspaceDirectoryObserver = SelectedWorkspaceDirectoryObserver()
     @State private var commandPaletteOverlayRenderModel = CommandPaletteOverlayRenderModel()
     @State private var backgroundWorkspacePrimeCoordinator = BackgroundWorkspacePrimeCoordinator()
@@ -10601,6 +10601,13 @@ struct VerticalTabsSidebar: View {
     @ObservedObject var fileExplorerState: FileExplorerState
     @ObservedObject var leftFileExplorerStore: FileExplorerStore
     @ObservedObject var leftFileExplorerState: FileExplorerState
+    @State private var explorerSplitDragStartFraction: CGFloat?
+    @State private var isExplorerSplitDragging = false
+
+    private static let fixedExplorerSplitCursor = NSCursor(
+        image: NSCursor.resizeUpDown.image,
+        hotSpot: NSCursor.resizeUpDown.hotSpot
+    )
     let windowId: UUID
     let onSendFeedback: () -> Void
     let onToggleSidebar: () -> Void
@@ -11031,14 +11038,38 @@ struct VerticalTabsSidebar: View {
             workspaceGroupMenuSnapshot: workspaceGroupMenuSnapshot
         )
 
-        ZStack(alignment: .bottomLeading) {
+        Group {
             if CmuxExtensionSidebarSelection.descriptor(for: effectiveExtensionSidebarProviderId).id == CmuxSidebarProviderDescriptor.defaultWorkspacesID {
-                workspaceScrollArea(renderContext: renderContext)
+                VStack(spacing: 0) {
+                    GeometryReader { proxy in
+                        let available = proxy.size.height
+                        let sessionFraction = SidebarExplorerSplit.clampedSessionFraction(
+                            leftFileExplorerState.dividerPosition,
+                            availableHeight: available
+                        )
+                        VStack(spacing: 0) {
+                            workspaceScrollArea(renderContext: renderContext)
+                                .frame(maxHeight: leftFileExplorerState.isVisible ? available * sessionFraction : .infinity)
+                            if leftFileExplorerState.isVisible {
+                                explorerSplitDivider(availableHeight: available)
+                            }
+                            SidebarFileExplorerPanel(
+                                store: leftFileExplorerStore,
+                                state: leftFileExplorerState
+                            )
+                            .frame(maxWidth: .infinity, maxHeight: leftFileExplorerState.isVisible ? .infinity : nil)
+                        }
+                    }
+                    SidebarFooter(updateViewModel: updateViewModel, fileExplorerState: fileExplorerState, onSendFeedback: onSendFeedback)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
             } else {
-                extensionSidebarScrollArea(renderContext: renderContext)
+                VStack(spacing: 0) {
+                    extensionSidebarScrollArea(renderContext: renderContext)
+                    SidebarFooter(updateViewModel: updateViewModel, fileExplorerState: fileExplorerState, onSendFeedback: onSendFeedback)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
             }
-            SidebarFooter(updateViewModel: updateViewModel, fileExplorerState: fileExplorerState, onSendFeedback: onSendFeedback)
-                .frame(maxWidth: .infinity, alignment: .leading)
         }
         .accessibilityIdentifier("Sidebar")
         .ignoresSafeArea()
@@ -11124,6 +11155,47 @@ struct VerticalTabsSidebar: View {
             frozenShortcutHintsTabId = nil
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+    }
+
+    private func explorerSplitDivider(availableHeight: CGFloat) -> some View {
+        Rectangle()
+            .fill(Color.clear)
+            .frame(height: 8)
+            .contentShape(Rectangle())
+            .overlay(
+                Rectangle()
+                    .fill(Color.primary.opacity(0.08))
+                    .frame(height: 1)
+            )
+            .onHover { hovering in
+                if hovering {
+                    Self.fixedExplorerSplitCursor.set()
+                } else if !isExplorerSplitDragging {
+                    NSCursor.arrow.set()
+                }
+            }
+            .gesture(
+                DragGesture(minimumDistance: 0)
+                    .onChanged { value in
+                        if !isExplorerSplitDragging {
+                            isExplorerSplitDragging = true
+                            explorerSplitDragStartFraction = leftFileExplorerState.dividerPosition
+                        }
+                        let start = explorerSplitDragStartFraction ?? leftFileExplorerState.dividerPosition
+                        let next = SidebarExplorerSplit.clampedSessionFraction(
+                            start + (value.translation.height / max(1, availableHeight)),
+                            availableHeight: availableHeight
+                        )
+                        withTransaction(Transaction(animation: nil)) {
+                            leftFileExplorerState.dividerPosition = next
+                        }
+                    }
+                    .onEnded { _ in
+                        isExplorerSplitDragging = false
+                        explorerSplitDragStartFraction = nil
+                        NSCursor.arrow.set()
+                    }
+            )
     }
 
     private func workspaceScrollArea(renderContext: WorkspaceListRenderContext) -> some View {
