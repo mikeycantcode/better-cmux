@@ -15450,6 +15450,102 @@ struct TabItemView: View, Equatable {
         )
     }
 
+    private var compactStatusDotColor: Color {
+        if let hex = workspaceSnapshot.statusDotColorHex, let nsColor = NSColor(hex: hex) {
+            return Color(nsColor: nsColor)
+        }
+        return activeSecondaryColor(0.4)
+    }
+
+    private var compactRowTooltipText: String {
+        let snapshot = workspaceSnapshot
+        var lines: [String] = [snapshot.title]
+        if !snapshot.compactRowPathText.isEmpty { lines.append(snapshot.compactRowPathText) }
+        if let branch = snapshot.compactGitBranchSummaryText, !branch.isEmpty { lines.append(branch) }
+        for entry in snapshot.metadataEntries { lines.append("\(entry.value)") }
+        if !snapshot.listeningPorts.isEmpty {
+            lines.append(snapshot.listeningPorts.map { ":\($0)" }.joined(separator: " "))
+        }
+        for pr in snapshot.pullRequestRows { lines.append(pr.label) }
+        return lines.joined(separator: "\n")
+    }
+
+    @ViewBuilder
+    private var compactRowContent: some View {
+        let workspaceSnapshot = self.workspaceSnapshot
+        let closeWorkspaceTooltip = String(localized: "sidebar.closeWorkspace.tooltip", defaultValue: "Close Workspace")
+        let protectedWorkspaceTooltip = String(
+            localized: "sidebar.pinnedWorkspaceProtected.tooltip",
+            defaultValue: "Pinned workspace. Closing requires confirmation."
+        )
+        let closeButtonTooltip = workspaceSnapshot.isPinned
+            ? protectedWorkspaceTooltip
+            : KeyboardShortcutSettings.Action.closeWorkspace.tooltip(closeWorkspaceTooltip)
+        let scaledCloseButtonHitSize = max(16, 16 * fontScale)
+        let scaledCloseButtonWidth = max(
+            SidebarTrailingAccessoryWidthPolicy.closeButtonWidth,
+            scaledCloseButtonHitSize
+        )
+
+        HStack(alignment: .center, spacing: 6) {
+            Circle()
+                .fill(compactStatusDotColor)
+                .frame(width: scaledFontSize(8), height: scaledFontSize(8))
+
+            if workspaceSnapshot.isPinned {
+                Image(systemName: "pin.fill")
+                    .font(.system(size: scaledFontSize(8), weight: .semibold))
+                    .foregroundColor(activeSecondaryColor(0.8))
+            }
+
+            Text(workspaceSnapshot.title)
+                .font(.system(size: scaledFontSize(12.5), weight: titleFontWeight))
+                .foregroundColor(activePrimaryTextColor)
+                .lineLimit(1)
+                .truncationMode(.tail)
+                .layoutPriority(1)
+
+            Spacer(minLength: 6)
+
+            if !workspaceSnapshot.compactRowPathText.isEmpty {
+                Text(workspaceSnapshot.compactRowPathText)
+                    .font(.system(size: scaledFontSize(9), design: .monospaced))
+                    .foregroundColor(activeSecondaryColor(0.5))
+                    .lineLimit(1)
+                    .truncationMode(.head)
+                    .layoutPriority(0)
+            }
+
+            if unreadCount > 0 {
+                ZStack {
+                    Circle().fill(activeUnreadBadgeFillColor)
+                    Text("\(unreadCount)")
+                        .font(.system(size: scaledFontSize(9), weight: .semibold))
+                        .foregroundColor(activeUnreadBadgeTextColor)
+                }
+                .frame(width: 16 * fontScale, height: 16 * fontScale)
+            }
+
+            if canCloseWorkspace {
+                Button(action: {
+                    #if DEBUG
+                    cmuxDebugLog("sidebar.close workspace=\(tab.id.uuidString.prefix(5)) method=button")
+                    #endif
+                    tabManager.closeWorkspaceWithConfirmation(tab)
+                }) {
+                    Image(systemName: "xmark")
+                        .font(.system(size: scaledFontSize(9), weight: .medium))
+                        .foregroundColor(activeSecondaryColor(0.7))
+                        .frame(width: scaledCloseButtonWidth, height: scaledCloseButtonHitSize, alignment: .center)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .safeHelp(closeButtonTooltip)
+                .opacity(showCloseButton ? 1 : 0)
+            }
+        }
+    }
+
     var body: some View {
         let workspaceSnapshot = self.workspaceSnapshot
         let closeWorkspaceTooltip = String(localized: "sidebar.closeWorkspace.tooltip", defaultValue: "Close Workspace")
@@ -15480,6 +15576,10 @@ struct TabItemView: View, Equatable {
             scaledCloseButtonHitSize
         )
 
+        Group {
+        if settings.compactRowMode {
+            compactRowContent
+        } else {
         VStack(alignment: .leading, spacing: 4) {
             HStack(alignment: .top, spacing: 8) {
                 if unreadCount > 0 {
@@ -15771,6 +15871,8 @@ struct TabItemView: View, Equatable {
                 .lineLimit(1)
             }
         }
+        }
+        }
         .animation(.easeInOut(duration: 0.2), value: workspaceSnapshot.latestLog)
         .animation(.easeInOut(duration: 0.2), value: workspaceSnapshot.progress != nil)
         .animation(.easeInOut(duration: 0.2), value: workspaceSnapshot.metadataBlocks.count)
@@ -15889,7 +15991,7 @@ struct TabItemView: View, Equatable {
         .onTapGesture {
             updateSelection()
         }
-        .safeHelp(workspaceSnapshot.title)
+        .safeHelp(settings.compactRowMode ? compactRowTooltipText : workspaceSnapshot.title)
         .accessibilityElement(children: .combine)
         .accessibilityLabel(Text(accessibilityTitle))
         .accessibilityHint(Text(accessibilityHintText))
