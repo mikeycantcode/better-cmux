@@ -1,5 +1,3 @@
-import Foundation
-
 /// Counts of staged (index) changes for a git repository.
 ///
 /// Produced by ``StagedDiffProvider`` from `git diff --cached --numstat` and
