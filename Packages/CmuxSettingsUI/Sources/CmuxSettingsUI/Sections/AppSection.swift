@@ -33,6 +33,7 @@ public struct AppSection: View {
     @State private var firstClick: DefaultsValueModel<Bool>
     @State private var fileDrop: DefaultsValueModel<FileDropDefaultBehavior>
     @State private var preferredEditor: DefaultsValueModel<String>
+    @State private var terminalEditor: DefaultsValueModel<String>
     @State private var openSupported: DefaultsValueModel<Bool>
     @State private var openMarkdown: DefaultsValueModel<Bool>
     @State private var markdownFontSize: DefaultsValueModel<Int>
@@ -77,6 +78,7 @@ public struct AppSection: View {
         _firstClick = State(initialValue: DefaultsValueModel(store: defaultsStore, key: catalog.app.focusPaneOnFirstClick))
         _fileDrop = State(initialValue: DefaultsValueModel(store: defaultsStore, key: catalog.app.fileDropDefaultBehavior))
         _preferredEditor = State(initialValue: DefaultsValueModel(store: defaultsStore, key: catalog.app.preferredEditor))
+        _terminalEditor = State(initialValue: DefaultsValueModel(store: defaultsStore, key: catalog.app.terminalEditor))
         _openSupported = State(initialValue: DefaultsValueModel(store: defaultsStore, key: catalog.app.openSupportedFilesInCmux))
         _openMarkdown = State(initialValue: DefaultsValueModel(store: defaultsStore, key: catalog.app.openMarkdownInCmuxViewer))
         _markdownFontSize = State(initialValue: DefaultsValueModel(store: defaultsStore, key: catalog.markdown.fontSize))
@@ -273,6 +275,21 @@ public struct AppSection: View {
                 TextField(
                     String(localized: "settings.app.preferredEditor.placeholder", defaultValue: "e.g. code, zed, subl"),
                     text: Binding(get: { preferredEditor.current }, set: { preferredEditor.set($0) })
+                )
+                .textFieldStyle(.roundedBorder)
+                .frame(width: 200)
+            }
+            SettingsCardDivider()
+
+            // Terminal Editor (sidebar double-click opens here; shown in the status bar)
+            SettingsCardRow(
+                configurationReview: .json("app.terminalEditor"),
+                String(localized: "settings.app.terminalEditor", defaultValue: "Terminal Editor"),
+                subtitle: String(localized: "settings.app.terminalEditor.subtitle", defaultValue: "Editor used when opening a file from the sidebar (in a new tab) and shown in the status bar. Leave empty for auto (micro, then vim).")
+            ) {
+                TextField(
+                    String(localized: "settings.app.terminalEditor.placeholder", defaultValue: "auto (micro, then vim)"),
+                    text: Binding(get: { terminalEditor.current }, set: { terminalEditor.set($0) })
                 )
                 .textFieldStyle(.roundedBorder)
                 .frame(width: 200)

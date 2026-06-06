@@ -309,6 +309,11 @@
           "default": "",
           "description": "Custom editor command used when Cmd-click file previews are disabled or a file is unsupported. Leave empty to use the default."
         },
+        "terminalEditor": {
+          "type": "string",
+          "default": "",
+          "description": "Editor used to open files from the sidebar (in a new tab) and shown in the status bar. Empty = auto (micro, then vim)."
+        },
         "openSupportedFilesInCmux": {
           "type": "boolean",
           "default": true,
