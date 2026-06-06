@@ -87895,6 +87895,23 @@
         }
       }
     },
+    "settings.app.compactRowMode" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Compact Sidebar Rows"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "サイドバーの行をコンパクト表示"
+          }
+        }
+      }
+    },
     "settings.app.closeWorkspaceOnLastSurfaceShortcut": {
       "extractionState": "manual",
       "localizations": {

@@ -473,6 +473,17 @@ enum CommandPaletteSettingsToggleCommands {
                 defaultsKey: SidebarWorkspaceDetailSettings.hideAllDetailsKey
             ),
             CommandPaletteSettingToggleDescriptor(
+                commandId: commandIdPrefix + "compactSidebarRows",
+                settingsKey: "sidebar.compactRowMode",
+                title: {
+                    String(localized: "settings.app.compactRowMode", defaultValue: "Compact Sidebar Rows")
+                },
+                sectionTitle: sidebar,
+                keywords: ["sidebar.compactRowMode", "sidebar", "compact", "rows", "dense", "narrow", "thin", "one line"],
+                defaultValue: SidebarCompactRowModeSettings.defaultValue,
+                defaultsKey: SidebarCompactRowModeSettings.key
+            ),
+            CommandPaletteSettingToggleDescriptor(
                 commandId: commandIdPrefix + "wrapWorkspaceTitlesInSidebar",
                 settingsKey: "sidebar.wrapWorkspaceTitles",
                 title: {
