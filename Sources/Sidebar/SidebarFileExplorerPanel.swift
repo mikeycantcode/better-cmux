@@ -5,11 +5,12 @@ import SwiftUI
 /// Shows a slim section header (the active folder's name + a collapse chevron)
 /// above an embedded ``FileExplorerPanelView`` whose root follows the active
 /// session. The header's chevron toggles `state.isVisible`; collapsed shows the
-/// header only. Double-clicking a file inserts its path into the active
-/// session's terminal.
+/// header only.
+/// Double-clicking a file opens it in the configured editor in a new tab.
 struct SidebarFileExplorerPanel: View {
     @ObservedObject var store: FileExplorerStore
     @ObservedObject var state: FileExplorerState
+    let onOpenFile: (String) -> Void
 
     private var folderName: String {
         let trimmed = store.rootPath.trimmingCharacters(in: .whitespaces)
@@ -56,11 +57,7 @@ struct SidebarFileExplorerPanel: View {
                         store: store,
                         state: state,
                         onOpenFilePreview: { path in
-                            FileExplorerTerminalPathInsertion.insert(
-                                paths: [path],
-                                relativeToRootPath: store.rootPath,
-                                intoTerminalFor: nil
-                            )
+                            onOpenFile(path)
                         },
                         presentation: .files,
                         placement: .pane,

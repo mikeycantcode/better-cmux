@@ -2023,6 +2023,7 @@ struct ContentView: View {
             fileExplorerState: fileExplorerState,
             leftFileExplorerStore: leftFileExplorerStore,
             leftFileExplorerState: leftFileExplorerState,
+            onOpenFileInEditor: { path in openSidebarFileInEditor(path: path) },
             windowId: windowId,
             onSendFeedback: presentFeedbackComposer,
             onToggleSidebar: { sidebarState.toggle() },
@@ -2205,6 +2206,21 @@ struct ContentView: View {
             isAvailable: { EditorLauncher.availableOnPath($0) }
         )
         bottomBarEditorName = EditorLauncher.editorDisplayName(forCommand: command)
+    }
+
+    private func openSidebarFileInEditor(path: String) {
+        let editor = EditorLauncher.resolveEditorCommand(
+            stored: EditorPreferenceSettings.storedCommand(),
+            isAvailable: { EditorLauncher.availableOnPath($0) }
+        )
+        let command = EditorLauncher.openInEditorCommand(editor: editor, path: path)
+        let workingDirectory = (path as NSString).deletingLastPathComponent
+        _ = tabManager.addWorkspace(
+            title: (path as NSString).lastPathComponent,
+            workingDirectory: workingDirectory.isEmpty ? nil : workingDirectory,
+            initialTerminalCommand: command,
+            select: true
+        )
     }
 
     private var rightSidebarVisible: Bool {
@@ -10655,6 +10671,7 @@ struct VerticalTabsSidebar: View {
     @ObservedObject var fileExplorerState: FileExplorerState
     @ObservedObject var leftFileExplorerStore: FileExplorerStore
     @ObservedObject var leftFileExplorerState: FileExplorerState
+    let onOpenFileInEditor: (String) -> Void
     @State private var explorerSplitDragStartFraction: CGFloat?
     @State private var isExplorerSplitDragging = false
 
@@ -11109,7 +11126,8 @@ struct VerticalTabsSidebar: View {
                             }
                             SidebarFileExplorerPanel(
                                 store: leftFileExplorerStore,
-                                state: leftFileExplorerState
+                                state: leftFileExplorerState,
+                                onOpenFile: onOpenFileInEditor
                             )
                             .frame(maxWidth: .infinity, maxHeight: leftFileExplorerState.isVisible ? .infinity : nil)
                         }
