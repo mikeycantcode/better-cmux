@@ -1085,6 +1085,8 @@ struct ContentView: View {
     @StateObject private var fullscreenControlsViewModel = TitlebarControlsViewModel()
     @StateObject private var fileExplorerStore = FileExplorerStore()
     @StateObject private var sessionIndexStore = SessionIndexStore()
+    @StateObject private var leftFileExplorerStore = FileExplorerStore()
+    @StateObject private var leftFileExplorerState = FileExplorerState(persistenceKeyPrefix: "sidebar.fileExplorer")
     @StateObject private var selectedWorkspaceDirectoryObserver = SelectedWorkspaceDirectoryObserver()
     @State private var commandPaletteOverlayRenderModel = CommandPaletteOverlayRenderModel()
     @State private var backgroundWorkspacePrimeCoordinator = BackgroundWorkspacePrimeCoordinator()
@@ -2016,6 +2018,8 @@ struct ContentView: View {
         VerticalTabsSidebar(
             updateViewModel: updateViewModel,
             fileExplorerState: fileExplorerState,
+            leftFileExplorerStore: leftFileExplorerStore,
+            leftFileExplorerState: leftFileExplorerState,
             windowId: windowId,
             onSendFeedback: presentFeedbackComposer,
             onToggleSidebar: { sidebarState.toggle() },
@@ -2611,6 +2615,8 @@ struct ContentView: View {
     }
 
     private func syncFileExplorerDirectory() {
+        leftFileExplorerStore.showHiddenFiles = true
+        defer { syncLeftFileExplorerDirectory() }
         guard let selectedId = tabManager.selectedTabId,
               let tab = tabManager.tabs.first(where: { $0.id == selectedId }) else {
             // No selection means we have no local cwd to scope by; clear so the
@@ -2676,6 +2682,45 @@ struct ContentView: View {
             return
         }
         fileExplorerStore.applyWorkspaceRoot(.local(path: dir))
+    }
+
+    /// Mirrors the active workspace directory onto the left-sidebar explorer
+    /// store, reusing the same selection/cwd signal as the right sidebar.
+    private func syncLeftFileExplorerDirectory() {
+        guard let selectedId = tabManager.selectedTabId,
+              let tab = tabManager.tabs.first(where: { $0.id == selectedId }) else {
+            leftFileExplorerStore.applyWorkspaceRoot(.none)
+            return
+        }
+        if tab.isRemoteWorkspace {
+            guard let config = tab.remoteConfiguration, config.transport == .ssh else {
+                leftFileExplorerStore.applyWorkspaceRoot(.none)
+                return
+            }
+            let unavailableDetail = tab.remoteConnectionDetail ?? tab.remoteDaemonStatus.detail
+            leftFileExplorerStore.applyWorkspaceRoot(
+                .remoteSSH(
+                    workspaceId: tab.id,
+                    connection: SSHFileExplorerConnection(
+                        destination: config.destination,
+                        port: config.port,
+                        identityFile: config.identityFile,
+                        sshOptions: config.sshOptions
+                    ),
+                    displayTarget: config.displayTarget,
+                    rootPath: tab.currentDirectory,
+                    isAvailable: tab.remoteConnectionState == .connected,
+                    unavailableDetail: unavailableDetail
+                )
+            )
+            return
+        }
+        let dir = tab.currentDirectory.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !dir.isEmpty else {
+            leftFileExplorerStore.applyWorkspaceRoot(.none)
+            return
+        }
+        leftFileExplorerStore.applyWorkspaceRoot(.local(path: dir))
     }
 
     private var shouldSyncFileExplorerStore: Bool {
@@ -10554,6 +10599,8 @@ enum SidebarShortcutHintFreezePolicy {
 struct VerticalTabsSidebar: View {
     var updateViewModel: UpdateStateModel
     @ObservedObject var fileExplorerState: FileExplorerState
+    @ObservedObject var leftFileExplorerStore: FileExplorerStore
+    @ObservedObject var leftFileExplorerState: FileExplorerState
     let windowId: UUID
     let onSendFeedback: () -> Void
     let onToggleSidebar: () -> Void
