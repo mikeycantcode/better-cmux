@@ -1089,6 +1089,7 @@ struct ContentView: View {
     @StateObject private var leftFileExplorerState = FileExplorerState(persistenceKeyPrefix: "sidebar.fileExplorer", defaultVisible: true)
     @StateObject private var selectedWorkspaceDirectoryObserver = SelectedWorkspaceDirectoryObserver()
     @StateObject private var bottomBarStagedDiffStore = BottomBarStagedDiffStore()
+    @State private var bottomBarEditorName: String = ""
     private let bottomBarContextProvider: any ContextUsageProviding = NullContextUsageProvider()
     @State private var commandPaletteOverlayRenderModel = CommandPaletteOverlayRenderModel()
     @State private var backgroundWorkspacePrimeCoordinator = BackgroundWorkspacePrimeCoordinator()
@@ -2177,17 +2178,12 @@ struct ContentView: View {
     @ViewBuilder
     private func bottomBarView() -> some View {
         let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? ""
-        let editorCommand = EditorLauncher.resolveEditorCommand(
-            stored: EditorPreferenceSettings.storedCommand(),
-            isAvailable: { EditorLauncher.availableOnPath($0) }
-        )
-        let editorName = EditorLauncher.editorDisplayName(forCommand: editorCommand)
         if let ws = tabManager.selectedWorkspace {
             BottomBarWorkspaceBridge(
                 workspace: ws,
                 stagedDiffStore: bottomBarStagedDiffStore,
                 appVersion: version,
-                editorDisplayName: editorName,
+                editorDisplayName: bottomBarEditorName,
                 contextProvider: bottomBarContextProvider
             )
         } else {
@@ -2196,11 +2192,19 @@ struct ContentView: View {
                 branch: nil,
                 isDirty: false,
                 staged: .empty,
-                editorDisplayName: editorName,
+                editorDisplayName: bottomBarEditorName,
                 agentActive: false,
                 contextUsage: nil
             ))
         }
+    }
+
+    private func refreshBottomBarEditorName() {
+        let command = EditorLauncher.resolveEditorCommand(
+            stored: EditorPreferenceSettings.storedCommand(),
+            isAvailable: { EditorLauncher.availableOnPath($0) }
+        )
+        bottomBarEditorName = EditorLauncher.editorDisplayName(forCommand: command)
     }
 
     private var rightSidebarVisible: Bool {
@@ -2802,6 +2806,7 @@ struct ContentView: View {
                             rightSidebarPanelWithBackdrop(appearance: appearance)
                         }
                         bottomBarView()
+                            .padding(.leading, sidebarState.isVisible ? sidebarWidth : 0)
                     }
                     if sidebarState.isVisible {
                         sidebarPanelWithBackdrop(appearance: appearance)
@@ -2863,6 +2868,7 @@ struct ContentView: View {
         view = AnyView(view.onAppear {
             selectedWorkspaceDirectoryObserver.wire(tabManager: tabManager)
             bottomBarStagedDiffStore.activate(directory: tabManager.selectedWorkspace?.currentDirectory ?? "")
+            refreshBottomBarEditorName()
             tabManager.applyWindowBackgroundForSelectedTab()
             reconcileMountedWorkspaceIds()
             previousSelectedWorkspaceId = tabManager.selectedTabId
@@ -2968,6 +2974,9 @@ struct ContentView: View {
         })
         view = AnyView(view.onChange(of: selectedWorkspaceDirectoryObserver.directoryChangeGeneration) { _ in
             bottomBarStagedDiffStore.refresh()
+        })
+        view = AnyView(view.onReceive(NotificationCenter.default.publisher(for: UserDefaults.didChangeNotification)) { _ in
+            refreshBottomBarEditorName()
         })
 
         view = AnyView(view.onChange(of: tabManager.isWorkspaceCycleHot) { _ in
