@@ -15546,40 +15546,17 @@ struct TabItemView: View, Equatable {
         }
     }
 
-    var body: some View {
-        let workspaceSnapshot = self.workspaceSnapshot
-        let closeWorkspaceTooltip = String(localized: "sidebar.closeWorkspace.tooltip", defaultValue: "Close Workspace")
-        let protectedWorkspaceTooltip = String(
-            localized: "sidebar.pinnedWorkspaceProtected.tooltip",
-            defaultValue: "Pinned workspace. Closing requires confirmation."
-        )
-        let closeButtonTooltip = workspaceSnapshot.isPinned
-            ? protectedWorkspaceTooltip
-            : KeyboardShortcutSettings.Action.closeWorkspace.tooltip(closeWorkspaceTooltip)
-        let accessibilityHintText = String(localized: "sidebar.workspace.accessibilityHint", defaultValue: "Activate to focus this workspace. Drag to reorder, or use Move Up and Move Down actions.")
-        let moveUpActionText = String(localized: "sidebar.workspace.moveUpAction", defaultValue: "Move Up")
-        let moveDownActionText = String(localized: "sidebar.workspace.moveDownAction", defaultValue: "Move Down")
-        let finderDirectoryPath = WorkspaceFinderDirectoryResolver.path(for: tab)
-        let finderDirectoryCacheKey = WorkspaceFinderDirectoryCacheKey(path: finderDirectoryPath)
-        let latestNotificationSubtitle = latestNotificationText
-        let conversationMessageSubtitle = !settings.hidesAllDetails && settings.iMessageModeEnabled
-            ? workspaceSnapshot.latestConversationMessage?
-                .trimmingCharacters(in: .whitespacesAndNewlines)
-                .nilIfEmpty
-            : nil
-        let effectiveSubtitle = latestNotificationSubtitle ?? conversationMessageSubtitle
-        let detailVisibility = visibleAuxiliaryDetails
-        let scaledUnreadBadgeSize = 16 * fontScale
-        let scaledCloseButtonHitSize = max(16, 16 * fontScale)
-        let scaledCloseButtonWidth = max(
-            SidebarTrailingAccessoryWidthPolicy.closeButtonWidth,
-            scaledCloseButtonHitSize
-        )
-
-        Group {
-        if settings.compactRowMode {
-            compactRowContent
-        } else {
+    @ViewBuilder
+    private func detailedRowContent(
+        workspaceSnapshot: SidebarWorkspaceSnapshotBuilder.Snapshot,
+        protectedWorkspaceTooltip: String,
+        closeButtonTooltip: String,
+        effectiveSubtitle: String?,
+        detailVisibility: SidebarWorkspaceAuxiliaryDetailVisibility,
+        scaledUnreadBadgeSize: CGFloat,
+        scaledCloseButtonWidth: CGFloat,
+        scaledCloseButtonHitSize: CGFloat
+    ) -> some View {
         VStack(alignment: .leading, spacing: 4) {
             HStack(alignment: .top, spacing: 8) {
                 if unreadCount > 0 {
@@ -15871,6 +15848,33 @@ struct TabItemView: View, Equatable {
                 .lineLimit(1)
             }
         }
+    }
+
+    @ViewBuilder
+    private func sidebarRowAppearance(
+        workspaceSnapshot: SidebarWorkspaceSnapshotBuilder.Snapshot,
+        protectedWorkspaceTooltip: String,
+        closeButtonTooltip: String,
+        effectiveSubtitle: String?,
+        detailVisibility: SidebarWorkspaceAuxiliaryDetailVisibility,
+        scaledUnreadBadgeSize: CGFloat,
+        scaledCloseButtonWidth: CGFloat,
+        scaledCloseButtonHitSize: CGFloat
+    ) -> some View {
+        Group {
+        if settings.compactRowMode {
+            compactRowContent
+        } else {
+            detailedRowContent(
+                workspaceSnapshot: workspaceSnapshot,
+                protectedWorkspaceTooltip: protectedWorkspaceTooltip,
+                closeButtonTooltip: closeButtonTooltip,
+                effectiveSubtitle: effectiveSubtitle,
+                detailVisibility: detailVisibility,
+                scaledUnreadBadgeSize: scaledUnreadBadgeSize,
+                scaledCloseButtonWidth: scaledCloseButtonWidth,
+                scaledCloseButtonHitSize: scaledCloseButtonHitSize
+            )
         }
         }
         .animation(.easeInOut(duration: 0.2), value: workspaceSnapshot.latestLog)
@@ -15907,6 +15911,48 @@ struct TabItemView: View, Equatable {
         .padding(.horizontal, 6)
         .background { rowHeightProbe }
         .contentShape(Rectangle())
+    }
+
+    var body: some View {
+        let workspaceSnapshot = self.workspaceSnapshot
+        let closeWorkspaceTooltip = String(localized: "sidebar.closeWorkspace.tooltip", defaultValue: "Close Workspace")
+        let protectedWorkspaceTooltip = String(
+            localized: "sidebar.pinnedWorkspaceProtected.tooltip",
+            defaultValue: "Pinned workspace. Closing requires confirmation."
+        )
+        let closeButtonTooltip = workspaceSnapshot.isPinned
+            ? protectedWorkspaceTooltip
+            : KeyboardShortcutSettings.Action.closeWorkspace.tooltip(closeWorkspaceTooltip)
+        let accessibilityHintText = String(localized: "sidebar.workspace.accessibilityHint", defaultValue: "Activate to focus this workspace. Drag to reorder, or use Move Up and Move Down actions.")
+        let moveUpActionText = String(localized: "sidebar.workspace.moveUpAction", defaultValue: "Move Up")
+        let moveDownActionText = String(localized: "sidebar.workspace.moveDownAction", defaultValue: "Move Down")
+        let finderDirectoryPath = WorkspaceFinderDirectoryResolver.path(for: tab)
+        let finderDirectoryCacheKey = WorkspaceFinderDirectoryCacheKey(path: finderDirectoryPath)
+        let latestNotificationSubtitle = latestNotificationText
+        let conversationMessageSubtitle = !settings.hidesAllDetails && settings.iMessageModeEnabled
+            ? workspaceSnapshot.latestConversationMessage?
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+                .nilIfEmpty
+            : nil
+        let effectiveSubtitle = latestNotificationSubtitle ?? conversationMessageSubtitle
+        let detailVisibility = visibleAuxiliaryDetails
+        let scaledUnreadBadgeSize = 16 * fontScale
+        let scaledCloseButtonHitSize = max(16, 16 * fontScale)
+        let scaledCloseButtonWidth = max(
+            SidebarTrailingAccessoryWidthPolicy.closeButtonWidth,
+            scaledCloseButtonHitSize
+        )
+
+        sidebarRowAppearance(
+            workspaceSnapshot: workspaceSnapshot,
+            protectedWorkspaceTooltip: protectedWorkspaceTooltip,
+            closeButtonTooltip: closeButtonTooltip,
+            effectiveSubtitle: effectiveSubtitle,
+            detailVisibility: detailVisibility,
+            scaledUnreadBadgeSize: scaledUnreadBadgeSize,
+            scaledCloseButtonWidth: scaledCloseButtonWidth,
+            scaledCloseButtonHitSize: scaledCloseButtonHitSize
+        )
         .opacity(isBeingDragged ? 0.6 : 1)
         .overlay {
             SidebarWorkspaceRowHoverTracker(rowInteractionState: $rowInteractionState)
