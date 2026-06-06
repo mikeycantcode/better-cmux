@@ -237,6 +237,9 @@
 		D0C0D0C0D0C0D0C0D0C0D001 /* DockPanelView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C0D0C0D0C0D0C0D0C0D002 /* DockPanelView.swift */; };
 		D0B10014A1B2C3D4E5F60001 /* DragOverlayRoutingPolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0B10015A1B2C3D4E5F60001 /* DragOverlayRoutingPolicy.swift */; };
 		D3622100A1B2C3D4E5F60718 /* EditableTextViewArrowKeyForwardingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3622101A1B2C3D4E5F60718 /* EditableTextViewArrowKeyForwardingTests.swift */; };
+		BB57A700000000000000000A /* EditorLauncher.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB57A700000000000000000B /* EditorLauncher.swift */; };
+		BB57A700000000000000000C /* EditorLauncherTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB57A7000000000000000009 /* EditorLauncherTests.swift */; };
+		BB57A7000000000000000008 /* EditorPreferenceSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB57A7000000000000000007 /* EditorPreferenceSettings.swift */; };
 		E4C001000000000000000001 /* ExtensionSidebarWorkspaceRowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E4C001000000000000000002 /* ExtensionSidebarWorkspaceRowView.swift */; };
 		E4C001000000000000000003 /* ExtensionWorktreePrototype.swift in Sources */ = {isa = PBXBuildFile; fileRef = E4C001000000000000000004 /* ExtensionWorktreePrototype.swift */; };
 		E50320010000000000000001 /* ExtensionWorktreeSpawnArgsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E50320010000000000000002 /* ExtensionWorktreeSpawnArgsTests.swift */; };
@@ -928,6 +931,9 @@
 		D0C0D0C0D0C0D0C0D0C0D002 /* DockPanelView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DockPanelView.swift; sourceTree = "<group>"; };
 		D0B10015A1B2C3D4E5F60001 /* DragOverlayRoutingPolicy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DragOverlayRoutingPolicy.swift; sourceTree = "<group>"; };
 		D3622101A1B2C3D4E5F60718 /* EditableTextViewArrowKeyForwardingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditableTextViewArrowKeyForwardingTests.swift; sourceTree = "<group>"; };
+		BB57A700000000000000000B /* EditorLauncher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatusBar/EditorLauncher.swift; sourceTree = "<group>"; };
+		BB57A7000000000000000009 /* EditorLauncherTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditorLauncherTests.swift; sourceTree = "<group>"; };
+		BB57A7000000000000000007 /* EditorPreferenceSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatusBar/EditorPreferenceSettings.swift; sourceTree = "<group>"; };
 		E4C001000000000000000002 /* ExtensionSidebarWorkspaceRowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExtensionSidebarWorkspaceRowView.swift; sourceTree = "<group>"; };
 		E4C001000000000000000004 /* ExtensionWorktreePrototype.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExtensionWorktreePrototype.swift; sourceTree = "<group>"; };
 		E50320010000000000000002 /* ExtensionWorktreeSpawnArgsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExtensionWorktreeSpawnArgsTests.swift; sourceTree = "<group>"; };
@@ -1597,6 +1603,8 @@
 				283AD9DC66FA4727AA4A7F1B /* SidebarExplorerSplit.swift */,
 				BB57A7000000000000000002 /* StagedDiffStats.swift */,
 				BB57A7000000000000000006 /* StagedDiffProvider.swift */,
+				BB57A7000000000000000007 /* EditorPreferenceSettings.swift */,
+				BB57A700000000000000000B /* EditorLauncher.swift */,
 				4B0E301ACD9E4F8995BC5CE7 /* SidebarFileExplorerPanel.swift */,
 				EA1F00000000000000000004 /* SidebarDirectoryText.swift */,
 				D7AB34300000000000000004 /* SidebarBonsplitTabWorkspaceDropOverlay.swift */,
@@ -2063,6 +2071,7 @@
 				8E2FECB526A443939C4A38B1 /* CompactRowStatusResolverTests.swift */,
 				E3241A8A01884A0F9C93B1D8 /* SidebarExplorerSplitTests.swift */,
 				BB57A7000000000000000004 /* StagedDiffStatsTests.swift */,
+				BB57A7000000000000000009 /* EditorLauncherTests.swift */,
 				42092CDB2109E250F7F2A76E /* TabManagerUnitTests.swift */,
 				C9A57002C9A57002C9A57002 /* WorkspaceGroupTests.swift */,
 				FEED49850000000000000002 /* FeedEventClassificationTests.swift */,
@@ -2591,6 +2600,8 @@
 				D0C0D0C0D0C0D0C0D0C0D003 /* DockEmptyView.swift in Sources */,
 				D0C0D0C0D0C0D0C0D0C0D001 /* DockPanelView.swift in Sources */,
 				D0B10014A1B2C3D4E5F60001 /* DragOverlayRoutingPolicy.swift in Sources */,
+				BB57A700000000000000000A /* EditorLauncher.swift in Sources */,
+				BB57A7000000000000000008 /* EditorPreferenceSettings.swift in Sources */,
 				E4C001000000000000000001 /* ExtensionSidebarWorkspaceRowView.swift in Sources */,
 				E4C001000000000000000003 /* ExtensionWorktreePrototype.swift in Sources */,
 				FEED0000000000000000F00D /* FeedButtonStyleDebugWindowController.swift in Sources */,
@@ -2999,6 +3010,7 @@
 				C1713006C1713006C1713006 /* CommandPaletteShortcutCustomizationTests.swift in Sources */,
 				7670BAF8951A417BBDFB0D24 /* CompactRowStatusResolverTests.swift in Sources */,
 				D3622100A1B2C3D4E5F60718 /* EditableTextViewArrowKeyForwardingTests.swift in Sources */,
+				BB57A700000000000000000C /* EditorLauncherTests.swift in Sources */,
 				E50320010000000000000001 /* ExtensionWorktreeSpawnArgsTests.swift in Sources */,
 				FEEDC0DEC0DEC0DEC0DE0001 /* FeedCoordinatorTests.swift in Sources */,
 				FEED49850000000000000001 /* FeedEventClassificationTests.swift in Sources */,
