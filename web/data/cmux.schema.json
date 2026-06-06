@@ -701,6 +701,11 @@
           "type": "boolean",
           "default": true,
           "description": "Show custom metadata pills."
+        },
+        "compactRowMode": {
+          "type": "boolean",
+          "default": true,
+          "description": "Render each workspace row as a single compact line (status dot + title + path). Set to false for the detailed multi-line row."
         }
       }
     },
