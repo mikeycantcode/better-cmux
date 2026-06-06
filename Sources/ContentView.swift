@@ -1088,6 +1088,8 @@ struct ContentView: View {
     @StateObject private var leftFileExplorerStore = FileExplorerStore()
     @StateObject private var leftFileExplorerState = FileExplorerState(persistenceKeyPrefix: "sidebar.fileExplorer", defaultVisible: true)
     @StateObject private var selectedWorkspaceDirectoryObserver = SelectedWorkspaceDirectoryObserver()
+    @StateObject private var bottomBarStagedDiffStore = BottomBarStagedDiffStore()
+    private let bottomBarContextProvider: any ContextUsageProviding = NullContextUsageProvider()
     @State private var commandPaletteOverlayRenderModel = CommandPaletteOverlayRenderModel()
     @State private var backgroundWorkspacePrimeCoordinator = BackgroundWorkspacePrimeCoordinator()
     @State private var fileExplorerWidth: CGFloat = 220
@@ -2163,9 +2165,41 @@ struct ContentView: View {
         // File explorer is always in the view tree. Visibility is controlled by
         // frame width (0 when hidden), avoiding SwiftUI view insertion/removal
         // and all associated transition animations.
-        return HStack(spacing: 0) {
-            terminalContentWithSidebarDropOverlay(appearance: appearance)
-            rightSidebarPanelWithBackdrop(appearance: appearance)
+        return VStack(spacing: 0) {
+            HStack(spacing: 0) {
+                terminalContentWithSidebarDropOverlay(appearance: appearance)
+                rightSidebarPanelWithBackdrop(appearance: appearance)
+            }
+            bottomBarView()
+        }
+    }
+
+    @ViewBuilder
+    private func bottomBarView() -> some View {
+        let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? ""
+        let editorCommand = EditorLauncher.resolveEditorCommand(
+            stored: EditorPreferenceSettings.storedCommand(),
+            isAvailable: { EditorLauncher.availableOnPath($0) }
+        )
+        let editorName = EditorLauncher.editorDisplayName(forCommand: editorCommand)
+        if let ws = tabManager.selectedWorkspace {
+            BottomBarWorkspaceBridge(
+                workspace: ws,
+                stagedDiffStore: bottomBarStagedDiffStore,
+                appVersion: version,
+                editorDisplayName: editorName,
+                contextProvider: bottomBarContextProvider
+            )
+        } else {
+            CmuxBottomBar(snapshot: BottomBarSnapshot(
+                appVersion: version,
+                branch: nil,
+                isDirty: false,
+                staged: .empty,
+                editorDisplayName: editorName,
+                agentActive: false,
+                contextUsage: nil
+            ))
         }
     }
 
@@ -2759,12 +2793,15 @@ struct ContentView: View {
             // the sidebar backdrop samples the window.
             layout = AnyView(
                 ZStack(alignment: .leading) {
-                    HStack(spacing: 0) {
-                        terminalContentWithSidebarDropOverlay(appearance: appearance)
-                            .padding(.leading, sidebarState.isVisible ? sidebarWidth : 0)
-                            .frame(maxWidth: .infinity, maxHeight: .infinity)
-                            .layoutPriority(1)
-                        rightSidebarPanelWithBackdrop(appearance: appearance)
+                    VStack(spacing: 0) {
+                        HStack(spacing: 0) {
+                            terminalContentWithSidebarDropOverlay(appearance: appearance)
+                                .padding(.leading, sidebarState.isVisible ? sidebarWidth : 0)
+                                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                                .layoutPriority(1)
+                            rightSidebarPanelWithBackdrop(appearance: appearance)
+                        }
+                        bottomBarView()
                     }
                     if sidebarState.isVisible {
                         sidebarPanelWithBackdrop(appearance: appearance)
@@ -2825,6 +2862,7 @@ struct ContentView: View {
 
         view = AnyView(view.onAppear {
             selectedWorkspaceDirectoryObserver.wire(tabManager: tabManager)
+            bottomBarStagedDiffStore.activate(directory: tabManager.selectedWorkspace?.currentDirectory ?? "")
             tabManager.applyWindowBackgroundForSelectedTab()
             reconcileMountedWorkspaceIds()
             previousSelectedWorkspaceId = tabManager.selectedTabId
@@ -2923,6 +2961,13 @@ struct ContentView: View {
         // File explorer: keep the Combine subscription stable across body re-evaluations.
         view = AnyView(view.onChange(of: selectedWorkspaceDirectoryObserver.directoryChangeGeneration) { _ in
             syncFileExplorerDirectory()
+        })
+
+        view = AnyView(view.onChange(of: tabManager.selectedWorkspace?.currentDirectory ?? "") { newDir in
+            bottomBarStagedDiffStore.activate(directory: newDir)
+        })
+        view = AnyView(view.onChange(of: selectedWorkspaceDirectoryObserver.directoryChangeGeneration) { _ in
+            bottomBarStagedDiffStore.refresh()
         })
 
         view = AnyView(view.onChange(of: tabManager.isWorkspaceCycleHot) { _ in

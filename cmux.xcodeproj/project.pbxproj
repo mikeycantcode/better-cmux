@@ -42,6 +42,8 @@
 		D0B10002A1B2C3D4E5F60001 /* BonsplitTabBarPassThrough.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0B10003A1B2C3D4E5F60001 /* BonsplitTabBarPassThrough.swift */; };
 		AA1B2C3D4E5F60718 /* BonsplitTabDragUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA1B2C3D4E5F60719 /* BonsplitTabDragUITests.swift */; };
 		BB57A700000000000000000D /* BottomBarSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB57A700000000000000000E /* BottomBarSnapshot.swift */; };
+		BB57A7000000000000000015 /* BottomBarStagedDiffStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB57A7000000000000000016 /* BottomBarStagedDiffStore.swift */; };
+		BB57A7000000000000000017 /* BottomBarWorkspaceBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB57A7000000000000000018 /* BottomBarWorkspaceBridge.swift */; };
 		D3622000A1B2C3D4E5F60718 /* BrowserArrowKeyForwardingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3622001A1B2C3D4E5F60718 /* BrowserArrowKeyForwardingTests.swift */; };
 		B3770BA00000000000000001 /* BrowserAutomation.swift in Sources */ = {isa = PBXBuildFile; fileRef = B3770BA00000000000000002 /* BrowserAutomation.swift */; };
 		BCBC0A0E0000000000000C01 /* BrowserChromeMetrics.swift in Sources */ = {isa = PBXBuildFile; fileRef = BCBC0A0E0000000000000C02 /* BrowserChromeMetrics.swift */; };
@@ -775,6 +777,8 @@
 		D0B10003A1B2C3D4E5F60001 /* BonsplitTabBarPassThrough.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BonsplitTabBarPassThrough.swift; sourceTree = "<group>"; };
 		AA1B2C3D4E5F60719 /* BonsplitTabDragUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BonsplitTabDragUITests.swift; sourceTree = "<group>"; };
 		BB57A700000000000000000E /* BottomBarSnapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatusBar/BottomBarSnapshot.swift; sourceTree = "<group>"; };
+		BB57A7000000000000000016 /* BottomBarStagedDiffStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatusBar/BottomBarStagedDiffStore.swift; sourceTree = "<group>"; };
+		BB57A7000000000000000018 /* BottomBarWorkspaceBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatusBar/BottomBarWorkspaceBridge.swift; sourceTree = "<group>"; };
 		D3622001A1B2C3D4E5F60718 /* BrowserArrowKeyForwardingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrowserArrowKeyForwardingTests.swift; sourceTree = "<group>"; };
 		B3770BA00000000000000002 /* BrowserAutomation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Panels/BrowserAutomation.swift; sourceTree = "<group>"; };
 		BCBC0A0E0000000000000C02 /* BrowserChromeMetrics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Panels/BrowserChromeMetrics.swift; sourceTree = "<group>"; };
@@ -1617,6 +1621,8 @@
 				BB57A7000000000000000010 /* ContextUsageProviding.swift */,
 				BB57A7000000000000000012 /* RainbowContextBar.swift */,
 				BB57A7000000000000000014 /* CmuxBottomBar.swift */,
+				BB57A7000000000000000016 /* BottomBarStagedDiffStore.swift */,
+				BB57A7000000000000000018 /* BottomBarWorkspaceBridge.swift */,
 				4B0E301ACD9E4F8995BC5CE7 /* SidebarFileExplorerPanel.swift */,
 				EA1F00000000000000000004 /* SidebarDirectoryText.swift */,
 				D7AB34300000000000000004 /* SidebarBonsplitTabWorkspaceDropOverlay.swift */,
@@ -2531,6 +2537,8 @@
 				D0B10010A1B2C3D4E5F60001 /* BonsplitTabBarDebug.swift in Sources */,
 				D0B10002A1B2C3D4E5F60001 /* BonsplitTabBarPassThrough.swift in Sources */,
 				BB57A700000000000000000D /* BottomBarSnapshot.swift in Sources */,
+				BB57A7000000000000000015 /* BottomBarStagedDiffStore.swift in Sources */,
+				BB57A7000000000000000017 /* BottomBarWorkspaceBridge.swift in Sources */,
 				B3770BA00000000000000001 /* BrowserAutomation.swift in Sources */,
 				BCBC0A0E0000000000000C01 /* BrowserChromeMetrics.swift in Sources */,
 				A5008373 /* BrowserFindJavaScript.swift in Sources */,
