@@ -41,6 +41,7 @@
 		D0B10010A1B2C3D4E5F60001 /* BonsplitTabBarDebug.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0B10011A1B2C3D4E5F60001 /* BonsplitTabBarDebug.swift */; };
 		D0B10002A1B2C3D4E5F60001 /* BonsplitTabBarPassThrough.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0B10003A1B2C3D4E5F60001 /* BonsplitTabBarPassThrough.swift */; };
 		AA1B2C3D4E5F60718 /* BonsplitTabDragUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA1B2C3D4E5F60719 /* BonsplitTabDragUITests.swift */; };
+		BB57A700000000000000000D /* BottomBarSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB57A700000000000000000E /* BottomBarSnapshot.swift */; };
 		D3622000A1B2C3D4E5F60718 /* BrowserArrowKeyForwardingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3622001A1B2C3D4E5F60718 /* BrowserArrowKeyForwardingTests.swift */; };
 		B3770BA00000000000000001 /* BrowserAutomation.swift in Sources */ = {isa = PBXBuildFile; fileRef = B3770BA00000000000000002 /* BrowserAutomation.swift */; };
 		BCBC0A0E0000000000000C01 /* BrowserChromeMetrics.swift in Sources */ = {isa = PBXBuildFile; fileRef = BCBC0A0E0000000000000C02 /* BrowserChromeMetrics.swift */; };
@@ -230,6 +231,7 @@
 		C3408A000000000000000005 /* ContentView+ViewCommandPalette.swift in Sources */ = {isa = PBXBuildFile; fileRef = C3408A000000000000000006 /* ContentView+ViewCommandPalette.swift */; };
 		A5001002 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5001012 /* ContentView.swift */; };
 		C0DE32470000000000000001 /* ContentViewIdentifierCopyCommands.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0DE32470000000000000002 /* ContentViewIdentifierCopyCommands.swift */; };
+		BB57A700000000000000000F /* ContextUsageProviding.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB57A7000000000000000010 /* ContextUsageProviding.swift */; };
 		A500D010A1B2C3D4E5F60718 /* DebugLogging.swift in Sources */ = {isa = PBXBuildFile; fileRef = A500D011A1B2C3D4E5F60718 /* DebugLogging.swift */; };
 		A5001F000000000000000001 /* DetachedFolderDragIcon.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5001F000000000000000002 /* DetachedFolderDragIcon.swift */; };
 		B8F266266A1A3D9A45BD840F /* DisplayResolutionRegressionUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B8F266276A1A3D9A45BD840F /* DisplayResolutionRegressionUITests.swift */; };
@@ -424,6 +426,7 @@
 		A5C0DE0000000000000000B4 /* ProjectPanelView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5C0DE0000000000000000B3 /* ProjectPanelView.swift */; };
 		A5C0DE0000000000000000BC /* ProjectSchemesTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5C0DE0000000000000000BB /* ProjectSchemesTabView.swift */; };
 		A5C0DE0000000000000000B8 /* ProjectTargetsTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5C0DE0000000000000000B7 /* ProjectTargetsTabView.swift */; };
+		BB57A7000000000000000011 /* RainbowContextBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB57A7000000000000000012 /* RainbowContextBar.swift */; };
 		A500RG01 /* ReactGrab.swift in Sources */ = {isa = PBXBuildFile; fileRef = A500RG00 /* ReactGrab.swift */; };
 		A5001643 /* RemoteInteractiveShellBootstrapBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5001642 /* RemoteInteractiveShellBootstrapBuilder.swift */; };
 		B9000028A1B2C3D4E5F60719 /* RemoteInteractiveShellBootstrapBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5001642 /* RemoteInteractiveShellBootstrapBuilder.swift */; };
@@ -770,6 +773,7 @@
 		D0B10011A1B2C3D4E5F60001 /* BonsplitTabBarDebug.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BonsplitTabBarDebug.swift; sourceTree = "<group>"; };
 		D0B10003A1B2C3D4E5F60001 /* BonsplitTabBarPassThrough.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BonsplitTabBarPassThrough.swift; sourceTree = "<group>"; };
 		AA1B2C3D4E5F60719 /* BonsplitTabDragUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BonsplitTabDragUITests.swift; sourceTree = "<group>"; };
+		BB57A700000000000000000E /* BottomBarSnapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatusBar/BottomBarSnapshot.swift; sourceTree = "<group>"; };
 		D3622001A1B2C3D4E5F60718 /* BrowserArrowKeyForwardingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrowserArrowKeyForwardingTests.swift; sourceTree = "<group>"; };
 		B3770BA00000000000000002 /* BrowserAutomation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Panels/BrowserAutomation.swift; sourceTree = "<group>"; };
 		BCBC0A0E0000000000000C02 /* BrowserChromeMetrics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Panels/BrowserChromeMetrics.swift; sourceTree = "<group>"; };
@@ -924,6 +928,7 @@
 		C3408A000000000000000006 /* ContentView+ViewCommandPalette.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "ContentView+ViewCommandPalette.swift"; sourceTree = "<group>"; };
 		A5001012 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		C0DE32470000000000000002 /* ContentViewIdentifierCopyCommands.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentViewIdentifierCopyCommands.swift; sourceTree = "<group>"; };
+		BB57A7000000000000000010 /* ContextUsageProviding.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatusBar/ContextUsageProviding.swift; sourceTree = "<group>"; };
 		A500D011A1B2C3D4E5F60718 /* DebugLogging.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = App/DebugLogging.swift; sourceTree = "<group>"; };
 		A5001F000000000000000002 /* DetachedFolderDragIcon.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DetachedFolderDragIcon.swift; sourceTree = "<group>"; };
 		B8F266276A1A3D9A45BD840F /* DisplayResolutionRegressionUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DisplayResolutionRegressionUITests.swift; sourceTree = "<group>"; };
@@ -1114,6 +1119,7 @@
 		A5C0DE0000000000000000B3 /* ProjectPanelView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Panels/ProjectPanelView.swift; sourceTree = "<group>"; };
 		A5C0DE0000000000000000BB /* ProjectSchemesTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Panels/ProjectSchemesTabView.swift; sourceTree = "<group>"; };
 		A5C0DE0000000000000000B7 /* ProjectTargetsTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Panels/ProjectTargetsTabView.swift; sourceTree = "<group>"; };
+		BB57A7000000000000000012 /* RainbowContextBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatusBar/RainbowContextBar.swift; sourceTree = "<group>"; };
 		A500RG00 /* ReactGrab.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Panels/ReactGrab.swift; sourceTree = "<group>"; };
 		A5001642 /* RemoteInteractiveShellBootstrapBuilder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RemoteInteractiveShellBootstrapBuilder.swift; sourceTree = "<group>"; };
 		D0C0D0C0D0C0D0C0D0C00002 /* RemoteLoopbackProxyAlias.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RemoteLoopbackProxyAlias.swift; sourceTree = "<group>"; };
@@ -1605,6 +1611,9 @@
 				BB57A7000000000000000006 /* StagedDiffProvider.swift */,
 				BB57A7000000000000000007 /* EditorPreferenceSettings.swift */,
 				BB57A700000000000000000B /* EditorLauncher.swift */,
+				BB57A700000000000000000E /* BottomBarSnapshot.swift */,
+				BB57A7000000000000000010 /* ContextUsageProviding.swift */,
+				BB57A7000000000000000012 /* RainbowContextBar.swift */,
 				4B0E301ACD9E4F8995BC5CE7 /* SidebarFileExplorerPanel.swift */,
 				EA1F00000000000000000004 /* SidebarDirectoryText.swift */,
 				D7AB34300000000000000004 /* SidebarBonsplitTabWorkspaceDropOverlay.swift */,
@@ -2518,6 +2527,7 @@
 				A50012F1 /* Backport.swift in Sources */,
 				D0B10010A1B2C3D4E5F60001 /* BonsplitTabBarDebug.swift in Sources */,
 				D0B10002A1B2C3D4E5F60001 /* BonsplitTabBarPassThrough.swift in Sources */,
+				BB57A700000000000000000D /* BottomBarSnapshot.swift in Sources */,
 				B3770BA00000000000000001 /* BrowserAutomation.swift in Sources */,
 				BCBC0A0E0000000000000C01 /* BrowserChromeMetrics.swift in Sources */,
 				A5008373 /* BrowserFindJavaScript.swift in Sources */,
@@ -2595,6 +2605,7 @@
 				C3408A000000000000000005 /* ContentView+ViewCommandPalette.swift in Sources */,
 				A5001002 /* ContentView.swift in Sources */,
 				C0DE32470000000000000001 /* ContentViewIdentifierCopyCommands.swift in Sources */,
+				BB57A700000000000000000F /* ContextUsageProviding.swift in Sources */,
 				A500D010A1B2C3D4E5F60718 /* DebugLogging.swift in Sources */,
 				A5001F000000000000000001 /* DetachedFolderDragIcon.swift in Sources */,
 				D0C0D0C0D0C0D0C0D0C0D003 /* DockEmptyView.swift in Sources */,
@@ -2717,6 +2728,7 @@
 					A5C0DE0000000000000000B4 /* ProjectPanelView.swift in Sources */,
 					A5C0DE0000000000000000BC /* ProjectSchemesTabView.swift in Sources */,
 					A5C0DE0000000000000000B8 /* ProjectTargetsTabView.swift in Sources */,
+				BB57A7000000000000000011 /* RainbowContextBar.swift in Sources */,
 				A500RG01 /* ReactGrab.swift in Sources */,
 				A5001643 /* RemoteInteractiveShellBootstrapBuilder.swift in Sources */,
 				D0C0D0C0D0C0D0C0D0C00001 /* RemoteLoopbackProxyAlias.swift in Sources */,
