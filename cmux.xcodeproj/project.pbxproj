@@ -533,6 +533,7 @@
 		E3309A0D /* SplitEqualizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = E3309A0E /* SplitEqualizer.swift */; };
 		F6355600A1B2C3D4E5F60718 /* SSHStartupSignalLifecycleTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F6355601A1B2C3D4E5F60718 /* SSHStartupSignalLifecycleTests.swift */; };
 		F20F85FC5900550685FA33AD /* StackAuth in Frameworks */ = {isa = PBXBuildFile; productRef = A8BD195031FC4B82B4354297 /* StackAuth */; };
+		BB57A7000000000000000005 /* StagedDiffProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB57A7000000000000000006 /* StagedDiffProvider.swift */; };
 		BB57A7000000000000000001 /* StagedDiffStats.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB57A7000000000000000002 /* StagedDiffStats.swift */; };
 		BB57A7000000000000000003 /* StagedDiffStatsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB57A7000000000000000004 /* StagedDiffStatsTests.swift */; };
 		D35B71010000000000000001 /* StartupBreadcrumbLog.swift in Sources */ = {isa = PBXBuildFile; fileRef = D35B71010000000000000002 /* StartupBreadcrumbLog.swift */; };
@@ -1213,6 +1214,7 @@
 		C510C1E00000000000000001 /* SocketOperationTelemetry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SocketOperationTelemetry.swift; sourceTree = "<group>"; };
 		E3309A0E /* SplitEqualizer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SplitEqualizer.swift; sourceTree = "<group>"; };
 		F6355601A1B2C3D4E5F60718 /* SSHStartupSignalLifecycleTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SSHStartupSignalLifecycleTests.swift; sourceTree = "<group>"; };
+		BB57A7000000000000000006 /* StagedDiffProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatusBar/StagedDiffProvider.swift; sourceTree = "<group>"; };
 		BB57A7000000000000000002 /* StagedDiffStats.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatusBar/StagedDiffStats.swift; sourceTree = "<group>"; };
 		BB57A7000000000000000004 /* StagedDiffStatsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StagedDiffStatsTests.swift; sourceTree = "<group>"; };
 		D35B71010000000000000002 /* StartupBreadcrumbLog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = App/StartupBreadcrumbLog.swift; sourceTree = "<group>"; };
@@ -1594,6 +1596,7 @@
 				F45B3F4EAB4F49479BFCF661 /* CompactRowStatusResolver.swift */,
 				283AD9DC66FA4727AA4A7F1B /* SidebarExplorerSplit.swift */,
 				BB57A7000000000000000002 /* StagedDiffStats.swift */,
+				BB57A7000000000000000006 /* StagedDiffProvider.swift */,
 				4B0E301ACD9E4F8995BC5CE7 /* SidebarFileExplorerPanel.swift */,
 				EA1F00000000000000000004 /* SidebarDirectoryText.swift */,
 				D7AB34300000000000000004 /* SidebarBonsplitTabWorkspaceDropOverlay.swift */,
@@ -2765,6 +2768,7 @@
 				988C6A036BA56EA5759A95A0 /* SidebarWorkspaceSnapshotRefreshPolicy.swift in Sources */,
 				A5001226 /* SocketControlMode+Display.swift in Sources */,
 				E3309A0D /* SplitEqualizer.swift in Sources */,
+				BB57A7000000000000000005 /* StagedDiffProvider.swift in Sources */,
 				BB57A7000000000000000001 /* StagedDiffStats.swift in Sources */,
 				D35B71010000000000000001 /* StartupBreadcrumbLog.swift in Sources */,
 				A5001303 /* SurfaceSearchOverlay.swift in Sources */,
