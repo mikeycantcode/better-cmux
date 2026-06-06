@@ -113,6 +113,7 @@
 		D35110010000000000000003 /* CmuxApplicationSupportDirectories.swift in Sources */ = {isa = PBXBuildFile; fileRef = D35110010000000000000002 /* CmuxApplicationSupportDirectories.swift */; };
 		5EDB6027B346C46521A93C74 /* CMUXAuthCore in Frameworks */ = {isa = PBXBuildFile; productRef = 29813FE5A6CBC1019289A251 /* CMUXAuthCore */; };
 		53750003A0B1C2D3E4F50003 /* CmuxAuthRuntime in Frameworks */ = {isa = PBXBuildFile; productRef = 53750002A0B1C2D3E4F50002 /* CmuxAuthRuntime */; };
+		BB57A7000000000000000013 /* CmuxBottomBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB57A7000000000000000014 /* CmuxBottomBar.swift */; };
 		B9000063A1B2C3D4E5F60719 /* CMUXCLI+AgentHookDefinitions.swift in Sources */ = {isa = PBXBuildFile; fileRef = B9000062A1B2C3D4E5F60719 /* CMUXCLI+AgentHookDefinitions.swift */; };
 		B9000068A1B2C3D4E5F60719 /* CMUXCLI+AmpExtension.swift in Sources */ = {isa = PBXBuildFile; fileRef = B9000069A1B2C3D4E5F60719 /* CMUXCLI+AmpExtension.swift */; };
 		B9000050A1B2C3D4E5F60719 /* CMUXCLI+Config.swift in Sources */ = {isa = PBXBuildFile; fileRef = B9000051A1B2C3D4E5F60719 /* CMUXCLI+Config.swift */; };
@@ -840,6 +841,7 @@
 		C4160A010000000000000002 /* cmuxApp+HistoryMenu.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "cmuxApp+HistoryMenu.swift"; sourceTree = "<group>"; };
 		A5001011 /* cmuxApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = cmuxApp.swift; sourceTree = "<group>"; };
 		D35110010000000000000002 /* CmuxApplicationSupportDirectories.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CmuxApplicationSupportDirectories.swift; sourceTree = "<group>"; };
+		BB57A7000000000000000014 /* CmuxBottomBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatusBar/CmuxBottomBar.swift; sourceTree = "<group>"; };
 		B9000062A1B2C3D4E5F60719 /* CMUXCLI+AgentHookDefinitions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "CMUXCLI+AgentHookDefinitions.swift"; sourceTree = "<group>"; };
 		B9000069A1B2C3D4E5F60719 /* CMUXCLI+AmpExtension.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "CMUXCLI+AmpExtension.swift"; sourceTree = "<group>"; };
 		B9000051A1B2C3D4E5F60719 /* CMUXCLI+Config.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "CMUXCLI+Config.swift"; sourceTree = "<group>"; };
@@ -1614,6 +1616,7 @@
 				BB57A700000000000000000E /* BottomBarSnapshot.swift */,
 				BB57A7000000000000000010 /* ContextUsageProviding.swift */,
 				BB57A7000000000000000012 /* RainbowContextBar.swift */,
+				BB57A7000000000000000014 /* CmuxBottomBar.swift */,
 				4B0E301ACD9E4F8995BC5CE7 /* SidebarFileExplorerPanel.swift */,
 				EA1F00000000000000000004 /* SidebarDirectoryText.swift */,
 				D7AB34300000000000000004 /* SidebarBonsplitTabWorkspaceDropOverlay.swift */,
@@ -2557,6 +2560,7 @@
 				C4160A010000000000000001 /* cmuxApp+HistoryMenu.swift in Sources */,
 				A5001001 /* cmuxApp.swift in Sources */,
 				D35110010000000000000001 /* CmuxApplicationSupportDirectories.swift in Sources */,
+				BB57A7000000000000000013 /* CmuxBottomBar.swift in Sources */,
 				A72C9F4179B54DF38E99A021 /* CmuxCLIPathInstaller.swift in Sources */,
 				A5001650 /* CmuxConfig.swift in Sources */,
 				A5001652 /* CmuxConfigExecutor.swift in Sources */,
