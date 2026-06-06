@@ -12,8 +12,9 @@ enum EditorLauncher {
     ///   - isAvailable: probe returning whether a binary is on `PATH`.
     /// - Returns: `stored` when non-empty, else `"micro"` if available else `"vim"`.
     static func resolveEditorCommand(stored: String?, isAvailable: (String) -> Bool) -> String {
-        if let stored, !stored.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-            return stored.trimmingCharacters(in: .whitespacesAndNewlines)
+        if let stored {
+            let trimmed = stored.trimmingCharacters(in: .whitespacesAndNewlines)
+            if !trimmed.isEmpty { return trimmed }
         }
         return isAvailable("micro") ? "micro" : "vim"
     }
@@ -33,6 +34,7 @@ enum EditorLauncher {
 
     /// Whether `name` is on `PATH` (`which <name>`), cached per process run.
     /// Used as the default `isAvailable` probe in production.
+    @MainActor
     static func availableOnPath(_ name: String) -> Bool {
         if let cached = pathCache[name] { return cached }
         let process = Process()
