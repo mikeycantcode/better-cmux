@@ -26682,6 +26682,23 @@
         }
       }
     },
+    "bottomBar.staged.accessibility" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Staged changes"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ステージされた変更"
+          }
+        }
+      }
+    },
     "browser.action.newTab": {
       "extractionState": "manual",
       "localizations": {
@@ -93171,6 +93188,57 @@
           "stringUnit": {
             "state": "translated",
             "value": "Зміна набуде чинності при наступному запуску."
+          }
+        }
+      }
+    },
+    "settings.app.terminalEditor" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Terminal Editor"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ターミナルエディタ"
+          }
+        }
+      }
+    },
+    "settings.app.terminalEditor.placeholder" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "auto (micro, then vim)"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "自動 (micro、なければ vim)"
+          }
+        }
+      }
+    },
+    "settings.app.terminalEditor.subtitle" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Editor used when opening a file from the sidebar (in a new tab) and shown in the status bar. Leave empty for auto (micro, then vim)."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "サイドバーからファイルを開くとき（新しいタブで）に使用し、ステータスバーに表示されるエディタ。空欄で自動（micro、なければ vim）。"
           }
         }
       }
