@@ -2,6 +2,11 @@
 
 All notable changes to cmux are documented here.
 
+## [Unreleased]
+
+### Added
+- Left-sidebar file explorer: a collapsible, resizable panel below the session list that follows the active session's working directory. Click a file to insert its path into the active terminal. Toggle with the collapse/expand button in the panel header.
+
 ## [0.64.14] - 2026-06-06
 
 ### Added
