@@ -12,6 +12,9 @@ enum MonacoBridgeMessage: Equatable, Sendable {
     case change(content: String)
     /// An explicit save was requested (e.g. Cmd+S or a flush before close).
     case requestSave(content: String)
+    /// The user typed (first keystroke of an edit burst), fired before the
+    /// debounced save so the panel can mark a local edit in flight.
+    case editing
     /// The editor widget gained focus.
     case focus
     /// The editor widget lost focus.
@@ -23,6 +26,7 @@ enum MonacoBridgeMessage: Equatable, Sendable {
         guard let dict = body as? [String: Any], let type = dict["type"] as? String else { return nil }
         switch type {
         case "ready": self = .ready
+        case "editing": self = .editing
         case "focus": self = .focus
         case "blur": self = .blur
         case "change":

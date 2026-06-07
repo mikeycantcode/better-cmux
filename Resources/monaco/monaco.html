@@ -11,11 +11,14 @@
 <body>
   <div id="container"></div>
   <script>
-    // Syntax-only (v1): route every Monaco worker to an inert no-op worker so the
-    // editor never fetches a real worker over the custom scheme (which WebKit
-    // blocks cross-scheme). Tokenization for highlighting runs on the main thread.
-    var NOOP_WORKER = URL.createObjectURL(new Blob(["self.onmessage=function(){};"], { type: "text/javascript" }));
-    self.MonacoEnvironment = { getWorkerUrl: function () { return NOOP_WORKER; } };
+    // Syntax-only (v1): route the worker to an inert no-op script so the editor
+    // never fetches a real worker over the custom scheme (which WebKit blocks
+    // cross-scheme). Tokenization for highlighting runs on the main thread.
+    // Revoke any prior blob URL before recreating it on a recovery reload so the
+    // object URLs do not accumulate across reloads.
+    if (self.__cmuxNoopWorker) URL.revokeObjectURL(self.__cmuxNoopWorker);
+    self.__cmuxNoopWorker = URL.createObjectURL(new Blob(["self.onmessage=function(){};"], { type: "text/javascript" }));
+    self.MonacoEnvironment = { getWorkerUrl: function () { return self.__cmuxNoopWorker; } };
 
     function post(msg) {
       try { window.webkit.messageHandlers.cmuxMonacoBridge.postMessage(msg); } catch (e) {}
@@ -39,17 +42,27 @@
       var suppressChange = false;   // true while we apply content from Swift
       var saveTimer = null;
       var SAVE_DEBOUNCE_MS = 600;
+      var editingPending = false;   // true between first keystroke and save
 
       function scheduleSave() {
         if (saveTimer) clearTimeout(saveTimer);
         saveTimer = setTimeout(function () {
           saveTimer = null;
+          editingPending = false;
           post({ type: "change", content: editor.getValue() });
         }, SAVE_DEBOUNCE_MS);
       }
 
       editor.onDidChangeModelContent(function () {
         if (suppressChange) return;
+        // Fire `editing` on the first keystroke of a burst (throttled by
+        // `editingPending`) so Swift marks a local edit in flight before the
+        // debounced save lands; this lets an external on-disk change keep the
+        // buffer (last-write-wins favoring the user's edit).
+        if (!editingPending) {
+          editingPending = true;
+          post({ type: "editing" });
+        }
         scheduleSave();
       });
       editor.onDidFocusEditorWidget(function () { post({ type: "focus" }); });
@@ -58,6 +71,7 @@
       // Cmd+S -> immediate save (even in auto-save mode).
       editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, function () {
         if (saveTimer) { clearTimeout(saveTimer); saveTimer = null; }
+        editingPending = false;
         post({ type: "requestSave", content: editor.getValue() });
       });
 
@@ -84,8 +98,10 @@
         },
         setTheme: function (theme) { monaco.editor.setTheme(theme); },
         focus: function () { editor.focus(); },
+        currentValue: function () { return editor.getValue(); },
         flushSave: function () {
           if (saveTimer) { clearTimeout(saveTimer); saveTimer = null; }
+          editingPending = false;
           post({ type: "requestSave", content: editor.getValue() });
         }
       };

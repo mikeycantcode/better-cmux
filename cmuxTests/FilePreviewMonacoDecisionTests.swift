@@ -8,17 +8,26 @@ import Testing
 #endif
 
 @Suite struct FilePreviewMonacoDecisionTests {
-    @Test func usesMonacoForSmallTextFiles() {
+    @Test func usesMonacoForSmallLocalTextFiles() {
         let d = FilePreviewMonacoDecision()
-        #expect(d.shouldUseMonaco(isTextMode: true, loadedByteSize: 1024) == true)
-        #expect(d.shouldUseMonaco(isTextMode: true, loadedByteSize: FilePreviewMonacoDecision.largeFileThresholdBytes) == true)
+        #expect(d.shouldUseMonaco(isTextMode: true, loadedByteSize: 1024, isRemote: false) == true)
+        #expect(d.shouldUseMonaco(isTextMode: true, loadedByteSize: FilePreviewMonacoDecision.largeFileThresholdBytes, isRemote: false) == true)
     }
 
     @Test func fallsBackForLargeUnknownOrNonText() {
         let d = FilePreviewMonacoDecision()
-        #expect(d.shouldUseMonaco(isTextMode: true, loadedByteSize: FilePreviewMonacoDecision.largeFileThresholdBytes + 1) == false)
-        #expect(d.shouldUseMonaco(isTextMode: true, loadedByteSize: nil) == false)
-        #expect(d.shouldUseMonaco(isTextMode: false, loadedByteSize: 10) == false)
+        #expect(d.shouldUseMonaco(isTextMode: true, loadedByteSize: FilePreviewMonacoDecision.largeFileThresholdBytes + 1, isRemote: false) == false)
+        #expect(d.shouldUseMonaco(isTextMode: true, loadedByteSize: nil, isRemote: false) == false)
+        #expect(d.shouldUseMonaco(isTextMode: false, loadedByteSize: 10, isRemote: false) == false)
+    }
+
+    @Test func fallsBackForRemoteFilesRegardlessOfSize() {
+        let d = FilePreviewMonacoDecision()
+        // Remote files keep the native explicit-save editor: Monaco's auto-save
+        // would write only to the local cache copy, never the remote host.
+        #expect(d.shouldUseMonaco(isTextMode: true, loadedByteSize: 1024, isRemote: true) == false)
+        #expect(d.shouldUseMonaco(isTextMode: true, loadedByteSize: FilePreviewMonacoDecision.largeFileThresholdBytes, isRemote: true) == false)
+        #expect(d.shouldUseMonaco(isTextMode: true, loadedByteSize: 1, isRemote: true) == false)
     }
 
     @Test func selfWriteSuppression() {

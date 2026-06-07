@@ -31,9 +31,13 @@ struct FilePreviewMonacoDecision: Sendable {
     ///   - loadedByteSize: The decoded file's byte size, if known. `nil` means the
     ///     size could not be determined; the decision is then conservative and
     ///     uses the native fallback.
+    ///   - isRemote: `true` when the file is a remote-workspace file (served from a
+    ///     local materialized cache copy). Remote files keep the native
+    ///     `NSTextView` explicit-save path because Monaco's silent auto-save would
+    ///     write only to the local cache and never reach the remote host.
     /// - Returns: `true` to route to Monaco, `false` to keep the native editor.
-    func shouldUseMonaco(isTextMode: Bool, loadedByteSize: UInt64?) -> Bool {
-        guard isTextMode, let loadedByteSize else { return false }
+    func shouldUseMonaco(isTextMode: Bool, loadedByteSize: UInt64?, isRemote: Bool) -> Bool {
+        guard !isRemote, isTextMode, let loadedByteSize else { return false }
         return loadedByteSize <= largeFileThresholdBytes
     }
 

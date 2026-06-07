@@ -21,11 +21,18 @@ final class MonacoWebController: NSObject, WKNavigationDelegate, WKScriptMessage
     // on every keystroke's auto-save round-trip. Theme is excluded — `setTheme`
     // handles appearance changes non-destructively.
     private var lastAppliedContent: (text: String, language: String)?
+    // The theme last pushed into the editor, used to make `setTheme` idempotent so
+    // SwiftUI's repeated `updateNSView` does not re-run `monaco.editor.setTheme`
+    // on every keystroke's round-trip.
+    private var lastAppliedTheme: String?
 
     /// Called with the full buffer when Monaco reports a debounced content change.
     var onChange: ((String) -> Void)?
     /// Called with the full buffer when an explicit save is requested (Cmd+S / flush).
     var onRequestSave: ((String) -> Void)?
+    /// Called on the first keystroke of an edit burst, before the debounced save,
+    /// so the panel can mark a local edit in flight (last-write-wins on conflict).
+    var onEditing: (() -> Void)?
     /// Called when the editor widget gains focus.
     var onFocus: (() -> Void)?
     /// Called when the editor widget loses focus.
@@ -36,7 +43,14 @@ final class MonacoWebController: NSObject, WKNavigationDelegate, WKScriptMessage
         if let webView { return webView }
         let config = WKWebViewConfiguration()
         config.setURLSchemeHandler(MonacoAssetURLSchemeHandler(), forURLScheme: MonacoAssetURLSchemeHandler.scheme)
-        config.userContentController.add(self, name: "cmuxMonacoBridge")
+        // Register through a weak trampoline so `userContentController` does not
+        // strongly retain this controller. A direct `add(self, ...)` forms a
+        // retain cycle that only `dismantle()` breaks, leaking the web view and its
+        // content process on detach/transfer paths where `close()` never runs.
+        config.userContentController.add(
+            WeakMonacoScriptMessageHandler(self),
+            name: "cmuxMonacoBridge"
+        )
         let wv = WKWebView(frame: .zero, configuration: config)
         wv.navigationDelegate = self
         wv.setValue(false, forKey: "drawsBackground")
@@ -59,6 +73,7 @@ final class MonacoWebController: NSObject, WKNavigationDelegate, WKScriptMessage
         // The fresh document starts empty, so forget what we believe is applied;
         // the queued `pendingLoad` replays on `ready` and reseeds it.
         lastAppliedContent = nil
+        lastAppliedTheme = nil
         webView?.load(request)
     }
 
@@ -81,6 +96,9 @@ final class MonacoWebController: NSObject, WKNavigationDelegate, WKScriptMessage
     private func applyPendingLoad() {
         guard let webView, let p = pendingLoad else { return }
         lastAppliedContent = (p.text, p.language)
+        // `setContent` applies the theme too, so record it to keep `setTheme`
+        // idempotent and avoid a redundant re-apply on the next `updateNSView`.
+        lastAppliedTheme = p.theme
         let args = jsonArgs(p.text, p.language, p.theme)
         webView.evaluateJavaScript(
             "window.cmuxMonaco && window.cmuxMonaco.setContent(\(args)[0], \(args)[1], \(args)[2]);",
@@ -101,8 +119,13 @@ final class MonacoWebController: NSObject, WKNavigationDelegate, WKScriptMessage
     }
 
     /// Sets the Monaco theme (`"vs"` / `"vs-dark"`).
+    ///
+    /// Idempotent: re-applying the theme already in effect is a no-op so SwiftUI's
+    /// repeated `updateNSView` does not run `monaco.editor.setTheme` every keystroke.
     func setTheme(_ theme: String) {
         guard let webView, isReady else { return }
+        guard lastAppliedTheme != theme else { return }
+        lastAppliedTheme = theme
         let args = jsonArgs(theme)
         webView.evaluateJavaScript("window.cmuxMonaco && window.cmuxMonaco.setTheme(\(args)[0]);", completionHandler: nil)
     }
@@ -116,6 +139,18 @@ final class MonacoWebController: NSObject, WKNavigationDelegate, WKScriptMessage
     /// `requestSave` message is delivered on the main actor before teardown.
     func flushSave() {
         webView?.evaluateJavaScript("window.cmuxMonaco && window.cmuxMonaco.flushSave();", completionHandler: nil)
+    }
+
+    /// Reads the editor's current buffer synchronously via the JS return value.
+    ///
+    /// Unlike ``flushSave()`` (which posts `requestSave` back over the bridge), this
+    /// awaits the buffer directly, so a caller can persist the final edit and then
+    /// tear down the bridge without racing an in-flight message. Returns `nil` when
+    /// the editor is not yet initialized or the evaluation fails.
+    func currentEditorValue() async -> String? {
+        (try? await webView?.evaluateJavaScript(
+            "window.cmuxMonaco ? window.cmuxMonaco.currentValue() : null"
+        )) as? String
     }
 
     /// JSON-encodes args into a JS array literal so arbitrary text is escaped safely.
@@ -139,6 +174,7 @@ final class MonacoWebController: NSObject, WKNavigationDelegate, WKScriptMessage
         case .requestSave(let content):
             recordEditorContent(content)
             onRequestSave?(content)
+        case .editing: onEditing?()
         case .focus: onFocus?()
         case .blur: onBlur?()
         }
@@ -156,6 +192,7 @@ final class MonacoWebController: NSObject, WKNavigationDelegate, WKScriptMessage
         webView = nil
         isReady = false
         lastAppliedContent = nil
+        lastAppliedTheme = nil
         pendingLoad = nil
     }
 
@@ -168,6 +205,12 @@ final class MonacoWebController: NSObject, WKNavigationDelegate, WKScriptMessage
 
     func webViewWebContentProcessDidTerminate(_ webView: WKWebView) {
         guard let current = self.webView, current === webView else { return }
+        // Seed the pending load from the last content we applied BEFORE the
+        // recovery reload clears `lastAppliedContent`, so the recovered editor
+        // repopulates on `ready` without waiting for a SwiftUI `updateNSView`.
+        if pendingLoad == nil, let last = lastAppliedContent {
+            pendingLoad = (last.text, last.language, lastAppliedTheme ?? "vs-dark")
+        }
         // Recover by reloading the shell; pendingLoad replays on `ready`.
         load(request: shellRequest())
     }

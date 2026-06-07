@@ -17,6 +17,10 @@ import Testing
         #expect(MonacoBridgeMessage(body: ["type": "requestSave", "content": "x"]) == .requestSave(content: "x"))
     }
 
+    @Test func parsesEditing() {
+        #expect(MonacoBridgeMessage(body: ["type": "editing"]) == .editing)
+    }
+
     @Test func parsesFocusBlur() {
         #expect(MonacoBridgeMessage(body: ["type": "focus"]) == .focus)
         #expect(MonacoBridgeMessage(body: ["type": "blur"]) == .blur)
