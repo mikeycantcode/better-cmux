@@ -445,6 +445,13 @@ final class CmuxSettingsFileStore {
         if let value = jsonString(section["terminalEditor"]) {
             snapshot.managedUserDefaults[EditorPreferenceSettings.key] = .string(value)
         }
+        if let raw = jsonString(section["codeEditor"]) {
+            if let choice = CodeEditorChoice(rawValue: raw) {
+                snapshot.managedUserDefaults[CodeEditorPreferenceSettings.key] = .string(choice.rawValue)
+            } else {
+                logInvalid("app.codeEditor", sourcePath: sourcePath)
+            }
+        }
         if let value = jsonBool(section["openSupportedFilesInCmux"]) {
             snapshot.managedUserDefaults[CmdClickSupportedFileRouteSettings.key] = .bool(value)
         }

@@ -209,6 +209,10 @@
 		7D5DA4DC51454ECDBF9AC978 /* CmuxWebViewMouseNavigationButtonTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 43F90FAF3FD44F11BF547BE9 /* CmuxWebViewMouseNavigationButtonTests.swift */; };
 		E30750000000000000000004 /* CmuxWorkspaceDefinition.swift in Sources */ = {isa = PBXBuildFile; fileRef = E30750000000000000000003 /* CmuxWorkspaceDefinition.swift */; };
 		AA11BB22CC33DD44EE550001 /* CMUXWorkstream in Frameworks */ = {isa = PBXBuildFile; productRef = AA11BB22CC33DD44EE550002 /* CMUXWorkstream */; };
+		BBC0DE000000000000000014 /* CodeEditorChoice.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBC0DE000000000000000013 /* CodeEditorChoice.swift */; };
+		BBC0DE0100000000000000C2 /* CodeEditorJSONParseTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBC0DE0100000000000000C1 /* CodeEditorJSONParseTests.swift */; };
+		BBC0DE000000000000000016 /* CodeEditorPreferenceSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBC0DE000000000000000015 /* CodeEditorPreferenceSettings.swift */; };
+		BBC0DE000000000000000020 /* CodeEditorPreferenceSettingsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBC0DE00000000000000001F /* CodeEditorPreferenceSettingsTests.swift */; };
 		C4041001000000000000001B /* CommandClickFileOpenRouter.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4041001000000000000001A /* CommandClickFileOpenRouter.swift */; };
 		C0DE32470000000000000005 /* CommandPaletteIdentifierClipboardUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0DE32470000000000000006 /* CommandPaletteIdentifierClipboardUITests.swift */; };
 		C0DEC0DE000000000000F202 /* CommandPaletteNucleoFFILibrarySupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0DEC0DE000000000000F201 /* CommandPaletteNucleoFFILibrarySupport.swift */; };
@@ -282,6 +286,8 @@
 		A5001447A5001447A5001447 /* FilePreviewMagnifyingPDFView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5001446A5001446A5001446 /* FilePreviewMagnifyingPDFView.swift */; };
 		287C15EFC945CE9D560600E3 /* FilePreviewMediaSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = 64D7B3C5A409C0B3EDD002CE /* FilePreviewMediaSession.swift */; };
 		A5001443A5001443A5001443 /* FilePreviewModeSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5001442A5001442A5001442 /* FilePreviewModeSupport.swift */; };
+		BBC0DE000000000002000002 /* FilePreviewMonacoDecision.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBC0DE000000000002000001 /* FilePreviewMonacoDecision.swift */; };
+		BBC0DE000000000002000004 /* FilePreviewMonacoDecisionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBC0DE000000000002000003 /* FilePreviewMonacoDecisionTests.swift */; };
 		A5001450A5001450A5001450 /* FilePreviewNativeBackground.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5001451A5001451A5001451 /* FilePreviewNativeBackground.swift */; };
 		904D6350B3BB50DEDED3F410 /* FilePreviewNativeViewSessions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 81E3615490F822CA0C8527C9 /* FilePreviewNativeViewSessions.swift */; };
 		A5001422 /* FilePreviewPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5001423 /* FilePreviewPanel.swift */; };
@@ -292,6 +298,7 @@
 		A5001429 /* FilePreviewPDFViewport.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5001428 /* FilePreviewPDFViewport.swift */; };
 		DD62AFF1D95A1D5D1850AC10 /* FilePreviewQuickLookSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A02623202562490B3E88372 /* FilePreviewQuickLookSession.swift */; };
 		C0DE31390000000000000103 /* FilePreviewReviewFeedbackTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0DE31390000000000000104 /* FilePreviewReviewFeedbackTests.swift */; };
+		BBC0DE0000000000000000A2 /* FilePreviewTextDecodeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBC0DE0000000000000000A3 /* FilePreviewTextDecodeTests.swift */; };
 		D0B10016A1B2C3D4E5F60001 /* FilePreviewTextEditor.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0B10017A1B2C3D4E5F60001 /* FilePreviewTextEditor.swift */; };
 		C0DEFC100000000000000001 /* FilePreviewTextEditorTextKitTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0DEFC100000000000000002 /* FilePreviewTextEditorTextKitTests.swift */; };
 		F11E52270000000000005227 /* FilePreviewWordWrapSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = F11E52270000000000005228 /* FilePreviewWordWrapSettings.swift */; };
@@ -396,6 +403,20 @@
 		C9CFB398DF94D6DDEAF42D67 /* MobileTerminalRenderObserver.swift in Sources */ = {isa = PBXBuildFile; fileRef = F51B54FAD18160281FC1C2B6 /* MobileTerminalRenderObserver.swift */; };
 		F6448F377504F33956E7E03B /* MobileWorkspaceListFidelityTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 86544CEFA1CA33CA9225FB6E /* MobileWorkspaceListFidelityTests.swift */; };
 		00C3AA443F6DA8D94E28CE17 /* MobileWorkspaceListObserver.swift in Sources */ = {isa = PBXBuildFile; fileRef = C9F14137954A34DFFA05C88C /* MobileWorkspaceListObserver.swift */; };
+		BBC0DE000000000000000022 /* monaco in Resources */ = {isa = PBXBuildFile; fileRef = BBC0DE000000000000000021 /* monaco */; };
+		BBC0DE000000000000000004 /* MonacoAssetMime.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBC0DE000000000000000003 /* MonacoAssetMime.swift */; };
+		BBC0DE000000000000000006 /* MonacoAssetPath.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBC0DE000000000000000005 /* MonacoAssetPath.swift */; };
+		BBC0DE000000000000000002 /* MonacoAssets.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBC0DE000000000000000001 /* MonacoAssets.swift */; };
+		BBC0DE000000000000000018 /* MonacoAssetTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBC0DE000000000000000017 /* MonacoAssetTests.swift */; };
+		BBC0DE000000000000000008 /* MonacoAssetURLSchemeHandler.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBC0DE000000000000000007 /* MonacoAssetURLSchemeHandler.swift */; };
+		BBC0DE000000000000000012 /* MonacoAtomicTextSaver.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBC0DE000000000000000011 /* MonacoAtomicTextSaver.swift */; };
+		BBC0DE00000000000000001E /* MonacoAtomicTextSaverTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBC0DE00000000000000001D /* MonacoAtomicTextSaverTests.swift */; };
+		BBC0DE00000000000000000A /* MonacoBridgeMessage.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBC0DE000000000000000009 /* MonacoBridgeMessage.swift */; };
+		BBC0DE00000000000000001A /* MonacoBridgeMessageTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBC0DE000000000000000019 /* MonacoBridgeMessageTests.swift */; };
+		BBC0DE000000000000000010 /* MonacoEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBC0DE00000000000000000F /* MonacoEditorView.swift */; };
+		BBC0DE00000000000000000C /* MonacoLanguageMap.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBC0DE00000000000000000B /* MonacoLanguageMap.swift */; };
+		BBC0DE00000000000000001C /* MonacoLanguageMapTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBC0DE00000000000000001B /* MonacoLanguageMapTests.swift */; };
+		BBC0DE00000000000000000E /* MonacoWebController.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBC0DE00000000000000000D /* MonacoWebController.swift */; };
 		B9000015A1B2C3D4E5F60719 /* MultiWindowNotificationsUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B9000016A1B2C3D4E5F60719 /* MultiWindowNotificationsUITests.swift */; };
 		734F49D37E543DD01C2F4FEF /* NotificationAndMenuBarTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D2C075029771815DD5DA1332 /* NotificationAndMenuBarTests.swift */; };
 		4E5F60720000000000000001 /* NotificationSoundSettingsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4E5F60720000000000000002 /* NotificationSoundSettingsTests.swift */; };
@@ -624,6 +645,7 @@
 		ACE4FE1A8F1CC6C0B6A673AB /* VMClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9CEC6EF35B71AE59FA45BA69 /* VMClient.swift */; };
 		ACE4FE2A8F1CC6C0B6A673AB /* VMClientSocketCommands.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9CEC6F0035B71AE59FA45BA7 /* VMClientSocketCommands.swift */; };
 		C37800000000000000000001 /* VMSSHCommandTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C37800000000000000000002 /* VMSSHCommandTests.swift */; };
+		BBC0DE0000000000000000A0 /* WeakMonacoScriptMessageHandler.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBC0DE0000000000000000A1 /* WeakMonacoScriptMessageHandler.swift */; };
 		A500120C /* WindowAccessor.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5001222 /* WindowAccessor.swift */; };
 		063BC42CEE257D6213A2E30C /* WindowAndDragTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BEE83F8394D90ACACD8E19DD /* WindowAndDragTests.swift */; };
 		A5001700A1B2C3D4E5F60718 /* WindowAppearanceSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5001701A1B2C3D4E5F60718 /* WindowAppearanceSnapshot.swift */; };
@@ -909,6 +931,10 @@
 		D0B1000DA1B2C3D4E5F60001 /* CmuxWebViewDragRoutingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CmuxWebViewDragRoutingTests.swift; sourceTree = "<group>"; };
 		43F90FAF3FD44F11BF547BE9 /* CmuxWebViewMouseNavigationButtonTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CmuxWebViewMouseNavigationButtonTests.swift; sourceTree = "<group>"; };
 		E30750000000000000000003 /* CmuxWorkspaceDefinition.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CmuxWorkspaceDefinition.swift; sourceTree = "<group>"; };
+		BBC0DE000000000000000013 /* CodeEditorChoice.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Monaco/CodeEditorChoice.swift"; sourceTree = "<group>"; };
+		BBC0DE0100000000000000C1 /* CodeEditorJSONParseTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodeEditorJSONParseTests.swift; sourceTree = "<group>"; };
+		BBC0DE000000000000000015 /* CodeEditorPreferenceSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Monaco/CodeEditorPreferenceSettings.swift"; sourceTree = "<group>"; };
+		BBC0DE00000000000000001F /* CodeEditorPreferenceSettingsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodeEditorPreferenceSettingsTests.swift; sourceTree = "<group>"; };
 		C4041001000000000000001A /* CommandClickFileOpenRouter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CommandClickFileOpenRouter.swift; sourceTree = "<group>"; };
 		C0DE32470000000000000006 /* CommandPaletteIdentifierClipboardUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CommandPaletteIdentifierClipboardUITests.swift; sourceTree = "<group>"; };
 		C0DEC0DE000000000000F201 /* CommandPaletteNucleoFFILibrarySupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CommandPaletteNucleoFFILibrarySupport.swift; sourceTree = "<group>"; };
@@ -981,6 +1007,8 @@
 		A5001446A5001446A5001446 /* FilePreviewMagnifyingPDFView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Panels/FilePreviewMagnifyingPDFView.swift; sourceTree = "<group>"; };
 		64D7B3C5A409C0B3EDD002CE /* FilePreviewMediaSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Panels/FilePreviewMediaSession.swift; sourceTree = "<group>"; };
 		A5001442A5001442A5001442 /* FilePreviewModeSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Panels/FilePreviewModeSupport.swift; sourceTree = "<group>"; };
+		BBC0DE000000000002000001 /* FilePreviewMonacoDecision.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Panels/FilePreviewMonacoDecision.swift"; sourceTree = "<group>"; };
+		BBC0DE000000000002000003 /* FilePreviewMonacoDecisionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilePreviewMonacoDecisionTests.swift; sourceTree = "<group>"; };
 		A5001451A5001451A5001451 /* FilePreviewNativeBackground.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Panels/FilePreviewNativeBackground.swift; sourceTree = "<group>"; };
 		81E3615490F822CA0C8527C9 /* FilePreviewNativeViewSessions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Panels/FilePreviewNativeViewSessions.swift; sourceTree = "<group>"; };
 		A5001423 /* FilePreviewPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Panels/FilePreviewPanel.swift; sourceTree = "<group>"; };
@@ -991,6 +1019,7 @@
 		A5001428 /* FilePreviewPDFViewport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Panels/FilePreviewPDFViewport.swift; sourceTree = "<group>"; };
 		0A02623202562490B3E88372 /* FilePreviewQuickLookSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Panels/FilePreviewQuickLookSession.swift; sourceTree = "<group>"; };
 		C0DE31390000000000000104 /* FilePreviewReviewFeedbackTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilePreviewReviewFeedbackTests.swift; sourceTree = "<group>"; };
+		BBC0DE0000000000000000A3 /* FilePreviewTextDecodeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilePreviewTextDecodeTests.swift; sourceTree = "<group>"; };
 		D0B10017A1B2C3D4E5F60001 /* FilePreviewTextEditor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Panels/FilePreviewTextEditor.swift; sourceTree = "<group>"; };
 		C0DEFC100000000000000002 /* FilePreviewTextEditorTextKitTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilePreviewTextEditorTextKitTests.swift; sourceTree = "<group>"; };
 		F11E52270000000000005228 /* FilePreviewWordWrapSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Panels/FilePreviewWordWrapSettings.swift; sourceTree = "<group>"; };
@@ -1094,6 +1123,20 @@
 		F51B54FAD18160281FC1C2B6 /* MobileTerminalRenderObserver.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = MobileTerminalRenderObserver.swift; sourceTree = "<group>"; };
 		86544CEFA1CA33CA9225FB6E /* MobileWorkspaceListFidelityTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MobileWorkspaceListFidelityTests.swift; sourceTree = "<group>"; };
 		C9F14137954A34DFFA05C88C /* MobileWorkspaceListObserver.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = MobileWorkspaceListObserver.swift; sourceTree = "<group>"; };
+		BBC0DE000000000000000021 /* monaco */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = folder; path = monaco; sourceTree = "<group>"; };
+		BBC0DE000000000000000003 /* MonacoAssetMime.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Monaco/MonacoAssetMime.swift"; sourceTree = "<group>"; };
+		BBC0DE000000000000000005 /* MonacoAssetPath.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Monaco/MonacoAssetPath.swift"; sourceTree = "<group>"; };
+		BBC0DE000000000000000001 /* MonacoAssets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Monaco/MonacoAssets.swift"; sourceTree = "<group>"; };
+		BBC0DE000000000000000017 /* MonacoAssetTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MonacoAssetTests.swift; sourceTree = "<group>"; };
+		BBC0DE000000000000000007 /* MonacoAssetURLSchemeHandler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Monaco/MonacoAssetURLSchemeHandler.swift"; sourceTree = "<group>"; };
+		BBC0DE000000000000000011 /* MonacoAtomicTextSaver.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Monaco/MonacoAtomicTextSaver.swift"; sourceTree = "<group>"; };
+		BBC0DE00000000000000001D /* MonacoAtomicTextSaverTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MonacoAtomicTextSaverTests.swift; sourceTree = "<group>"; };
+		BBC0DE000000000000000009 /* MonacoBridgeMessage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Monaco/MonacoBridgeMessage.swift"; sourceTree = "<group>"; };
+		BBC0DE000000000000000019 /* MonacoBridgeMessageTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MonacoBridgeMessageTests.swift; sourceTree = "<group>"; };
+		BBC0DE00000000000000000F /* MonacoEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Monaco/MonacoEditorView.swift"; sourceTree = "<group>"; };
+		BBC0DE00000000000000000B /* MonacoLanguageMap.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Monaco/MonacoLanguageMap.swift"; sourceTree = "<group>"; };
+		BBC0DE00000000000000001B /* MonacoLanguageMapTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MonacoLanguageMapTests.swift; sourceTree = "<group>"; };
+		BBC0DE00000000000000000D /* MonacoWebController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Monaco/MonacoWebController.swift"; sourceTree = "<group>"; };
 		B9000016A1B2C3D4E5F60719 /* MultiWindowNotificationsUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MultiWindowNotificationsUITests.swift; sourceTree = "<group>"; };
 		D2C075029771815DD5DA1332 /* NotificationAndMenuBarTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationAndMenuBarTests.swift; sourceTree = "<group>"; };
 		4E5F60720000000000000002 /* NotificationSoundSettingsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationSoundSettingsTests.swift; sourceTree = "<group>"; };
@@ -1314,6 +1357,7 @@
 		9CEC6EF35B71AE59FA45BA69 /* VMClient.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = VMClient.swift; sourceTree = "<group>"; };
 		9CEC6F0035B71AE59FA45BA7 /* VMClientSocketCommands.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = VMClientSocketCommands.swift; sourceTree = "<group>"; };
 		C37800000000000000000002 /* VMSSHCommandTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VMSSHCommandTests.swift; sourceTree = "<group>"; };
+		BBC0DE0000000000000000A1 /* WeakMonacoScriptMessageHandler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Monaco/WeakMonacoScriptMessageHandler.swift"; sourceTree = "<group>"; };
 		A5001222 /* WindowAccessor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WindowAccessor.swift; sourceTree = "<group>"; };
 		BEE83F8394D90ACACD8E19DD /* WindowAndDragTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WindowAndDragTests.swift; sourceTree = "<group>"; };
 		A5001701A1B2C3D4E5F60718 /* WindowAppearanceSnapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Windowing/WindowAppearanceSnapshot.swift; sourceTree = "<group>"; };
@@ -1459,6 +1503,7 @@
 				FEED0000000000000000F006 /* opencode-plugin.js */,
 				FEED0A00000000000000F006 /* feed-tui */,
 				A9D9000000000000000F0016 /* markdown-viewer */,
+				BBC0DE000000000000000021 /* monaco */,
 				A5001622 /* cmux.sdef */,
 			);
 			path = Resources;
@@ -1623,6 +1668,19 @@
 				BB57A7000000000000000014 /* CmuxBottomBar.swift */,
 				BB57A7000000000000000016 /* BottomBarStagedDiffStore.swift */,
 				BB57A7000000000000000018 /* BottomBarWorkspaceBridge.swift */,
+				BBC0DE000000000002000001 /* FilePreviewMonacoDecision.swift */,
+				BBC0DE000000000000000001 /* MonacoAssets.swift */,
+				BBC0DE000000000000000003 /* MonacoAssetMime.swift */,
+				BBC0DE000000000000000005 /* MonacoAssetPath.swift */,
+				BBC0DE000000000000000007 /* MonacoAssetURLSchemeHandler.swift */,
+				BBC0DE000000000000000009 /* MonacoBridgeMessage.swift */,
+				BBC0DE00000000000000000B /* MonacoLanguageMap.swift */,
+				BBC0DE00000000000000000D /* MonacoWebController.swift */,
+				BBC0DE0000000000000000A1 /* WeakMonacoScriptMessageHandler.swift */,
+				BBC0DE00000000000000000F /* MonacoEditorView.swift */,
+				BBC0DE000000000000000011 /* MonacoAtomicTextSaver.swift */,
+				BBC0DE000000000000000013 /* CodeEditorChoice.swift */,
+				BBC0DE000000000000000015 /* CodeEditorPreferenceSettings.swift */,
 				4B0E301ACD9E4F8995BC5CE7 /* SidebarFileExplorerPanel.swift */,
 				EA1F00000000000000000004 /* SidebarDirectoryText.swift */,
 				D7AB34300000000000000004 /* SidebarBonsplitTabWorkspaceDropOverlay.swift */,
@@ -2090,6 +2148,14 @@
 				E3241A8A01884A0F9C93B1D8 /* SidebarExplorerSplitTests.swift */,
 				BB57A7000000000000000004 /* StagedDiffStatsTests.swift */,
 				BB57A7000000000000000009 /* EditorLauncherTests.swift */,
+				BBC0DE000000000002000003 /* FilePreviewMonacoDecisionTests.swift */,
+				BBC0DE0000000000000000A3 /* FilePreviewTextDecodeTests.swift */,
+				BBC0DE000000000000000017 /* MonacoAssetTests.swift */,
+				BBC0DE000000000000000019 /* MonacoBridgeMessageTests.swift */,
+				BBC0DE00000000000000001B /* MonacoLanguageMapTests.swift */,
+				BBC0DE00000000000000001D /* MonacoAtomicTextSaverTests.swift */,
+				BBC0DE00000000000000001F /* CodeEditorPreferenceSettingsTests.swift */,
+				BBC0DE0100000000000000C1 /* CodeEditorJSONParseTests.swift */,
 				42092CDB2109E250F7F2A76E /* TabManagerUnitTests.swift */,
 				C9A57002C9A57002C9A57002 /* WorkspaceGroupTests.swift */,
 				FEED49850000000000000002 /* FeedEventClassificationTests.swift */,
@@ -2398,6 +2464,7 @@
 				DA7A10CA710E000000000004 /* InfoPlist.xcstrings in Resources */,
 				DA7A10CA710E000000000003 /* Localizable.xcstrings in Resources */,
 				A9D9000000000000000F0017 /* markdown-viewer in Resources */,
+				BBC0DE000000000000000022 /* monaco in Resources */,
 				FEED0000000000000000F007 /* opencode-plugin.js in Resources */,
 				A5002000 /* THIRD_PARTY_LICENSES.md in Resources */,
 				84E00D47E4584162AE53BC8D /* xterm-ghostty in Resources */,
@@ -2600,6 +2667,8 @@
 				D7AB00000000000000000009 /* CmuxWebView+MoveTabToNewWorkspace.swift in Sources */,
 				A5001500 /* CmuxWebView.swift in Sources */,
 				E30750000000000000000004 /* CmuxWorkspaceDefinition.swift in Sources */,
+				BBC0DE000000000000000014 /* CodeEditorChoice.swift in Sources */,
+				BBC0DE000000000000000016 /* CodeEditorPreferenceSettings.swift in Sources */,
 				C4041001000000000000001B /* CommandClickFileOpenRouter.swift in Sources */,
 				C0DEFF100000000000000001 /* CommandPaletteNucleoSearch.swift in Sources */,
 				C0DEFF200000000000000001 /* CommandPaletteOverlay.swift in Sources */,
@@ -2648,6 +2717,7 @@
 				A5001447A5001447A5001447 /* FilePreviewMagnifyingPDFView.swift in Sources */,
 				287C15EFC945CE9D560600E3 /* FilePreviewMediaSession.swift in Sources */,
 				A5001443A5001443A5001443 /* FilePreviewModeSupport.swift in Sources */,
+				BBC0DE000000000002000002 /* FilePreviewMonacoDecision.swift in Sources */,
 				A5001450A5001450A5001450 /* FilePreviewNativeBackground.swift in Sources */,
 				904D6350B3BB50DEDED3F410 /* FilePreviewNativeViewSessions.swift in Sources */,
 				A5001422 /* FilePreviewPanel.swift in Sources */,
@@ -2723,6 +2793,15 @@
 				AB57F0C27BECE8EDFC6B2B97 /* MobileTerminalByteTee.swift in Sources */,
 				C9CFB398DF94D6DDEAF42D67 /* MobileTerminalRenderObserver.swift in Sources */,
 				00C3AA443F6DA8D94E28CE17 /* MobileWorkspaceListObserver.swift in Sources */,
+				BBC0DE000000000000000004 /* MonacoAssetMime.swift in Sources */,
+				BBC0DE000000000000000006 /* MonacoAssetPath.swift in Sources */,
+				BBC0DE000000000000000002 /* MonacoAssets.swift in Sources */,
+				BBC0DE000000000000000008 /* MonacoAssetURLSchemeHandler.swift in Sources */,
+				BBC0DE000000000000000012 /* MonacoAtomicTextSaver.swift in Sources */,
+				BBC0DE00000000000000000A /* MonacoBridgeMessage.swift in Sources */,
+				BBC0DE000000000000000010 /* MonacoEditorView.swift in Sources */,
+				BBC0DE00000000000000000C /* MonacoLanguageMap.swift in Sources */,
+				BBC0DE00000000000000000E /* MonacoWebController.swift in Sources */,
 				A5001094 /* NotificationsPage.swift in Sources */,
 				D36090020000000000000001 /* NSWindow+CmuxPeerWindow.swift in Sources */,
 				D0B1001CA1B2C3D4E5F60001 /* PaneDropRoutingSupport.swift in Sources */,
@@ -2863,6 +2942,7 @@
 				C9A57209C9A57209C9A57209 /* VerticalTabsSidebar+WorkspaceGroups.swift in Sources */,
 				ACE4FE1A8F1CC6C0B6A673AB /* VMClient.swift in Sources */,
 				ACE4FE2A8F1CC6C0B6A673AB /* VMClientSocketCommands.swift in Sources */,
+				BBC0DE0000000000000000A0 /* WeakMonacoScriptMessageHandler.swift in Sources */,
 				A500120C /* WindowAccessor.swift in Sources */,
 				A5001700A1B2C3D4E5F60718 /* WindowAppearanceSnapshot.swift in Sources */,
 				A5001800A1B2C3D4E5F60718 /* WindowBackdropController.swift in Sources */,
@@ -3026,6 +3106,8 @@
 				C7A509000000000000000002 /* CmuxTopSnapshotScopeTests.swift in Sources */,
 				D0B1000CA1B2C3D4E5F60001 /* CmuxWebViewDragRoutingTests.swift in Sources */,
 				7D5DA4DC51454ECDBF9AC978 /* CmuxWebViewMouseNavigationButtonTests.swift in Sources */,
+				BBC0DE0100000000000000C2 /* CodeEditorJSONParseTests.swift in Sources */,
+				BBC0DE000000000000000020 /* CodeEditorPreferenceSettingsTests.swift in Sources */,
 				C0DEC0DE000000000000F202 /* CommandPaletteNucleoFFILibrarySupport.swift in Sources */,
 				C0DEC0DE000000000000F102 /* CommandPaletteNucleoFFITests.swift in Sources */,
 				C0DEC0DE000000000000F204 /* CommandPaletteNucleoFixtures.swift in Sources */,
@@ -3046,8 +3128,10 @@
 				4E94481592C84BC7BDACE475 /* FileExplorerStatePersistenceTests.swift in Sources */,
 				FE002102 /* FileExplorerStoreTests.swift in Sources */,
 				C0DE49950000000000000001 /* FilePreviewKindResolverTests.swift in Sources */,
+				BBC0DE000000000002000004 /* FilePreviewMonacoDecisionTests.swift in Sources */,
 				A5001436A5001436A5001436 /* FilePreviewPDFThumbnailSidebarTests.swift in Sources */,
 				C0DE31390000000000000103 /* FilePreviewReviewFeedbackTests.swift in Sources */,
+				BBC0DE0000000000000000A2 /* FilePreviewTextDecodeTests.swift in Sources */,
 				C0DEFC100000000000000001 /* FilePreviewTextEditorTextKitTests.swift in Sources */,
 				FE002103 /* FileSearchRipgrepParserTests.swift in Sources */,
 				C35610000000000000000001 /* FinderFileDropRegressionTests.swift in Sources */,
@@ -3074,6 +3158,10 @@
 				6AA2F2E8BEB19ED6B8E125DB /* MobileHostAuthorizationTests.swift in Sources */,
 				C0DE10510000000000000001 /* MobileHostServiceSettingsTests.swift in Sources */,
 				F6448F377504F33956E7E03B /* MobileWorkspaceListFidelityTests.swift in Sources */,
+				BBC0DE000000000000000018 /* MonacoAssetTests.swift in Sources */,
+				BBC0DE00000000000000001E /* MonacoAtomicTextSaverTests.swift in Sources */,
+				BBC0DE00000000000000001A /* MonacoBridgeMessageTests.swift in Sources */,
+				BBC0DE00000000000000001C /* MonacoLanguageMapTests.swift in Sources */,
 				734F49D37E543DD01C2F4FEF /* NotificationAndMenuBarTests.swift in Sources */,
 				4E5F60720000000000000001 /* NotificationSoundSettingsTests.swift in Sources */,
 				4378399A7C0245EF8186F306 /* OmnibarAndToolsTests.swift in Sources */,

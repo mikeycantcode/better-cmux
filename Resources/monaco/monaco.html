@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <style>
+    html, body, #container { height: 100%; margin: 0; padding: 0; overflow: hidden; }
+    body { background: transparent; }
+  </style>
+  <link rel="stylesheet" href="cmux-monaco://app/vs/editor/editor.main.css" />
+</head>
+<body>
+  <div id="container"></div>
+  <script>
+    // Syntax-only (v1): route the worker to an inert no-op script so the editor
+    // never fetches a real worker over the custom scheme (which WebKit blocks
+    // cross-scheme). Tokenization for highlighting runs on the main thread.
+    // Revoke any prior blob URL before recreating it on a recovery reload so the
+    // object URLs do not accumulate across reloads.
+    if (self.__cmuxNoopWorker) URL.revokeObjectURL(self.__cmuxNoopWorker);
+    self.__cmuxNoopWorker = URL.createObjectURL(new Blob(["self.onmessage=function(){};"], { type: "text/javascript" }));
+    self.MonacoEnvironment = { getWorkerUrl: function () { return self.__cmuxNoopWorker; } };
+
+    function post(msg) {
+      try { window.webkit.messageHandlers.cmuxMonacoBridge.postMessage(msg); } catch (e) {}
+    }
+    // Surface a fatal load error directly in the (otherwise blank) pane so a
+    // failure is diagnosable without the Web Inspector, and report it to Swift.
+    function showFatal(message) {
+      try { console.error("monaco shell error:", message); } catch (e) {}
+      try {
+        var el = document.getElementById("container");
+        if (el) {
+          el.style.cssText = "white-space:pre-wrap;font:12px ui-monospace,monospace;color:#f85149;padding:12px;overflow:auto;";
+          el.textContent = "Monaco failed to load:\n" + message;
+        }
+      } catch (e) {}
+      post({ type: "loadError", message: String(message) });
+    }
+    window.onerror = function (message, src, line, col) {
+      showFatal(String(message) + (src ? " @ " + src + ":" + line + ":" + col : ""));
+    };
+  </script>
+  <script src="cmux-monaco://app/vs/loader.js"></script>
+  <script>
+    // Map the `vs/` module prefix to the bundle path. Do NOT use `baseUrl`:
+    // module ids already start with `vs/`, so baseUrl would resolve
+    // `vs/editor/editor.main` to `.../vs/vs/editor/editor.main.js` (doubled vs).
+    require.config({ paths: { vs: "cmux-monaco://app/vs" } });
+    require.onError = function (err) {
+      showFatal((err && err.message ? err.message : String(err)) +
+        (err && err.errorCode ? " [" + err.errorCode + "]" : "") +
+        (err && err.moduleId ? " module=" + err.moduleId : ""));
+    };
+    require(["vs/editor/editor.main"], function () {
+      var editor = monaco.editor.create(document.getElementById("container"), {
+        value: "",
+        language: "plaintext",
+        theme: "vs-dark",
+        automaticLayout: true,
+        minimap: { enabled: true },
+        scrollBeyondLastLine: false,
+        fontLigatures: true
+      });
+
+      var suppressChange = false;   // true while we apply content from Swift
+      var saveTimer = null;
+      var SAVE_DEBOUNCE_MS = 600;
+      var editingPending = false;   // true between first keystroke and save
+
+      function scheduleSave() {
+        if (saveTimer) clearTimeout(saveTimer);
+        saveTimer = setTimeout(function () {
+          saveTimer = null;
+          editingPending = false;
+          post({ type: "change", content: editor.getValue() });
+        }, SAVE_DEBOUNCE_MS);
+      }
+
+      editor.onDidChangeModelContent(function () {
+        if (suppressChange) return;
+        // Fire `editing` on the first keystroke of a burst (throttled by
+        // `editingPending`) so Swift marks a local edit in flight before the
+        // debounced save lands; this lets an external on-disk change keep the
+        // buffer (last-write-wins favoring the user's edit).
+        if (!editingPending) {
+          editingPending = true;
+          post({ type: "editing" });
+        }
+        scheduleSave();
+      });
+      editor.onDidFocusEditorWidget(function () { post({ type: "focus" }); });
+      editor.onDidBlurEditorWidget(function () { post({ type: "blur" }); });
+
+      // Cmd+S -> immediate save (even in auto-save mode).
+      editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, function () {
+        if (saveTimer) { clearTimeout(saveTimer); saveTimer = null; }
+        editingPending = false;
+        post({ type: "requestSave", content: editor.getValue() });
+      });
+
+      // Swift -> JS API.
+      window.cmuxMonaco = {
+        setContent: function (text, language, theme) {
+          suppressChange = true;
+          var model = editor.getModel();
+          if (model) {
+            model.setValue(text);
+            if (language) monaco.editor.setModelLanguage(model, language);
+          } else {
+            editor.setValue(text);
+          }
+          if (theme) monaco.editor.setTheme(theme);
+          suppressChange = false;
+        },
+        applyExternalChange: function (text) {
+          suppressChange = true;
+          var pos = editor.getPosition();
+          editor.getModel().setValue(text);
+          if (pos) editor.setPosition(pos);
+          suppressChange = false;
+        },
+        setTheme: function (theme) { monaco.editor.setTheme(theme); },
+        focus: function () { editor.focus(); },
+        currentValue: function () { return editor.getValue(); },
+        flushSave: function () {
+          if (saveTimer) { clearTimeout(saveTimer); saveTimer = null; }
+          editingPending = false;
+          post({ type: "requestSave", content: editor.getValue() });
+        }
+      };
+
+      post({ type: "ready" });
+    });
+  </script>
+</body>
+</html>

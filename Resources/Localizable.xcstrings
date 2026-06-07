@@ -26682,19 +26682,19 @@
         }
       }
     },
-    "bottomBar.staged.accessibility" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Staged changes"
+    "bottomBar.staged.accessibility": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Staged changes"
           }
         },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ステージされた変更"
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ステージされた変更"
           }
         }
       }
@@ -87980,19 +87980,19 @@
         }
       }
     },
-    "settings.app.compactRowMode" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Compact Sidebar Rows"
+    "settings.app.compactRowMode": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Compact Sidebar Rows"
           }
         },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "サイドバーの行をコンパクト表示"
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "サイドバーの行をコンパクト表示"
           }
         }
       }
@@ -93192,53 +93192,53 @@
         }
       }
     },
-    "settings.app.terminalEditor" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Terminal Editor"
+    "settings.app.terminalEditor": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Terminal Editor"
           }
         },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ターミナルエディタ"
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ターミナルエディタ"
           }
         }
       }
     },
-    "settings.app.terminalEditor.placeholder" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "auto (micro, then vim)"
+    "settings.app.terminalEditor.placeholder": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "auto (micro, then vim)"
           }
         },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "自動 (micro、なければ vim)"
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "自動 (micro、なければ vim)"
           }
         }
       }
     },
-    "settings.app.terminalEditor.subtitle" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Editor used when opening a file from the sidebar (in a new tab) and shown in the status bar. Leave empty for auto (micro, then vim)."
+    "settings.app.terminalEditor.subtitle": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Editor used when opening a file from the sidebar (in a new tab) and shown in the status bar. Leave empty for auto (micro, then vim)."
           }
         },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "サイドバーからファイルを開くとき（新しいタブで）に使用し、ステータスバーに表示されるエディタ。空欄で自動（micro、なければ vim）。"
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "サイドバーからファイルを開くとき（新しいタブで）に使用し、ステータスバーに表示されるエディタ。空欄で自動（micro、なければ vim）。"
           }
         }
       }
@@ -176187,6 +176187,108 @@
           "stringUnit": {
             "state": "translated",
             "value": "保存しました。iOS ペアリングを有効にするとポート %lld を使用します。"
+          }
+        }
+      }
+    },
+    "settings.app.codeEditor": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Code Editor"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "コードエディタ"
+          }
+        }
+      }
+    },
+    "settings.app.codeEditor.subtitle.monaco": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Opening a file from the sidebar uses the built-in Monaco code editor."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "サイドバーからファイルを開くと、内蔵の Monaco コードエディタを使用します。"
+          }
+        }
+      }
+    },
+    "settings.app.codeEditor.subtitle.terminal": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Opening a file from the sidebar launches the Terminal Editor command below in a new tab."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "サイドバーからファイルを開くと、下のターミナルエディタのコマンドが新しいタブで起動します。"
+          }
+        }
+      }
+    },
+    "settings.app.codeEditor.monaco": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Monaco (built-in)"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Monaco（内蔵）"
+          }
+        }
+      }
+    },
+    "settings.app.codeEditor.terminal": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Terminal editor"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ターミナルエディタ"
+          }
+        }
+      }
+    },
+    "bottomBar.editor.monaco": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Monaco"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Monaco"
           }
         }
       }

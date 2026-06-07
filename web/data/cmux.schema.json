@@ -309,6 +309,12 @@
           "default": "",
           "description": "Custom editor command used when Cmd-click file previews are disabled or a file is unsupported. Leave empty to use the default."
         },
+        "codeEditor": {
+          "type": "string",
+          "enum": ["monaco", "terminal"],
+          "default": "monaco",
+          "description": "Which editor opens files from the sidebar. \"monaco\" uses the built-in Monaco code editor; \"terminal\" opens the terminalEditor command in a new tab."
+        },
         "terminalEditor": {
           "type": "string",
           "default": "",

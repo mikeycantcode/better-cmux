@@ -1,6 +1,7 @@
 import AppKit
 import AVKit
 import Bonsplit
+import CmuxFileWatch
 import Combine
 import Foundation
 import PDFKit
@@ -932,17 +933,33 @@ enum FilePreviewTextLoader {
         }
     }
 
-    private static func decodeText(_ data: Data) -> (content: String, encoding: String.Encoding)? {
+    /// Decodes `data` into text, choosing an encoding that round-trips on save.
+    ///
+    /// UTF-16 is only attempted when a UTF-16 BOM is present: without that guard,
+    /// a Latin-1 byte stream (which `String(data:encoding:.utf16)` happily decodes
+    /// into garbage) would be misdetected as UTF-16, and the first auto-save would
+    /// overwrite the file with re-encoded UTF-16 garbage. With the BOM guard,
+    /// non-BOM data falls through to `.isoLatin1` (a total 1-byte codec).
+    static func decodeText(_ data: Data) -> (content: String, encoding: String.Encoding)? {
         if let decoded = String(data: data, encoding: .utf8) {
             return (decoded, .utf8)
         }
-        if let decoded = String(data: data, encoding: .utf16) {
+        if hasUTF16ByteOrderMark(data), let decoded = String(data: data, encoding: .utf16) {
             return (decoded, .utf16)
         }
         if let decoded = String(data: data, encoding: .isoLatin1) {
             return (decoded, .isoLatin1)
         }
         return nil
+    }
+
+    /// Whether `data` begins with a UTF-16 byte-order mark (LE `FF FE` or BE
+    /// `FE FF`). Used to gate UTF-16 decoding so non-BOM Latin-1 is not misdetected.
+    static func hasUTF16ByteOrderMark(_ data: Data) -> Bool {
+        data.count >= 2 && (
+            (data[data.startIndex] == 0xFF && data[data.startIndex + 1] == 0xFE)
+                || (data[data.startIndex] == 0xFE && data[data.startIndex + 1] == 0xFF)
+        )
     }
 }
 
@@ -982,6 +999,9 @@ final class FilePreviewPanel: Panel, ObservableObject, FilePreviewTextEditingPan
     @Published private(set) var isSaving = false
     @Published private(set) var focusFlashToken = 0
     @Published private(set) var previewMode: FilePreviewMode
+    /// `true` when text mode renders the Monaco web editor (auto-saving); `false`
+    /// keeps the native `NSTextView` fallback (large files / non-text modes).
+    @Published private(set) var useMonacoForText = false
 
     let nativeViewSessions = FilePreviewNativeViewSessions()
 
@@ -994,6 +1014,43 @@ final class FilePreviewPanel: Panel, ObservableObject, FilePreviewTextEditingPan
     private weak var textView: NSTextView?
     private let focusCoordinator: FilePreviewFocusCoordinator
     private let textLoader: @Sendable (URL) async -> FilePreviewTextLoader.Result
+
+    private let monacoDecision = FilePreviewMonacoDecision()
+    private let atomicTextSaver = MonacoAtomicTextSaver()
+    /// Backing store for the panel-owned Monaco controller, constructed on demand
+    /// via ``monacoController`` so panels in non-text modes never spin up a web
+    /// view. A plain stored property (not a `lazy var`) so the nonisolated
+    /// `deinit` can read the already-created instance for teardown.
+    private var createdMonacoController: MonacoWebController?
+    /// Hash of the content most recently written by this panel (load or save),
+    /// used to suppress the file-watcher reload triggered by our own write.
+    private var lastWrittenContentHash: Int?
+    /// `true` when the user is actively editing in Monaco and the buffer has not
+    /// yet been fully reconciled with a completed save. While set, an external
+    /// on-disk change keeps the buffer (last-write-wins favoring local edits).
+    private var hasPendingEdit = false
+    /// Monotonic generation for Monaco auto-saves so out-of-order completions of
+    /// concurrent saves cannot apply stale post-save reconciliation.
+    private var monacoSaveGeneration = 0
+    /// `true` when ``filePath`` is a remote-workspace file materialized into the
+    /// local preview cache. Remote files stay on the native explicit-save editor
+    /// (Monaco's auto-save would write only to the cache, never the remote host).
+    private let isRemotePreviewFile: Bool
+    // Watches `filePath` so external edits reload the Monaco buffer. Only started
+    // once text mode routes to Monaco; native-editor text mode keeps its existing
+    // manual revert behavior.
+    private var fileWatcher: FileWatcher?
+    private var fileWatchTask: Task<Void, Never>?
+    private var isClosed = false
+
+    /// The panel-owned Monaco controller backing text mode. Construct-on-demand:
+    /// reading it from the view only happens when ``useMonacoForText`` is `true`.
+    var monacoController: MonacoWebController {
+        if let createdMonacoController { return createdMonacoController }
+        let controller = makeMonacoController()
+        createdMonacoController = controller
+        return controller
+    }
 
     var fileURL: URL {
         URL(fileURLWithPath: filePath)
@@ -1011,6 +1068,7 @@ final class FilePreviewPanel: Panel, ObservableObject, FilePreviewTextEditingPan
         self.filePath = filePath
         self.displayTitle = URL(fileURLWithPath: filePath).lastPathComponent
         self.textLoader = textLoader
+        self.isRemotePreviewFile = FileExplorerStore.isRemotePreviewCachePath(filePath)
         let fileURL = URL(fileURLWithPath: filePath)
         let initialPreviewMode = FilePreviewKindResolver.initialMode(for: fileURL)
         self.previewMode = initialPreviewMode
@@ -1032,9 +1090,25 @@ final class FilePreviewPanel: Panel, ObservableObject, FilePreviewTextEditingPan
     }
 
     func close() {
+        isClosed = true
         nativeViewSessions.closeAll()
         textView = nil
         focusCoordinator.unregisterAll()
+        stopWatching()
+        if let controller = createdMonacoController {
+            // Read the live editor buffer synchronously over the bridge and persist
+            // it BEFORE dismantling, so the last debounced edit cannot be lost: a
+            // fire-and-forget `flushSave()` would post `requestSave` back over the
+            // bridge after `dismantle()` has already removed it. The Task strongly
+            // captures the controller (and self) so the web view stays alive until
+            // the save completes; this is intentional and brief.
+            Task { @MainActor in
+                if let content = await controller.currentEditorValue() {
+                    await self.persistContent(content)
+                }
+                controller.dismantle()
+            }
+        }
     }
 
     func triggerFlash(reason: WorkspaceAttentionFlashReason) {
@@ -1141,10 +1215,29 @@ final class FilePreviewPanel: Panel, ObservableObject, FilePreviewTextEditingPan
 
     private func prepareContentForPreviewMode() {
         if previewMode == .text {
+            // Optimistically route to Monaco using the on-disk size so the panel
+            // does not flash the native editor before the async text load lands.
+            // The load confirms/corrects this from the decoded byte size.
+            useMonacoForText = monacoDecision.shouldUseMonaco(
+                isTextMode: true,
+                loadedByteSize: onDiskFileByteSize(),
+                isRemote: isRemotePreviewFile
+            )
             loadTextContent(replacingDirtyContent: false)
         } else {
+            useMonacoForText = false
             isFileUnavailable = !FileManager.default.fileExists(atPath: filePath)
         }
+    }
+
+    /// The current on-disk byte size of ``filePath``, or `nil` if unknown. Used
+    /// only for the optimistic Monaco-routing guess before content is decoded.
+    private func onDiskFileByteSize() -> UInt64? {
+        guard let size = try? fileURL.resourceValues(forKeys: [.fileSizeKey]).fileSize,
+              size >= 0 else {
+            return nil
+        }
+        return UInt64(size)
     }
 
     private func resolvePreviewModeIfNeeded(for fileURL: URL) {
@@ -1166,6 +1259,8 @@ final class FilePreviewPanel: Panel, ObservableObject, FilePreviewTextEditingPan
         guard previewMode != mode else { return }
         if mode != .text {
             textLoadGeneration += 1
+            useMonacoForText = false
+            stopWatching()
         }
         previewMode = mode
         displayIcon = FilePreviewKindResolver.iconName(for: mode)
@@ -1209,6 +1304,13 @@ final class FilePreviewPanel: Panel, ObservableObject, FilePreviewTextEditingPan
             isFileUnavailable = true
             return
         case .loaded(let content, let encoding):
+            let byteSize = content.data(using: encoding).map { UInt64($0.count) }
+            let routeToMonaco = monacoDecision.shouldUseMonaco(
+                isTextMode: true,
+                loadedByteSize: byteSize,
+                isRemote: isRemotePreviewFile
+            )
+
             if !replacingDirtyContent && isDirty {
                 originalTextContent = content
                 textEncoding = encoding
@@ -1220,6 +1322,175 @@ final class FilePreviewPanel: Panel, ObservableObject, FilePreviewTextEditingPan
             textEncoding = encoding
             isDirty = false
             isFileUnavailable = false
+            lastWrittenContentHash = MonacoAtomicTextSaver.hash(of: content, encoding: encoding)
+
+            useMonacoForText = routeToMonaco
+            if routeToMonaco {
+                // `MonacoEditorView` is the sole driver of `controller.load`: it
+                // seeds `panel.textContent` with the panel-appearance theme when it
+                // mounts, so the model does not issue a `load` here (which would
+                // need a separate theme guess and risk a one-frame mismatch).
+                startWatchingIfNeeded()
+            } else {
+                stopWatching()
+            }
+        }
+    }
+
+    private func makeMonacoController() -> MonacoWebController {
+        let controller = MonacoWebController()
+        controller.onChange = { [weak self] content in
+            self?.autoSave(content)
+        }
+        controller.onRequestSave = { [weak self] content in
+            self?.autoSave(content)
+        }
+        controller.onEditing = { [weak self] in
+            // Mark a local edit in flight so a concurrent external on-disk change
+            // keeps the buffer (last-write-wins favoring the user's edit).
+            self?.hasPendingEdit = true
+        }
+        controller.onFocus = { [weak self] in
+            self?.noteFilePreviewFocusIntent(.textEditor)
+        }
+        controller.onBlur = { [weak self] in
+            // No-op: AppKit resigns focus when another responder takes over; the
+            // preferred intent is only updated on explicit focus.
+            _ = self
+        }
+        return controller
+    }
+
+    /// Debounced auto-save handler for the Monaco-backed editor. The guarded
+    /// wrapper around ``persistContent(_:)`` that rejects writes once the panel is
+    /// closing or has left Monaco text mode.
+    private func autoSave(_ content: String) {
+        guard useMonacoForText, !isClosed else { return }
+        hasPendingEdit = true
+        Task { @MainActor in
+            await self.persistContent(content)
+        }
+    }
+
+    /// Writes `content` to disk atomically and reconciles panel state. NOT gated
+    /// by ``isClosed`` so `close()` can flush the final buffer after teardown has
+    /// begun. Skips writes that already match the last written content. Save errors
+    /// are logged, never fatal.
+    ///
+    /// Sets ``lastWrittenContentHash`` synchronously BEFORE awaiting the save: the
+    /// atomic rename fires the ``FileWatcher`` before the save's async completion,
+    /// so recording the hash up front lets ``handleExternalFileChange()`` recognize
+    /// the watcher event as this panel's own write instead of an external change.
+    private func persistContent(_ content: String) async {
+        let encoding = textEncoding
+        let hash = MonacoAtomicTextSaver.hash(of: content, encoding: encoding)
+        if hash == lastWrittenContentHash {
+            // Our buffer already matches the last write; nothing to persist.
+            textContent = content
+            hasPendingEdit = false
+            return
+        }
+
+        monacoSaveGeneration += 1
+        let generation = monacoSaveGeneration
+        // Record our own write deterministically before the atomic rename so the
+        // self-write suppression in `handleExternalFileChange` sees it.
+        lastWrittenContentHash = hash
+
+        let filePath = filePath
+        let saver = atomicTextSaver
+        do {
+            _ = try await saver.save(content: content, to: filePath, encoding: encoding)
+            // Only the latest save reconciles state; stale completions are ignored.
+            guard monacoSaveGeneration == generation else { return }
+            textContent = content
+            originalTextContent = content
+            isFileUnavailable = false
+            hasPendingEdit = false
+        } catch {
+            #if DEBUG
+            cmuxDebugLog("FilePreviewPanel.persistContent failed for \(filePath): \(error)")
+            #endif
+        }
+    }
+
+    private func startWatchingIfNeeded() {
+        guard fileWatcher == nil, !isClosed else { return }
+        // Coalesce the multi-event burst an atomic write (temp file + rename) emits
+        // into a single reload, so our own save does not trigger a flurry of
+        // watcher events that race the self-write hash bookkeeping.
+        let watcher = FileWatcher(path: filePath, throttle: .milliseconds(150))
+        fileWatcher = watcher
+        let events = watcher.events
+        fileWatchTask = Task { @MainActor [weak self] in
+            for await _ in events {
+                guard let self, !self.isClosed else { break }
+                self.handleExternalFileChange()
+            }
+        }
+    }
+
+    private func stopWatching() {
+        fileWatchTask?.cancel()
+        fileWatchTask = nil
+        fileWatcher = nil
+    }
+
+    /// Reloads the file from disk for the Monaco editor, suppressing the panel's
+    /// own writes (write → watch → reload loop) and applying genuine external
+    /// changes. Last-write-wins: if a local edit is in flight (``hasPendingEdit``),
+    /// the buffer is kept and the disk content is not adopted.
+    private func handleExternalFileChange() {
+        guard useMonacoForText, !isClosed, previewMode == .text else { return }
+        let fileURL = fileURL
+        let textLoader = textLoader
+        Task { [weak self, fileURL, textLoader] in
+            let result = await textLoader(fileURL)
+            await MainActor.run {
+                guard let self, self.useMonacoForText, !self.isClosed else { return }
+                switch result {
+                case .unavailable:
+                    self.isFileUnavailable = true
+                case .loaded(let content, let encoding):
+                    let onDiskHash = MonacoAtomicTextSaver.hash(of: content, encoding: encoding)
+                    if self.monacoDecision.isSelfWrite(
+                        onDiskHash: onDiskHash,
+                        lastWrittenHash: self.lastWrittenContentHash
+                    ) {
+                        // Our own write echoed back; ignore.
+                        self.isFileUnavailable = false
+                        return
+                    }
+                    if self.hasPendingEdit {
+                        // A local edit is in flight (and a save is pending). Keep
+                        // the buffer rather than clobbering the user's in-progress
+                        // work; the pending save persists the buffer last.
+                        self.isFileUnavailable = false
+                        return
+                    }
+                    // Genuine external change with no pending local edit; adopt it.
+                    self.textEncoding = encoding
+                    self.textContent = content
+                    self.originalTextContent = content
+                    self.isDirty = false
+                    self.isFileUnavailable = false
+                    self.lastWrittenContentHash = onDiskHash
+
+                    // If the external edit grew the file past the Monaco ceiling,
+                    // fall back to the native editor; otherwise push the change.
+                    let byteSize = content.data(using: encoding).map { UInt64($0.count) }
+                    if self.monacoDecision.shouldUseMonaco(
+                        isTextMode: true,
+                        loadedByteSize: byteSize,
+                        isRemote: self.isRemotePreviewFile
+                    ) {
+                        self.createdMonacoController?.applyExternalChange(content)
+                    } else {
+                        self.useMonacoForText = false
+                        self.stopWatching()
+                    }
+                }
+            }
         }
     }
 
@@ -1272,6 +1543,22 @@ final class FilePreviewPanel: Panel, ObservableObject, FilePreviewTextEditingPan
             return .quickLook
         }
     }
+
+    deinit {
+        fileWatchTask?.cancel()
+        // Backstop teardown for detach/transfer paths where `close()` is never
+        // called. The weak script-message trampoline (see `makeWebView`) keeps the
+        // bridge from retaining the controller, so this `deinit` actually runs and
+        // the controller — owned by this panel — is released with it. Dismantle
+        // explicitly on the main actor (matching `BrowserPanel.deinit`'s pattern)
+        // so the bridge handler and web view are torn down deterministically; the
+        // controller is captured so it survives until the hop completes.
+        if let controller = createdMonacoController {
+            Task { @MainActor in
+                controller.dismantle()
+            }
+        }
+    }
 }
 
 struct FilePreviewPanelView: View {
@@ -1292,6 +1579,12 @@ struct FilePreviewPanelView: View {
 
     private var contentBackgroundColor: NSColor {
         appearance.contentBackgroundColor
+    }
+
+    /// Dark/light flag for the Monaco theme, derived from the opaque panel
+    /// background exactly like the markdown viewer's `themeColorScheme`.
+    private var isDark: Bool {
+        !appearance.backgroundColor.isLightColor
     }
 
     var body: some View {
@@ -1323,7 +1616,7 @@ struct FilePreviewPanelView: View {
             filePath: panel.filePath,
             foregroundColor: themeForegroundColor
         ) {
-            if panel.previewMode == .text {
+            if panel.previewMode == .text && !panel.useMonacoForText {
                 PanelHeaderIconButton(
                     systemName: "arrow.counterclockwise",
                     label: String(localized: "filePreview.revert", defaultValue: "Revert"),
@@ -1350,14 +1643,23 @@ struct FilePreviewPanelView: View {
         } else {
             switch panel.previewMode {
             case .text:
-                FilePreviewTextEditor(
-                    panel: panel,
-                    isVisibleInUI: isVisibleInUI,
-                    themeBackgroundColor: contentBackgroundColor,
-                    themeForegroundColor: themeForegroundColor,
-                    drawsBackground: appearance.drawsContentBackground,
-                    wordWrap: fileEditorWordWrap
-                )
+                if panel.useMonacoForText {
+                    MonacoEditorView(
+                        controller: panel.monacoController,
+                        text: panel.textContent,
+                        language: MonacoLanguageMap.languageId(forPath: panel.filePath),
+                        isDark: isDark
+                    )
+                } else {
+                    FilePreviewTextEditor(
+                        panel: panel,
+                        isVisibleInUI: isVisibleInUI,
+                        themeBackgroundColor: contentBackgroundColor,
+                        themeForegroundColor: themeForegroundColor,
+                        drawsBackground: appearance.drawsContentBackground,
+                        wordWrap: fileEditorWordWrap
+                    )
+                }
             case .pdf:
                 FilePreviewPDFView(
                     panel: panel,

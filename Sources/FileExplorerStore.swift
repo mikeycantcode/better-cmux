@@ -1286,9 +1286,29 @@ final class FileExplorerStore: ObservableObject {
         return trimmed
     }
 
-    private static func remotePreviewCacheURL(displayTarget: String, remotePath: String) -> URL {
-        let cacheRoot = FileManager.default.temporaryDirectory
+    /// Root directory under which remote files are materialized into a local cache
+    /// for preview. Exposed so other surfaces (e.g. ``FilePreviewPanel``) can tell
+    /// whether a local `filePath` is actually a remote-materialized cache copy.
+    static func remotePreviewCacheRootURL() -> URL {
+        FileManager.default.temporaryDirectory
             .appendingPathComponent("cmux-remote-file-previews", isDirectory: true)
+    }
+
+    /// Whether `filePath` lives under the remote-preview cache root, meaning it is
+    /// a local copy of a remote-workspace file (writes to it never reach the remote).
+    static func isRemotePreviewCachePath(_ filePath: String) -> Bool {
+        let cacheRoot = remotePreviewCacheRootURL()
+            .standardizedFileURL
+            .resolvingSymlinksInPath()
+        let candidate = URL(fileURLWithPath: filePath)
+            .standardizedFileURL
+            .resolvingSymlinksInPath()
+        let rootPath = cacheRoot.path
+        return candidate.path == rootPath || candidate.path.hasPrefix(rootPath + "/")
+    }
+
+    private static func remotePreviewCacheURL(displayTarget: String, remotePath: String) -> URL {
+        let cacheRoot = remotePreviewCacheRootURL()
         let target = sanitizedCacheComponent(displayTarget)
         let remote = sanitizedCacheComponent(remotePath)
         let basename = URL(fileURLWithPath: remotePath).lastPathComponent

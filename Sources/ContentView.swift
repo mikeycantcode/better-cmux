@@ -2023,7 +2023,7 @@ struct ContentView: View {
             fileExplorerState: fileExplorerState,
             leftFileExplorerStore: leftFileExplorerStore,
             leftFileExplorerState: leftFileExplorerState,
-            onOpenFileInEditor: { path in openSidebarFileInEditor(path: path) },
+            onOpenFileInEditor: { path in openSidebarFile(path: path) },
             windowId: windowId,
             onSendFeedback: presentFeedbackComposer,
             onToggleSidebar: { sidebarState.toggle() },
@@ -2201,11 +2201,27 @@ struct ContentView: View {
     }
 
     private func refreshBottomBarEditorName() {
-        let command = EditorLauncher.resolveEditorCommand(
-            stored: EditorPreferenceSettings.storedCommand(),
-            isAvailable: { EditorLauncher.availableOnPath($0) }
-        )
-        bottomBarEditorName = EditorLauncher.editorDisplayName(forCommand: command)
+        switch CodeEditorPreferenceSettings.resolved() {
+        case .monaco:
+            bottomBarEditorName = String(localized: "bottomBar.editor.monaco", defaultValue: "Monaco")
+        case .terminal:
+            let command = EditorLauncher.resolveEditorCommand(
+                stored: EditorPreferenceSettings.storedCommand(),
+                isAvailable: { EditorLauncher.availableOnPath($0) }
+            )
+            bottomBarEditorName = EditorLauncher.editorDisplayName(forCommand: command)
+        }
+    }
+
+    /// Routes a sidebar file-open through the configured ``CodeEditorChoice``:
+    /// Monaco (built-in editor surface) or the terminal editor (micro → vim).
+    private func openSidebarFile(path: String) {
+        switch CodeEditorPreferenceSettings.resolved() {
+        case .monaco:
+            openFilePreviewFromSidebar(filePath: path)
+        case .terminal:
+            openSidebarFileInEditor(path: path)
+        }
     }
 
     private func openSidebarFileInEditor(path: String) {

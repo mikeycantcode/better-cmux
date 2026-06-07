@@ -33,6 +33,7 @@ public struct AppSection: View {
     @State private var firstClick: DefaultsValueModel<Bool>
     @State private var fileDrop: DefaultsValueModel<FileDropDefaultBehavior>
     @State private var preferredEditor: DefaultsValueModel<String>
+    @State private var codeEditor: DefaultsValueModel<String>
     @State private var terminalEditor: DefaultsValueModel<String>
     @State private var openSupported: DefaultsValueModel<Bool>
     @State private var openMarkdown: DefaultsValueModel<Bool>
@@ -78,6 +79,7 @@ public struct AppSection: View {
         _firstClick = State(initialValue: DefaultsValueModel(store: defaultsStore, key: catalog.app.focusPaneOnFirstClick))
         _fileDrop = State(initialValue: DefaultsValueModel(store: defaultsStore, key: catalog.app.fileDropDefaultBehavior))
         _preferredEditor = State(initialValue: DefaultsValueModel(store: defaultsStore, key: catalog.app.preferredEditor))
+        _codeEditor = State(initialValue: DefaultsValueModel(store: defaultsStore, key: catalog.app.codeEditor))
         _terminalEditor = State(initialValue: DefaultsValueModel(store: defaultsStore, key: catalog.app.terminalEditor))
         _openSupported = State(initialValue: DefaultsValueModel(store: defaultsStore, key: catalog.app.openSupportedFilesInCmux))
         _openMarkdown = State(initialValue: DefaultsValueModel(store: defaultsStore, key: catalog.app.openMarkdownInCmuxViewer))
@@ -278,6 +280,25 @@ public struct AppSection: View {
                 )
                 .textFieldStyle(.roundedBorder)
                 .frame(width: 200)
+            }
+            SettingsCardDivider()
+
+            // Code Editor — picks which editor opens files from the sidebar:
+            // the built-in Monaco web editor, or the Terminal Editor command below.
+            SettingsCardRow(
+                configurationReview: .json("app.codeEditor"),
+                String(localized: "settings.app.codeEditor", defaultValue: "Code Editor"),
+                subtitle: codeEditor.current == "terminal"
+                    ? String(localized: "settings.app.codeEditor.subtitle.terminal", defaultValue: "Opening a file from the sidebar launches the Terminal Editor command below in a new tab.")
+                    : String(localized: "settings.app.codeEditor.subtitle.monaco", defaultValue: "Opening a file from the sidebar uses the built-in Monaco code editor."),
+                controlWidth: Self.columnWidth
+            ) {
+                Picker("", selection: Binding(get: { codeEditor.current }, set: { codeEditor.set($0) })) {
+                    Text(String(localized: "settings.app.codeEditor.monaco", defaultValue: "Monaco (built-in)")).tag("monaco")
+                    Text(String(localized: "settings.app.codeEditor.terminal", defaultValue: "Terminal editor")).tag("terminal")
+                }
+                .labelsHidden()
+                .pickerStyle(.menu)
             }
             SettingsCardDivider()
 
