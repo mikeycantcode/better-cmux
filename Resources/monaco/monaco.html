@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <style>
+    html, body, #container { height: 100%; margin: 0; padding: 0; overflow: hidden; }
+    body { background: transparent; }
+  </style>
+  <link rel="stylesheet" href="cmux-monaco://app/vs/editor/editor.main.css" />
+</head>
+<body>
+  <div id="container"></div>
+  <script>
+    // Syntax-only (v1): route every Monaco worker to an inert no-op worker so the
+    // editor never fetches a real worker over the custom scheme (which WebKit
+    // blocks cross-scheme). Tokenization for highlighting runs on the main thread.
+    var NOOP_WORKER = URL.createObjectURL(new Blob(["self.onmessage=function(){};"], { type: "text/javascript" }));
+    self.MonacoEnvironment = { getWorkerUrl: function () { return NOOP_WORKER; } };
+
+    function post(msg) {
+      try { window.webkit.messageHandlers.cmuxMonacoBridge.postMessage(msg); } catch (e) {}
+    }
+    window.onerror = function (message) { try { console.error("monaco shell error:", message); } catch (e) {} };
+  </script>
+  <script src="cmux-monaco://app/vs/loader.js"></script>
+  <script>
+    require.config({ baseUrl: "cmux-monaco://app/vs" });
+    require(["vs/editor/editor.main"], function () {
+      var editor = monaco.editor.create(document.getElementById("container"), {
+        value: "",
+        language: "plaintext",
+        theme: "vs-dark",
+        automaticLayout: true,
+        minimap: { enabled: true },
+        scrollBeyondLastLine: false,
+        fontLigatures: true
+      });
+
+      var suppressChange = false;   // true while we apply content from Swift
+      var saveTimer = null;
+      var SAVE_DEBOUNCE_MS = 600;
+
+      function scheduleSave() {
+        if (saveTimer) clearTimeout(saveTimer);
+        saveTimer = setTimeout(function () {
+          saveTimer = null;
+          post({ type: "change", content: editor.getValue() });
+        }, SAVE_DEBOUNCE_MS);
+      }
+
+      editor.onDidChangeModelContent(function () {
+        if (suppressChange) return;
+        scheduleSave();
+      });
+      editor.onDidFocusEditorWidget(function () { post({ type: "focus" }); });
+      editor.onDidBlurEditorWidget(function () { post({ type: "blur" }); });
+
+      // Cmd+S -> immediate save (even in auto-save mode).
+      editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, function () {
+        if (saveTimer) { clearTimeout(saveTimer); saveTimer = null; }
+        post({ type: "requestSave", content: editor.getValue() });
+      });
+
+      // Swift -> JS API.
+      window.cmuxMonaco = {
+        setContent: function (text, language, theme) {
+          suppressChange = true;
+          var model = editor.getModel();
+          if (model) {
+            model.setValue(text);
+            if (language) monaco.editor.setModelLanguage(model, language);
+          } else {
+            editor.setValue(text);
+          }
+          if (theme) monaco.editor.setTheme(theme);
+          suppressChange = false;
+        },
+        applyExternalChange: function (text) {
+          suppressChange = true;
+          var pos = editor.getPosition();
+          editor.getModel().setValue(text);
+          if (pos) editor.setPosition(pos);
+          suppressChange = false;
+        },
+        setTheme: function (theme) { monaco.editor.setTheme(theme); },
+        focus: function () { editor.focus(); },
+        flushSave: function () {
+          if (saveTimer) { clearTimeout(saveTimer); saveTimer = null; }
+          post({ type: "requestSave", content: editor.getValue() });
+        }
+      };
+
+      post({ type: "ready" });
+    });
+  </script>
+</body>
+</html>
