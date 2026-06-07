@@ -51,6 +51,8 @@ public struct AppSection: View {
     @State private var soundName: DefaultsValueModel<String>
     @State private var soundCommand: DefaultsValueModel<String>
     @State private var customSoundFile: DefaultsValueModel<String>
+    @State private var webSocketEnabled: DefaultsValueModel<Bool>
+    @State private var webSocketPort: DefaultsValueModel<Int>
     @State private var telemetry: DefaultsValueModel<Bool>
     @State private var confirmQuit: DefaultsValueModel<ConfirmQuitMode>
     @State private var warnCloseTab: DefaultsValueModel<Bool>
@@ -97,6 +99,8 @@ public struct AppSection: View {
         _soundName = State(initialValue: DefaultsValueModel(store: defaultsStore, key: catalog.notifications.sound))
         _soundCommand = State(initialValue: DefaultsValueModel(store: defaultsStore, key: catalog.notifications.command))
         _customSoundFile = State(initialValue: DefaultsValueModel(store: defaultsStore, key: catalog.notifications.customSoundFilePath))
+        _webSocketEnabled = State(initialValue: DefaultsValueModel(store: defaultsStore, key: catalog.notifications.webSocketEnabled))
+        _webSocketPort = State(initialValue: DefaultsValueModel(store: defaultsStore, key: catalog.notifications.webSocketPort))
         _telemetry = State(initialValue: DefaultsValueModel(store: defaultsStore, key: catalog.app.sendAnonymousTelemetry))
         _confirmQuit = State(initialValue: DefaultsValueModel(store: defaultsStore, key: catalog.app.confirmQuitMode))
         _warnCloseTab = State(initialValue: DefaultsValueModel(store: defaultsStore, key: catalog.app.warnBeforeClosingTab))
@@ -568,6 +572,41 @@ public struct AppSection: View {
                 )
                 .textFieldStyle(.roundedBorder)
                 .frame(width: 200)
+            }
+            SettingsCardDivider()
+
+            // Notification WebSocket server — loopback-only, no authentication.
+            SettingsCardRow(
+                configurationReview: .json("notifications.webSocket.enabled"),
+                String(localized: "settings.notifications.webSocket.title", defaultValue: "Notification WebSocket server"),
+                subtitle: String(localized: "settings.notifications.webSocket.subtitle", defaultValue: "Run a loopback-only WebSocket server that exposes notifications and accepts actions. Warning: there is NO authentication — any local process can read your notifications and send actions while this is enabled.")
+            ) {
+                Toggle("", isOn: Binding(get: { webSocketEnabled.current }, set: { webSocketEnabled.set($0) }))
+                    .labelsHidden()
+                    .controlSize(.small)
+            }
+            if webSocketEnabled.current {
+                SettingsCardDivider()
+                SettingsCardRow(
+                    configurationReview: .json("notifications.webSocket.port"),
+                    String(localized: "settings.notifications.webSocket.port.title", defaultValue: "WebSocket server port"),
+                    subtitle: String(localized: "settings.notifications.webSocket.port.subtitle", defaultValue: "Loopback TCP port the notification WebSocket server listens on."),
+                    controlWidth: Self.columnWidth
+                ) {
+                    Stepper(
+                        value: Binding(get: { webSocketPort.current }, set: { webSocketPort.set($0) }),
+                        in: 1...65535
+                    ) {
+                        Text(verbatim: "\(webSocketPort.current)")
+                            .monospacedDigit()
+                            .frame(width: 56, alignment: .trailing)
+                    }
+                    .controlSize(.small)
+                    .accessibilityIdentifier("SettingsNotificationWebSocketPortStepper")
+                    .accessibilityLabel(
+                        String(localized: "settings.notifications.webSocket.port.title", defaultValue: "WebSocket server port")
+                    )
+                }
             }
             SettingsCardDivider()
 

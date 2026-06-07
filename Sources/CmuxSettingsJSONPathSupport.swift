@@ -109,6 +109,8 @@ extension CmuxSettingsFileStore {
         "notifications.command",
         "notifications.hooks",
         "notifications.hooksMode",
+        "notifications.webSocket.enabled",
+        "notifications.webSocket.port",
         "sidebar.hideAllDetails",
         "sidebar.compactRowMode",
         "sidebar.wrapWorkspaceTitles",

@@ -856,6 +856,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
     private var shortcutDefaultsObserver: NSObjectProtocol?
     private var menuBarVisibilityObserver: NSObjectProtocol?
     private var mobileHostSettingsObserver: NSObjectProtocol?
+    /// Loopback WebSocket server that streams notification/agent/report events to
+    /// local clients and accepts a small set of action commands. Off by default;
+    /// started/stopped/synced alongside ``MobileHostService``.
+    let notificationWebSocketServer = NotificationWebSocketServer()
     private var reloadConfigurationMenuItemRefreshScheduled = false
     private var splitButtonTooltipRefreshScheduled = false
     private var didScheduleGhosttyCrashBreadcrumbCheck = false
@@ -1864,6 +1868,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
         CloudVMActionLauncher.shared.terminateAll()
         CmuxSSHURLProcessLauncher.shared.terminateAll()
         MobileHostService.shared.stop()
+        notificationWebSocketServer.stop()
         TerminalController.shared.stop()
         GhosttyPasteboardHelper.cleanupAllOwnedTemporaryImageFiles()
         VSCodeServeWebController.shared.stop()
@@ -6929,6 +6934,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
                 source: "bootstrapInitialMainWindow.\(debugSource)"
             )
             MobileHostService.shared.start()
+            notificationWebSocketServer.start()
         }
         guard !didBootstrapInitialMainWindow else { return windowId }
 
@@ -8456,6 +8462,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
 
     private func syncMobileHostService() {
         MobileHostService.shared.syncToSettings()
+        // The notification WebSocket server shares this settings-change hook
+        // (UserDefaults.didChangeNotification) — it reacts to its own
+        // enabled/port keys and no-ops otherwise.
+        notificationWebSocketServer.syncToSettings()
     }
 
     private func syncActivationPolicy(defaults: UserDefaults = .standard) {
