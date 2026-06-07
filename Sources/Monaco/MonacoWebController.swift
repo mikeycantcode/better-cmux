@@ -14,6 +14,13 @@ final class MonacoWebController: NSObject, WKNavigationDelegate, WKScriptMessage
 
     private var isReady = false
     private var pendingLoad: (text: String, language: String, theme: String)?
+    // The text/language last pushed into the editor, used to make `load` idempotent.
+    // SwiftUI re-runs the representable's `updateNSView` on every parent change and
+    // calls `load` each time; without this guard, re-applying the same buffer would
+    // run Monaco's destructive `setValue` (resetting the cursor and undo history)
+    // on every keystroke's auto-save round-trip. Theme is excluded — `setTheme`
+    // handles appearance changes non-destructively.
+    private var lastAppliedContent: (text: String, language: String)?
 
     /// Called with the full buffer when Monaco reports a debounced content change.
     var onChange: ((String) -> Void)?
@@ -49,12 +56,23 @@ final class MonacoWebController: NSObject, WKNavigationDelegate, WKScriptMessage
 
     private func load(request: URLRequest) {
         isReady = false
+        // The fresh document starts empty, so forget what we believe is applied;
+        // the queued `pendingLoad` replays on `ready` and reseeds it.
+        lastAppliedContent = nil
         webView?.load(request)
     }
 
     /// Loads `text` into the editor with the given Monaco language id and theme.
     /// If the editor is not ready yet, the load is queued and applied on `ready`.
+    ///
+    /// Idempotent: re-applying the text/language already in the editor is a no-op
+    /// (only the theme is re-applied via ``setTheme(_:)`` separately), so SwiftUI's
+    /// repeated `updateNSView` calls do not run Monaco's destructive `setValue` and
+    /// reset the cursor mid-edit.
     func load(text: String, language: String, theme: String) {
+        if let last = lastAppliedContent, last.text == text, last.language == language {
+            return
+        }
         pendingLoad = (text, language, theme)
         guard isReady else { return }
         applyPendingLoad()
@@ -62,6 +80,7 @@ final class MonacoWebController: NSObject, WKNavigationDelegate, WKScriptMessage
 
     private func applyPendingLoad() {
         guard let webView, let p = pendingLoad else { return }
+        lastAppliedContent = (p.text, p.language)
         let args = jsonArgs(p.text, p.language, p.theme)
         webView.evaluateJavaScript(
             "window.cmuxMonaco && window.cmuxMonaco.setContent(\(args)[0], \(args)[1], \(args)[2]);",
@@ -73,6 +92,7 @@ final class MonacoWebController: NSObject, WKNavigationDelegate, WKScriptMessage
     /// preserving the cursor position.
     func applyExternalChange(_ text: String) {
         guard let webView, isReady else { return }
+        lastAppliedContent = (text, lastAppliedContent?.language ?? "plaintext")
         let args = jsonArgs(text)
         webView.evaluateJavaScript(
             "window.cmuxMonaco && window.cmuxMonaco.applyExternalChange(\(args)[0]);",
@@ -110,11 +130,22 @@ final class MonacoWebController: NSObject, WKNavigationDelegate, WKScriptMessage
         case .ready:
             isReady = true
             applyPendingLoad()
-        case .change(let content): onChange?(content)
-        case .requestSave(let content): onRequestSave?(content)
+        case .change(let content):
+            // The editor now holds `content`; record it so a subsequent `load`
+            // echoing the same text (e.g. from the panel persisting its buffer)
+            // is a no-op and does not reset the cursor mid-edit.
+            recordEditorContent(content)
+            onChange?(content)
+        case .requestSave(let content):
+            recordEditorContent(content)
+            onRequestSave?(content)
         case .focus: onFocus?()
         case .blur: onBlur?()
         }
+    }
+
+    private func recordEditorContent(_ content: String) {
+        lastAppliedContent = (content, lastAppliedContent?.language ?? "plaintext")
     }
 
     /// Tears down the web view and bridge. Call from the owning panel's `close()`.
@@ -124,6 +155,8 @@ final class MonacoWebController: NSObject, WKNavigationDelegate, WKScriptMessage
         webView?.navigationDelegate = nil
         webView = nil
         isReady = false
+        lastAppliedContent = nil
+        pendingLoad = nil
     }
 
     // MARK: WKNavigationDelegate

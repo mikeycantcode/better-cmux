@@ -67,6 +67,15 @@ public struct AppCatalogSection: SettingCatalogSection {
         userDefaultsKey: "preferredEditorCommand"
     )
 
+    /// Selects which editor opens files from the sidebar: `"monaco"` (the
+    /// built-in Monaco web editor, the default) or `"terminal"` (a terminal
+    /// editor launched in a new tab, configured by ``terminalEditor``).
+    public let codeEditor = DefaultsKey<String>(
+        id: "app.codeEditor",
+        defaultValue: "monaco",
+        userDefaultsKey: "codeEditor"
+    )
+
     public let terminalEditor = DefaultsKey<String>(
         id: "app.terminalEditor",
         defaultValue: "",

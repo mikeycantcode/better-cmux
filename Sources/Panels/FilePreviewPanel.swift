@@ -1,6 +1,7 @@
 import AppKit
 import AVKit
 import Bonsplit
+import CmuxFileWatch
 import Combine
 import Foundation
 import PDFKit
@@ -982,6 +983,9 @@ final class FilePreviewPanel: Panel, ObservableObject, FilePreviewTextEditingPan
     @Published private(set) var isSaving = false
     @Published private(set) var focusFlashToken = 0
     @Published private(set) var previewMode: FilePreviewMode
+    /// `true` when text mode renders the Monaco web editor (auto-saving); `false`
+    /// keeps the native `NSTextView` fallback (large files / non-text modes).
+    @Published private(set) var useMonacoForText = false
 
     let nativeViewSessions = FilePreviewNativeViewSessions()
 
@@ -994,6 +998,27 @@ final class FilePreviewPanel: Panel, ObservableObject, FilePreviewTextEditingPan
     private weak var textView: NSTextView?
     private let focusCoordinator: FilePreviewFocusCoordinator
     private let textLoader: @Sendable (URL) async -> FilePreviewTextLoader.Result
+
+    private let monacoDecision = FilePreviewMonacoDecision()
+    private let atomicTextSaver = MonacoAtomicTextSaver()
+    /// Lazily constructed so panels in non-text modes never spin up a web view.
+    private lazy var lazyMonacoController: MonacoWebController = makeMonacoController()
+    private var didMakeMonacoController = false
+    /// Hash of the content most recently written by this panel (load or save),
+    /// used to suppress the file-watcher reload triggered by our own write.
+    private var lastWrittenContentHash: Int?
+    // Watches `filePath` so external edits reload the Monaco buffer. Only started
+    // once text mode routes to Monaco; native-editor text mode keeps its existing
+    // manual revert behavior.
+    private var fileWatcher: FileWatcher?
+    private var fileWatchTask: Task<Void, Never>?
+    private var isClosed = false
+
+    /// The panel-owned Monaco controller backing text mode. Construct-on-demand:
+    /// reading it from the view only happens when ``useMonacoForText`` is `true`.
+    var monacoController: MonacoWebController {
+        lazyMonacoController
+    }
 
     var fileURL: URL {
         URL(fileURLWithPath: filePath)
@@ -1032,9 +1057,17 @@ final class FilePreviewPanel: Panel, ObservableObject, FilePreviewTextEditingPan
     }
 
     func close() {
+        isClosed = true
         nativeViewSessions.closeAll()
         textView = nil
         focusCoordinator.unregisterAll()
+        stopWatching()
+        if didMakeMonacoController {
+            // Flush any pending debounced edit so it lands on disk before the
+            // web view is torn down, then dismantle the controller.
+            lazyMonacoController.flushSave()
+            lazyMonacoController.dismantle()
+        }
     }
 
     func triggerFlash(reason: WorkspaceAttentionFlashReason) {
@@ -1141,10 +1174,28 @@ final class FilePreviewPanel: Panel, ObservableObject, FilePreviewTextEditingPan
 
     private func prepareContentForPreviewMode() {
         if previewMode == .text {
+            // Optimistically route to Monaco using the on-disk size so the panel
+            // does not flash the native editor before the async text load lands.
+            // The load confirms/corrects this from the decoded byte size.
+            useMonacoForText = monacoDecision.shouldUseMonaco(
+                isTextMode: true,
+                loadedByteSize: onDiskFileByteSize()
+            )
             loadTextContent(replacingDirtyContent: false)
         } else {
+            useMonacoForText = false
             isFileUnavailable = !FileManager.default.fileExists(atPath: filePath)
         }
+    }
+
+    /// The current on-disk byte size of ``filePath``, or `nil` if unknown. Used
+    /// only for the optimistic Monaco-routing guess before content is decoded.
+    private func onDiskFileByteSize() -> UInt64? {
+        guard let size = try? fileURL.resourceValues(forKeys: [.fileSizeKey]).fileSize,
+              size >= 0 else {
+            return nil
+        }
+        return UInt64(size)
     }
 
     private func resolvePreviewModeIfNeeded(for fileURL: URL) {
@@ -1166,6 +1217,8 @@ final class FilePreviewPanel: Panel, ObservableObject, FilePreviewTextEditingPan
         guard previewMode != mode else { return }
         if mode != .text {
             textLoadGeneration += 1
+            useMonacoForText = false
+            stopWatching()
         }
         previewMode = mode
         displayIcon = FilePreviewKindResolver.iconName(for: mode)
@@ -1209,6 +1262,9 @@ final class FilePreviewPanel: Panel, ObservableObject, FilePreviewTextEditingPan
             isFileUnavailable = true
             return
         case .loaded(let content, let encoding):
+            let byteSize = content.data(using: encoding).map { UInt64($0.count) }
+            let routeToMonaco = monacoDecision.shouldUseMonaco(isTextMode: true, loadedByteSize: byteSize)
+
             if !replacingDirtyContent && isDirty {
                 originalTextContent = content
                 textEncoding = encoding
@@ -1220,6 +1276,136 @@ final class FilePreviewPanel: Panel, ObservableObject, FilePreviewTextEditingPan
             textEncoding = encoding
             isDirty = false
             isFileUnavailable = false
+            lastWrittenContentHash = MonacoAtomicTextSaver.hash(of: content, encoding: encoding)
+
+            useMonacoForText = routeToMonaco
+            if routeToMonaco {
+                // `MonacoEditorView` is the sole driver of `controller.load`: it
+                // seeds `panel.textContent` with the panel-appearance theme when it
+                // mounts, so the model does not issue a `load` here (which would
+                // need a separate theme guess and risk a one-frame mismatch).
+                startWatchingIfNeeded()
+            } else {
+                stopWatching()
+            }
+        }
+    }
+
+    private func makeMonacoController() -> MonacoWebController {
+        didMakeMonacoController = true
+        let controller = MonacoWebController()
+        controller.onChange = { [weak self] content in
+            self?.autoSave(content)
+        }
+        controller.onRequestSave = { [weak self] content in
+            self?.autoSave(content)
+        }
+        controller.onFocus = { [weak self] in
+            self?.noteFilePreviewFocusIntent(.textEditor)
+        }
+        controller.onBlur = { [weak self] in
+            // No-op: AppKit resigns focus when another responder takes over; the
+            // preferred intent is only updated on explicit focus.
+            _ = self
+        }
+        return controller
+    }
+
+    /// Debounced auto-save handler for the Monaco-backed editor. Skips writes that
+    /// match both the last written content and the current on-disk content, and
+    /// saves atomically off-main. Save errors are logged, never fatal.
+    private func autoSave(_ content: String) {
+        guard useMonacoForText, !isClosed else { return }
+        let encoding = textEncoding
+        let hash = MonacoAtomicTextSaver.hash(of: content, encoding: encoding)
+        if hash == lastWrittenContentHash {
+            // Our buffer already matches the last write; nothing to persist.
+            textContent = content
+            return
+        }
+        let filePath = filePath
+        let saver = atomicTextSaver
+        Task { [weak self] in
+            do {
+                let result = try await saver.save(content: content, to: filePath, encoding: encoding)
+                await MainActor.run {
+                    guard let self else { return }
+                    self.lastWrittenContentHash = result.contentHash
+                    self.textContent = content
+                    self.originalTextContent = content
+                    self.isFileUnavailable = false
+                }
+            } catch {
+                #if DEBUG
+                cmuxDebugLog("FilePreviewPanel.autoSave failed for \(filePath): \(error)")
+                #endif
+            }
+        }
+    }
+
+    private func startWatchingIfNeeded() {
+        guard fileWatcher == nil, !isClosed else { return }
+        let watcher = FileWatcher(path: filePath)
+        fileWatcher = watcher
+        let events = watcher.events
+        fileWatchTask = Task { @MainActor [weak self] in
+            for await _ in events {
+                guard let self, !self.isClosed else { break }
+                self.handleExternalFileChange()
+            }
+        }
+    }
+
+    private func stopWatching() {
+        fileWatchTask?.cancel()
+        fileWatchTask = nil
+        fileWatcher = nil
+    }
+
+    /// Reloads the file from disk for the Monaco editor, suppressing the panel's
+    /// own writes (write → watch → reload loop) and applying genuine external
+    /// changes. Last-write-wins: if a local edit is in flight, the buffer is kept.
+    private func handleExternalFileChange() {
+        guard useMonacoForText, !isClosed, previewMode == .text else { return }
+        let fileURL = fileURL
+        let textLoader = textLoader
+        Task { [weak self, fileURL, textLoader] in
+            let result = await textLoader(fileURL)
+            await MainActor.run {
+                guard let self, self.useMonacoForText, !self.isClosed else { return }
+                switch result {
+                case .unavailable:
+                    self.isFileUnavailable = true
+                case .loaded(let content, let encoding):
+                    let onDiskHash = MonacoAtomicTextSaver.hash(of: content, encoding: encoding)
+                    if self.monacoDecision.isSelfWrite(
+                        onDiskHash: onDiskHash,
+                        lastWrittenHash: self.lastWrittenContentHash
+                    ) {
+                        // Our own write echoed back; ignore.
+                        self.isFileUnavailable = false
+                        return
+                    }
+                    // Genuine external change. Auto-save means there are no
+                    // persistent local edits, so adopt the new content.
+                    self.textEncoding = encoding
+                    self.textContent = content
+                    self.originalTextContent = content
+                    self.isDirty = false
+                    self.isFileUnavailable = false
+                    self.lastWrittenContentHash = onDiskHash
+
+                    // If the external edit grew the file past the Monaco ceiling,
+                    // fall back to the native editor; otherwise push the change.
+                    let byteSize = content.data(using: encoding).map { UInt64($0.count) }
+                    if self.monacoDecision.shouldUseMonaco(isTextMode: true, loadedByteSize: byteSize) {
+                        self.lazyMonacoController.applyExternalChange(content)
+                    } else {
+                        self.useMonacoForText = false
+                        self.stopWatching()
+                    }
+                }
+            }
         }
     }
 
@@ -1272,6 +1458,10 @@ final class FilePreviewPanel: Panel, ObservableObject, FilePreviewTextEditingPan
             return .quickLook
         }
     }
+
+    deinit {
+        fileWatchTask?.cancel()
+    }
 }
 
 struct FilePreviewPanelView: View {
@@ -1292,6 +1482,12 @@ struct FilePreviewPanelView: View {
 
     private var contentBackgroundColor: NSColor {
         appearance.contentBackgroundColor
+    }
+
+    /// Dark/light flag for the Monaco theme, derived from the opaque panel
+    /// background exactly like the markdown viewer's `themeColorScheme`.
+    private var isDark: Bool {
+        !appearance.backgroundColor.isLightColor
     }
 
     var body: some View {
@@ -1323,7 +1519,7 @@ struct FilePreviewPanelView: View {
             filePath: panel.filePath,
             foregroundColor: themeForegroundColor
         ) {
-            if panel.previewMode == .text {
+            if panel.previewMode == .text && !panel.useMonacoForText {
                 PanelHeaderIconButton(
                     systemName: "arrow.counterclockwise",
                     label: String(localized: "filePreview.revert", defaultValue: "Revert"),
@@ -1350,14 +1546,23 @@ struct FilePreviewPanelView: View {
         } else {
             switch panel.previewMode {
             case .text:
-                FilePreviewTextEditor(
-                    panel: panel,
-                    isVisibleInUI: isVisibleInUI,
-                    themeBackgroundColor: contentBackgroundColor,
-                    themeForegroundColor: themeForegroundColor,
-                    drawsBackground: appearance.drawsContentBackground,
-                    wordWrap: fileEditorWordWrap
-                )
+                if panel.useMonacoForText {
+                    MonacoEditorView(
+                        controller: panel.monacoController,
+                        text: panel.textContent,
+                        language: MonacoLanguageMap.languageId(forPath: panel.filePath),
+                        isDark: isDark
+                    )
+                } else {
+                    FilePreviewTextEditor(
+                        panel: panel,
+                        isVisibleInUI: isVisibleInUI,
+                        themeBackgroundColor: contentBackgroundColor,
+                        themeForegroundColor: themeForegroundColor,
+                        drawsBackground: appearance.drawsContentBackground,
+                        wordWrap: fileEditorWordWrap
+                    )
+                }
             case .pdf:
                 FilePreviewPDFView(
                     panel: panel,
