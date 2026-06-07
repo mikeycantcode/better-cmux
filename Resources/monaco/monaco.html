@@ -23,11 +23,34 @@
     function post(msg) {
       try { window.webkit.messageHandlers.cmuxMonacoBridge.postMessage(msg); } catch (e) {}
     }
-    window.onerror = function (message) { try { console.error("monaco shell error:", message); } catch (e) {} };
+    // Surface a fatal load error directly in the (otherwise blank) pane so a
+    // failure is diagnosable without the Web Inspector, and report it to Swift.
+    function showFatal(message) {
+      try { console.error("monaco shell error:", message); } catch (e) {}
+      try {
+        var el = document.getElementById("container");
+        if (el) {
+          el.style.cssText = "white-space:pre-wrap;font:12px ui-monospace,monospace;color:#f85149;padding:12px;overflow:auto;";
+          el.textContent = "Monaco failed to load:\n" + message;
+        }
+      } catch (e) {}
+      post({ type: "loadError", message: String(message) });
+    }
+    window.onerror = function (message, src, line, col) {
+      showFatal(String(message) + (src ? " @ " + src + ":" + line + ":" + col : ""));
+    };
   </script>
   <script src="cmux-monaco://app/vs/loader.js"></script>
   <script>
-    require.config({ baseUrl: "cmux-monaco://app/vs" });
+    // Map the `vs/` module prefix to the bundle path. Do NOT use `baseUrl`:
+    // module ids already start with `vs/`, so baseUrl would resolve
+    // `vs/editor/editor.main` to `.../vs/vs/editor/editor.main.js` (doubled vs).
+    require.config({ paths: { vs: "cmux-monaco://app/vs" } });
+    require.onError = function (err) {
+      showFatal((err && err.message ? err.message : String(err)) +
+        (err && err.errorCode ? " [" + err.errorCode + "]" : "") +
+        (err && err.moduleId ? " module=" + err.moduleId : ""));
+    };
     require(["vs/editor/editor.main"], function () {
       var editor = monaco.editor.create(document.getElementById("container"), {
         value: "",
