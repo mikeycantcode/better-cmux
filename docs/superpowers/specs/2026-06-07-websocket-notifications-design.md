@@ -121,9 +121,10 @@ cmux app target + (for testable seams) cmux-unit.
 - A bundled web client (the endpoint is the deliverable; clients are external).
 - Streaming terminal bytes/render grid (that's MobileHostService's domain).
 - Arbitrary command execution — only the curated action set.
-- Per-client topic filtering beyond `since` replay (clients filter client-side in
-  v1; server sends all categories). Server-side `categories=` filter is a fast
-  follow if needed.
+- Per-client topic selection beyond the fixed category set. The server filters its
+  bus subscription to `notification` + `agent` + `report` categories (it does NOT
+  stream the whole bus — no browser URLs, workspace cwds, etc.). A client-tunable
+  `categories=` filter is a fast follow if needed.
 
 ## Security & constraints
 

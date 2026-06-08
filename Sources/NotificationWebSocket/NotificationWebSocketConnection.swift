@@ -81,16 +81,22 @@ final class NotificationWebSocketConnection {
         send(text: data)
     }
 
-    /// Opens a bus subscription (replay everything currently retained for v1)
-    /// and drains it on a background task, sending each event as a text frame.
+    /// The event categories this server streams. Scoped to notifications, agent
+    /// state, and report events (git branch / PR / ports / pwd / shell state) —
+    /// deliberately NOT the whole bus, so the unauthenticated loopback endpoint
+    /// does not leak browser URLs, workspace cwds, etc.
+    private static let streamedCategories: Set<String> = ["notification", "agent", "report"]
+
+    /// Opens a bus subscription scoped to ``streamedCategories`` and drains it on
+    /// a background task, sending each event as a text frame.
     private func startEventDrain() {
-        // No filters for v1: forward every event. `afterSequence: nil` means the
-        // subscription replays from the latest sequence onward (no historical
-        // replay), matching the `hello` frame's `latest_sequence`.
+        // `afterSequence: nil` means the subscription delivers from the latest
+        // sequence onward (no historical replay), matching the `hello` frame's
+        // `latest_sequence`. Categories are filtered to the streamed set.
         let snapshot = CmuxEventBus.shared.subscribe(
             afterSequence: nil,
             names: [],
-            categories: []
+            categories: Self.streamedCategories
         )
         let subscription = snapshot.subscription
 

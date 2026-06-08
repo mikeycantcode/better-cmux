@@ -32,6 +32,10 @@ final class NotificationWebSocketServer {
     /// The preferred port the running listener targeted, used to decide whether a
     /// settings change needs a restart. `nil` while stopped.
     private var appliedPort: Int?
+    /// Upper bound on concurrently-accepted connections (mirrors
+    /// `MobileHostService`). Bounds the resource cost of abandoned/half-open
+    /// loopback peers since there is no authentication gate.
+    private let maximumActiveConnectionCount = 16
 
     /// The port the listener is currently bound to, for diagnostics. `nil` while
     /// stopped or before the listener reaches `.ready`.
@@ -66,12 +70,22 @@ final class NotificationWebSocketServer {
 
         let tcpOptions = NWProtocolTCP.Options()
         tcpOptions.noDelay = true
+        // Detect silently-dead/half-open peers so the connection transitions to
+        // `.failed` and its `cancel()` runs (tearing down the bus subscription +
+        // drain task). Without this, an abandoned peer would leak both forever.
+        tcpOptions.enableKeepalive = true
+        tcpOptions.keepaliveIdle = 30
+        tcpOptions.keepaliveInterval = 10
+        tcpOptions.keepaliveCount = 3
         let parameters = NWParameters(tls: nil, tcp: tcpOptions)
         // Bind loopback only so the listener never accepts off-host peers; the
         // per-connection check below is defense in depth.
         parameters.requiredInterfaceType = .loopback
         let webSocketOptions = NWProtocolWebSocket.Options()
         webSocketOptions.autoReplyPing = true
+        // Inbound command frames are tiny; cap inbound message size so a local
+        // client cannot force a large per-message buffer.
+        webSocketOptions.maximumMessageSize = 64 * 1024
         parameters.defaultProtocolStack.applicationProtocols.insert(webSocketOptions, at: 0)
 
         let nextListener: NWListener
@@ -125,6 +139,11 @@ final class NotificationWebSocketServer {
         // interface, reusing MobileHostService's address classifier.
         guard MobileHostService.isLoopbackConnection(connection) else {
             notificationWebSocketServerLog.error("notification websocket rejected non-loopback connection")
+            connection.cancel()
+            return
+        }
+        guard connections.count < maximumActiveConnectionCount else {
+            notificationWebSocketServerLog.error("notification websocket at connection cap (\(self.maximumActiveConnectionCount)); rejecting")
             connection.cancel()
             return
         }

@@ -12,7 +12,9 @@ enum NotificationWebSocketCommand: Equatable, Sendable {
     case markReadSurface(tabId: String, surfaceId: String?)
     /// Mark every notification read.
     case markAllRead
-    /// Clear a single notification by id, or all when `id` is `nil`.
+    /// Clear all notifications when `id` is `nil`. A non-nil `id` is parsed but
+    /// rejected by the router (no single-notification clear primitive exists —
+    /// use ``markRead(id:)`` to dismiss one notification).
     case clear(id: String?)
     /// Focus a surface and/or pane WITHOUT activating the app (focus policy).
     case focus(surfaceId: String?, paneId: String?)

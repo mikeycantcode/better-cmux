@@ -69,20 +69,14 @@ final class NotificationWebSocketCommandRouter {
             guard let store = Self.notificationStore else {
                 return Self.error("notification store unavailable")
             }
-            guard let id else {
-                store.clearAll()
-                return Self.ack("clear")
+            guard id == nil else {
+                // There is no single-notification clear primitive — clearing by a
+                // resolved tab/surface scope would also wipe sibling notifications
+                // on that surface (silent data loss). Reject single-id clear and
+                // point callers at `mark_read` for dismissing one notification.
+                return Self.error("clear by id is not supported; use mark_read with the id to dismiss a single notification, or clear with no id to clear all")
             }
-            guard let uuid = UUID(uuidString: id) else {
-                return Self.error("invalid notification id")
-            }
-            // There is no single-notification clear primitive; resolve the
-            // notification's tab/surface scope and clear that scope. When the id
-            // is not found, report it rather than silently no-op'ing.
-            guard let notification = store.notifications.first(where: { $0.id == uuid }) else {
-                return Self.error("notification not found")
-            }
-            store.clearNotifications(forTabId: notification.tabId, surfaceId: notification.surfaceId)
+            store.clearAll()
             return Self.ack("clear")
 
         case let .focus(surfaceId, paneId):
