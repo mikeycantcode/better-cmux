@@ -6499,6 +6499,15 @@ final class TerminalSurface: Identifiable, ObservableObject {
         if !AmpIntegrationSettings.hooksEnabled() {
             setManagedEnvironmentValue("CMUX_AMP_HOOKS_DISABLED", "1")
         }
+        // When enabled, expose the layout-command capability brief so the claude
+        // wrapper can inject it via --append-system-prompt. Left unset when
+        // disabled so agents see no brief.
+        if AgentCapabilityBriefSettings.isEnabled() {
+            setManagedEnvironmentValue(
+                AgentCapabilityBriefSettings.environmentKey,
+                AgentCapabilityBrief.text
+            )
+        }
 
         if let cliBinPath = Bundle.main.resourceURL?.appendingPathComponent("bin").path {
             let currentPath = env["PATH"]
