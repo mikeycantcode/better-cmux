@@ -918,6 +918,7 @@ class TerminalController {
         "mobile.attach_ticket.create",
         "system.top",
         "system.memory",
+        "workspace.snapshot",
         "workspace.remote.pty_sessions",
         "workspace.remote.pty_close",
         "workspace.remote.pty_detach",
@@ -1050,6 +1051,8 @@ class TerminalController {
             return v2Ok(id: request.id, result: v2AuthStatusPayload(timedOut: false))
         case "feedback.submit":
             return v2Result(id: request.id, v2FeedbackSubmit(params: request.params))
+        case "workspace.snapshot":
+            return v2Result(id: request.id, v2WorkspaceSnapshot(params: request.params))
         case "feed.push":
             return v2Result(id: request.id, v2FeedPush(params: request.params))
         case "feed.permission.reply":
