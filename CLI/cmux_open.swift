@@ -1005,6 +1005,172 @@ extension CMUXCLI {
         print(json)
     }
 
+    /// Connects, fetches `workspace.snapshot`, and decodes it into a ``LayoutSnapshot`` plus the
+    /// resolved socket handles, for the reorg verbs that resolve human-friendly refs.
+    private func snapshotForReorg(
+        workspaceArg: String?,
+        windowArg: String?,
+        client: SocketClient
+    ) throws -> (snapshot: LayoutSnapshot, windowHandle: String?, workspaceHandle: String?, anchorPaneId: String?) {
+        let windowHandle = try normalizeWindowHandle(windowArg, client: client)
+        let workspaceRaw = workspaceArg ?? (windowArg == nil ? ProcessInfo.processInfo.environment["CMUX_WORKSPACE_ID"] : nil)
+        let workspaceHandle = try normalizeWorkspaceHandle(workspaceRaw, client: client, windowHandle: windowHandle)
+        let anchorSurfaceRaw = windowArg == nil ? ProcessInfo.processInfo.environment["CMUX_SURFACE_ID"] : nil
+        let anchorSurfaceHandle = try normalizeSurfaceHandle(anchorSurfaceRaw, client: client, workspaceHandle: workspaceHandle, windowHandle: windowHandle)
+
+        var params: [String: Any] = [:]
+        if let windowHandle { params["window_id"] = windowHandle }
+        if let workspaceHandle { params["workspace_id"] = workspaceHandle }
+        if let anchorSurfaceHandle { params["surface_id"] = anchorSurfaceHandle }
+        let result = try client.sendV2(method: "workspace.snapshot", params: params)
+        guard let snapshot = decodeLayoutSnapshot(result) else {
+            throw CLIError(message: "Failed to decode workspace.snapshot for the current workspace")
+        }
+        // Prefer the anchor pane the app resolved from CMUX_SURFACE_ID; fall back to the focused pane.
+        let anchorPaneId = snapshot.anchor.paneId ?? snapshot.focusedPaneId
+        return (snapshot, windowHandle, workspaceHandle, anchorPaneId)
+    }
+
+    /// Returns the value following `name` in `args`, or `nil` if the flag is absent or has no value.
+    private func reorgOptionValue(_ args: [String], name: String) -> String? {
+        var index = 0
+        while index < args.count {
+            if args[index] == name, index + 1 < args.count {
+                return args[index + 1]
+            }
+            index += 1
+        }
+        return nil
+    }
+
+    func runMoveTabCommand(
+        commandArgs: [String],
+        socketPath: String,
+        explicitPassword: String?,
+        jsonOutput: Bool,
+        idFormat: CLIIDFormat
+    ) throws {
+        let positionals = commandArgs.filter { !$0.hasPrefix("-") }
+        guard let surfaceRef = positionals.first else {
+            throw CLIError(message: "move-tab requires a <surfaceRef>. Usage: cmux move-tab <surfaceRef> --to-pane <paneRef> [--focus]")
+        }
+        guard let paneRef = reorgOptionValue(commandArgs, name: "--to-pane") else {
+            throw CLIError(message: "move-tab requires --to-pane <paneRef>")
+        }
+        let focus = commandArgs.contains("--focus")
+        let workspaceArg = reorgOptionValue(commandArgs, name: "--workspace")
+        let windowArg = reorgOptionValue(commandArgs, name: "--window")
+
+        let client = try connectClient(socketPath: socketPath, explicitPassword: explicitPassword, launchIfNeeded: false)
+        defer { client.close() }
+
+        let ctx = try snapshotForReorg(workspaceArg: workspaceArg, windowArg: windowArg, client: client)
+        let resolver = TargetResolver()
+        guard let surfaceId = resolver.resolveSurface(surfaceRef, in: ctx.snapshot) else {
+            throw CLIError(message: "move-tab: could not resolve surface '\(surfaceRef)' (no match or ambiguous)")
+        }
+        guard let paneId = resolver.resolvePane(paneRef, anchorPaneId: ctx.anchorPaneId, in: ctx.snapshot) else {
+            throw CLIError(message: "move-tab: could not resolve pane '\(paneRef)' (no match)")
+        }
+
+        var params: [String: Any] = ["surface_id": surfaceId, "pane_id": paneId, "focus": focus]
+        if let windowHandle = ctx.windowHandle { params["window_id"] = windowHandle }
+        if let workspaceHandle = ctx.workspaceHandle { params["workspace_id"] = workspaceHandle }
+        let payload = try client.sendV2(method: "surface.move", params: params)
+        printV2Payload(payload, jsonOutput: jsonOutput, idFormat: idFormat, fallbackText: "OK")
+    }
+
+    func runReorderTabCommand(
+        commandArgs: [String],
+        socketPath: String,
+        explicitPassword: String?,
+        jsonOutput: Bool,
+        idFormat: CLIIDFormat
+    ) throws {
+        let positionals = commandArgs.filter { !$0.hasPrefix("-") }
+        guard let surfaceRef = positionals.first else {
+            throw CLIError(message: "reorder-tab requires a <surfaceRef>. Usage: cmux reorder-tab <surfaceRef> --index N | --before <surfaceRef> | --after <surfaceRef>")
+        }
+        let indexRaw = reorgOptionValue(commandArgs, name: "--index")
+        let beforeRef = reorgOptionValue(commandArgs, name: "--before")
+        let afterRef = reorgOptionValue(commandArgs, name: "--after")
+        let targetCount = (indexRaw != nil ? 1 : 0) + (beforeRef != nil ? 1 : 0) + (afterRef != nil ? 1 : 0)
+        guard targetCount == 1 else {
+            throw CLIError(message: "reorder-tab requires exactly one of --index N | --before <surfaceRef> | --after <surfaceRef>")
+        }
+        let focus = commandArgs.contains("--focus")
+        let workspaceArg = reorgOptionValue(commandArgs, name: "--workspace")
+        let windowArg = reorgOptionValue(commandArgs, name: "--window")
+
+        let client = try connectClient(socketPath: socketPath, explicitPassword: explicitPassword, launchIfNeeded: false)
+        defer { client.close() }
+
+        let ctx = try snapshotForReorg(workspaceArg: workspaceArg, windowArg: windowArg, client: client)
+        let resolver = TargetResolver()
+        guard let surfaceId = resolver.resolveSurface(surfaceRef, in: ctx.snapshot) else {
+            throw CLIError(message: "reorder-tab: could not resolve surface '\(surfaceRef)' (no match or ambiguous)")
+        }
+
+        var params: [String: Any] = ["surface_id": surfaceId, "focus": focus]
+        if let windowHandle = ctx.windowHandle { params["window_id"] = windowHandle }
+        if let workspaceHandle = ctx.workspaceHandle { params["workspace_id"] = workspaceHandle }
+        if let indexRaw {
+            guard let index = Int(indexRaw) else {
+                throw CLIError(message: "reorder-tab: --index must be an integer")
+            }
+            params["index"] = index
+        } else if let beforeRef {
+            guard let beforeId = resolver.resolveSurface(beforeRef, in: ctx.snapshot) else {
+                throw CLIError(message: "reorder-tab: could not resolve --before surface '\(beforeRef)' (no match or ambiguous)")
+            }
+            params["before_surface_id"] = beforeId
+        } else if let afterRef {
+            guard let afterId = resolver.resolveSurface(afterRef, in: ctx.snapshot) else {
+                throw CLIError(message: "reorder-tab: could not resolve --after surface '\(afterRef)' (no match or ambiguous)")
+            }
+            params["after_surface_id"] = afterId
+        }
+
+        let payload = try client.sendV2(method: "surface.reorder", params: params)
+        printV2Payload(payload, jsonOutput: jsonOutput, idFormat: idFormat, fallbackText: "OK")
+    }
+
+    func runSwapPanesCommand(
+        commandArgs: [String],
+        socketPath: String,
+        explicitPassword: String?,
+        jsonOutput: Bool,
+        idFormat: CLIIDFormat
+    ) throws {
+        let positionals = commandArgs.filter { !$0.hasPrefix("-") }
+        guard positionals.count >= 2 else {
+            throw CLIError(message: "swap-panes requires two pane refs. Usage: cmux swap-panes <paneRefA> <paneRefB> [--focus]")
+        }
+        let refA = positionals[0]
+        let refB = positionals[1]
+        let focus = commandArgs.contains("--focus")
+        let workspaceArg = reorgOptionValue(commandArgs, name: "--workspace")
+        let windowArg = reorgOptionValue(commandArgs, name: "--window")
+
+        let client = try connectClient(socketPath: socketPath, explicitPassword: explicitPassword, launchIfNeeded: false)
+        defer { client.close() }
+
+        let ctx = try snapshotForReorg(workspaceArg: workspaceArg, windowArg: windowArg, client: client)
+        let resolver = TargetResolver()
+        guard let paneA = resolver.resolvePane(refA, anchorPaneId: ctx.anchorPaneId, in: ctx.snapshot) else {
+            throw CLIError(message: "swap-panes: could not resolve pane '\(refA)' (no match)")
+        }
+        guard let paneB = resolver.resolvePane(refB, anchorPaneId: ctx.anchorPaneId, in: ctx.snapshot) else {
+            throw CLIError(message: "swap-panes: could not resolve pane '\(refB)' (no match)")
+        }
+
+        var params: [String: Any] = ["pane_id": paneA, "target_pane_id": paneB, "focus": focus]
+        if let windowHandle = ctx.windowHandle { params["window_id"] = windowHandle }
+        if let workspaceHandle = ctx.workspaceHandle { params["workspace_id"] = workspaceHandle }
+        let payload = try client.sendV2(method: "pane.swap", params: params)
+        printV2Payload(payload, jsonOutput: jsonOutput, idFormat: idFormat, fallbackText: "OK")
+    }
+
     func runDiffCommand(
         commandArgs: [String],
         socketPath: String,
