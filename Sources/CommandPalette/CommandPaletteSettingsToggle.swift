@@ -740,6 +740,31 @@ enum CommandPaletteSettingsToggleCommands {
                 defaultsKey: AgentSubagentNotificationSettings.suppressNotificationsKey
             ),
             CommandPaletteSettingToggleDescriptor(
+                commandId: commandIdPrefix + "agentCapabilityBrief",
+                settingsKey: "automation.agentCapabilityBrief",
+                title: {
+                    String(
+                        localized: "settings.automation.agentCapabilityBrief",
+                        defaultValue: "Tell Agents About cmux Layout Commands"
+                    )
+                },
+                sectionTitle: automation,
+                keywords: [
+                    "automation.agentCapabilityBrief",
+                    "agent",
+                    "claude",
+                    "capability",
+                    "brief",
+                    "layout",
+                    "open",
+                    "snapshot",
+                    "system",
+                    "prompt",
+                ],
+                defaultValue: AgentCapabilityBriefSettings.defaultEnabled,
+                defaultsKey: AgentCapabilityBriefSettings.enabledKey
+            ),
+            CommandPaletteSettingToggleDescriptor(
                 commandId: commandIdPrefix + "cursorIntegration",
                 settingsKey: "automation.cursorIntegration",
                 title: {
