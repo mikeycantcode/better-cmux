@@ -755,6 +755,64 @@ extension CMUXCLI {
         ))
     }
 
+    func runSnapshotCommand(
+        commandArgs: [String],
+        socketPath: String,
+        explicitPassword: String?
+    ) throws {
+        var workspaceArg: String?
+        var surfaceArg: String?
+        var windowArg: String?
+        var index = 0
+        while index < commandArgs.count {
+            let arg = commandArgs[index]
+            switch arg {
+            case "--workspace":
+                index += 1
+                workspaceArg = index < commandArgs.count ? commandArgs[index] : nil
+            case "--surface":
+                index += 1
+                surfaceArg = index < commandArgs.count ? commandArgs[index] : nil
+            case "--window":
+                index += 1
+                windowArg = index < commandArgs.count ? commandArgs[index] : nil
+            default:
+                throw CLIError(message: "snapshot: unknown flag '\(arg)'. Usage: cmux snapshot [--workspace <id|ref|index>] [--surface <id|ref|index>] [--window <id|ref|index>]")
+            }
+            index += 1
+        }
+
+        let client = try connectClient(
+            socketPath: socketPath,
+            explicitPassword: explicitPassword,
+            launchIfNeeded: false
+        )
+        defer { client.close() }
+
+        let windowHandle = try normalizeWindowHandle(windowArg, client: client)
+        let workspaceRaw = workspaceArg ?? (windowArg == nil ? ProcessInfo.processInfo.environment["CMUX_WORKSPACE_ID"] : nil)
+        let workspaceHandle = try normalizeWorkspaceHandle(workspaceRaw, client: client, windowHandle: windowHandle)
+        let surfaceRaw = surfaceArg ?? (windowArg == nil ? ProcessInfo.processInfo.environment["CMUX_SURFACE_ID"] : nil)
+        let surfaceHandle = try normalizeSurfaceHandle(surfaceRaw, client: client, workspaceHandle: workspaceHandle, windowHandle: windowHandle)
+
+        var params: [String: Any] = [:]
+        if let windowHandle { params["window_id"] = windowHandle }
+        if let workspaceHandle { params["workspace_id"] = workspaceHandle }
+        if let surfaceHandle { params["surface_id"] = surfaceHandle }
+
+        let payload = try client.sendV2(method: "workspace.snapshot", params: params)
+
+        // Pretty-print to a TTY for human/agent readability; compact when piped.
+        let isTTY = isatty(fileno(stdout)) != 0
+        let options: JSONSerialization.WritingOptions = isTTY ? [.prettyPrinted, .sortedKeys] : []
+        guard JSONSerialization.isValidJSONObject(payload),
+              let data = try? JSONSerialization.data(withJSONObject: payload, options: options),
+              let json = String(data: data, encoding: .utf8) else {
+            throw CLIError(message: "Failed to encode snapshot JSON")
+        }
+        print(json)
+    }
+
     func runDiffCommand(
         commandArgs: [String],
         socketPath: String,
