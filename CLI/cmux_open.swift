@@ -1,3 +1,4 @@
+import CmuxLayoutPolicy
 import Darwin
 import Foundation
 
@@ -141,6 +142,9 @@ extension CMUXCLI {
         var pane: String?
         var focus: String?
         var noFocus = false
+        var forceHere = false
+        var split: String?
+        var noReuse = false
         var targets: [String] = []
     }
 
@@ -701,6 +705,15 @@ extension CMUXCLI {
 
         var payloads: [[String: Any]] = []
 
+        // Parse the optional --split orientation into a forced split (validated up front so a typo
+        // fails before we touch the socket).
+        let forcedSplit = try parsedArgs.split.map { try parseSplitOrientation($0) }
+
+        // Smart placement runs the layout policy to decide where a bare `cmux open <file>` lands.
+        // An explicit pane/surface destination preserves the legacy batched `file.open` behavior;
+        // --here and --split route through the placement engine with the policy overridden.
+        let useSmartPlacement = parsedArgs.pane == nil && parsedArgs.surface == nil
+
         var pendingFiles: [String] = []
         func flushPendingFiles() throws {
             guard !pendingFiles.isEmpty else { return }
@@ -717,10 +730,75 @@ extension CMUXCLI {
             fileCount += files.count
         }
 
+        // Opens a single file using the placement returned by ``PlacementPolicy``. Falls back to
+        // a plain `file.open` (legacy behavior) when the snapshot lacks a usable anchor.
+        func placeFileSmart(_ path: String) throws {
+            guard let anchorSurfaceId = surfaceHandle else {
+                pendingFiles.append(path)
+                try flushPendingFiles()
+                return
+            }
+
+            // --split forces a beside split in the requested direction; the policy itself does not
+            // consume forcedSplit, so honor it directly without consulting the layout.
+            if let direction = parsedArgs.split {
+                let payload = try executeSplitOpen(
+                    path: path,
+                    direction: direction,
+                    anchorSurfaceId: anchorSurfaceId,
+                    focus: focus,
+                    windowHandle: windowHandle,
+                    workspaceHandle: workspaceHandle,
+                    client: client
+                )
+                payloads.append(["kind": "file", "payload": payload])
+                fileCount += 1
+                return
+            }
+
+            var snapshotParams: [String: Any] = ["surface_id": anchorSurfaceId]
+            if let windowHandle { snapshotParams["window_id"] = windowHandle }
+            if let workspaceHandle { snapshotParams["workspace_id"] = workspaceHandle }
+            let snapshotResult = try client.sendV2(method: "workspace.snapshot", params: snapshotParams)
+
+            guard let snapshot = decodeLayoutSnapshot(snapshotResult) else {
+                pendingFiles.append(path)
+                try flushPendingFiles()
+                return
+            }
+
+            let overrides = PlacementOverrides(
+                forceHere: parsedArgs.forceHere,
+                forcedSplit: forcedSplit,
+                allowReuse: !parsedArgs.noReuse
+            )
+            let placement = PlacementPolicy().decide(
+                filePath: path,
+                in: snapshot,
+                anchorSurfaceId: anchorSurfaceId,
+                overrides: overrides
+            )
+
+            let payload = try executePlacement(
+                placement,
+                path: path,
+                focus: focus,
+                windowHandle: windowHandle,
+                workspaceHandle: workspaceHandle,
+                client: client
+            )
+            payloads.append(["kind": "file", "payload": payload])
+            fileCount += 1
+        }
+
         for target in targets {
             switch target {
             case .file(let path):
-                pendingFiles.append(path)
+                if useSmartPlacement {
+                    try placeFileSmart(path)
+                } else {
+                    pendingFiles.append(path)
+                }
             case .directory(let directory):
                 try flushPendingFiles()
                 var params: [String: Any] = ["cwd": directory]
@@ -753,6 +831,120 @@ extension CMUXCLI {
             directoryCount: directoryCount,
             idFormat: idFormat
         ))
+    }
+
+    /// Maps a `--split left|right|up|down` value to the split orientation the placement policy uses.
+    private func parseSplitOrientation(_ raw: String) throws -> LayoutNode.Orientation {
+        switch raw.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() {
+        case "left", "right":
+            return .horizontal
+        case "up", "down":
+            return .vertical
+        default:
+            throw CLIError(message: "--split must be one of left|right|up|down")
+        }
+    }
+
+    /// Decodes a `workspace.snapshot` result dictionary into a ``LayoutSnapshot``, or `nil` if the
+    /// payload cannot be re-serialized/decoded (callers fall back to a plain `file.open`).
+    private func decodeLayoutSnapshot(_ result: [String: Any]) -> LayoutSnapshot? {
+        guard JSONSerialization.isValidJSONObject(result),
+              let data = try? JSONSerialization.data(withJSONObject: result, options: []) else {
+            return nil
+        }
+        return try? JSONDecoder().decode(LayoutSnapshot.self, from: data)
+    }
+
+    /// Executes a ``Placement`` against the socket and returns the payload of the final mutation.
+    private func executePlacement(
+        _ placement: Placement,
+        path: String,
+        focus: Bool,
+        windowHandle: String?,
+        workspaceHandle: String?,
+        client: SocketClient
+    ) throws -> [String: Any] {
+        switch placement {
+        case .reuse(let surfaceId):
+            if focus {
+                var params: [String: Any] = ["surface_id": surfaceId]
+                if let windowHandle { params["window_id"] = windowHandle }
+                if let workspaceHandle { params["workspace_id"] = workspaceHandle }
+                return try client.sendV2(method: "surface.focus", params: params)
+            }
+            // --no-focus: the file is already open; report the existing surface without focusing.
+            return ["surface_id": surfaceId, "reused": true]
+        case .newTab(let paneId):
+            return try openFile(
+                path: path,
+                paneId: paneId,
+                focus: focus,
+                windowHandle: windowHandle,
+                workspaceHandle: workspaceHandle,
+                client: client
+            )
+        case .here(let paneId):
+            return try openFile(
+                path: path,
+                paneId: paneId,
+                focus: focus,
+                windowHandle: windowHandle,
+                workspaceHandle: workspaceHandle,
+                client: client
+            )
+        case .splitRight(let fromSurfaceId):
+            return try executeSplitOpen(
+                path: path,
+                direction: "right",
+                anchorSurfaceId: fromSurfaceId,
+                focus: focus,
+                windowHandle: windowHandle,
+                workspaceHandle: workspaceHandle,
+                client: client
+            )
+        }
+    }
+
+    /// Creates a new pane beside the anchor surface, then opens `path` as a tab in that pane.
+    private func executeSplitOpen(
+        path: String,
+        direction: String,
+        anchorSurfaceId: String,
+        focus: Bool,
+        windowHandle: String?,
+        workspaceHandle: String?,
+        client: SocketClient
+    ) throws -> [String: Any] {
+        var createParams: [String: Any] = ["direction": direction, "surface_id": anchorSurfaceId, "focus": focus]
+        if let windowHandle { createParams["window_id"] = windowHandle }
+        if let workspaceHandle { createParams["workspace_id"] = workspaceHandle }
+        let createResult = try client.sendV2(method: "pane.create", params: createParams)
+        guard let newPaneId = createResult["pane_id"] as? String else {
+            throw CLIError(message: "pane.create did not return a pane_id")
+        }
+        return try openFile(
+            path: path,
+            paneId: newPaneId,
+            focus: focus,
+            windowHandle: windowHandle,
+            workspaceHandle: workspaceHandle,
+            client: client
+        )
+    }
+
+    /// Opens a single file as a tab in the given pane.
+    private func openFile(
+        path: String,
+        paneId: String,
+        focus: Bool,
+        windowHandle: String?,
+        workspaceHandle: String?,
+        client: SocketClient
+    ) throws -> [String: Any] {
+        var params: [String: Any] = ["paths": [path], "focus": focus, "pane_id": paneId]
+        if let windowHandle { params["window_id"] = windowHandle }
+        if let workspaceHandle { params["workspace_id"] = workspaceHandle }
+        return try client.sendV2(method: "file.open", params: params)
     }
 
     func runSnapshotCommand(
@@ -1171,9 +1363,21 @@ extension CMUXCLI {
                     parsed.noFocus = true
                     index += 1
                     continue
+                case "--here", "--tab":
+                    parsed.forceHere = true
+                    index += 1
+                    continue
+                case "--split":
+                    parsed.split = try openOptionValue(commandArgs, index: index, name: arg)
+                    index += 2
+                    continue
+                case "--no-reuse":
+                    parsed.noReuse = true
+                    index += 1
+                    continue
                 default:
                     if arg.hasPrefix("-") {
-                        throw CLIError(message: "open: unknown flag '\(arg)'. Usage: cmux open <path-or-url>... [--workspace <id|ref|index>] [--surface <id|ref|index>] [--pane <id|ref|index>] [--window <id|ref|index>] [--focus true|false] [--no-focus]")
+                        throw CLIError(message: "open: unknown flag '\(arg)'. Usage: cmux open <path-or-url>... [--workspace <id|ref|index>] [--surface <id|ref|index>] [--pane <id|ref|index>] [--window <id|ref|index>] [--focus true|false] [--no-focus] [--here|--tab] [--split left|right|up|down] [--no-reuse]")
                     }
                 }
             }
