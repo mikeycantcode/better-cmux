@@ -73,7 +73,12 @@ struct PanelContentView: View {
                 )
             }
         case .filePreview:
-            if let filePreviewPanel = panel as? FilePreviewPanel {
+            if let editReviewPanel = panel as? EditReviewPanel {
+                EditReviewPanelView(
+                    panel: editReviewPanel,
+                    appearance: appearance
+                )
+            } else if let filePreviewPanel = panel as? FilePreviewPanel {
                 FilePreviewPanelView(
                     panel: filePreviewPanel,
                     isFocused: isFocused,
