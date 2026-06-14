@@ -6936,6 +6936,14 @@ struct ContentView: View {
         )
         contributions.append(
             CommandPaletteCommandContribution(
+                commandId: "palette.resumeLastClaudeSession",
+                title: constant(String(localized: "command.resumeLastClaudeSession.title", defaultValue: "Resume Last Claude Session")),
+                subtitle: constant(String(localized: "command.resumeLastClaudeSession.subtitle", defaultValue: "Sessions")),
+                keywords: ["resume", "claude", "session", "last", "recent", "continue", "reopen"]
+            )
+        )
+        contributions.append(
+            CommandPaletteCommandContribution(
                 commandId: "palette.newTerminalTab",
                 title: constant(String(localized: "command.newTerminalTab.title", defaultValue: "New Tab (Terminal)")),
                 subtitle: constant(String(localized: "command.newTerminalTab.subtitle", defaultValue: "Tab")),
@@ -8100,6 +8108,20 @@ struct ContentView: View {
         }
         registry.register(commandId: "palette.reopenPreviousSession") {
             if AppDelegate.shared?.reopenPreviousSession() != true {
+                NSSound.beep()
+            }
+        }
+        registry.register(commandId: "palette.resumeLastClaudeSession") {
+            // Pick the most-recent resumable Claude session from the session index
+            // and resume it in a new tab via the shared resume coordinator.
+            let entry = ClaudeResumeLast.mostRecent(
+                sessionIndexStore.entries,
+                matching: { $0.agent == .claude && $0.resumeCommandWithCwd != nil },
+                modifiedAt: { $0.modified }
+            )
+            if let entry {
+                SessionEntryResumeCoordinator.resume(entry, tabManager: tabManager)
+            } else {
                 NSSound.beep()
             }
         }
