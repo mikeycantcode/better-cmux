@@ -30,8 +30,6 @@ final class EditReviewPanel: ObservableObject, Panel {
     var displayIcon: String? { "plus.forwardslash.minus" }
     var isDirty: Bool { false }
 
-    @Published private(set) var focusFlashToken = 0
-
     private var isClosed = false
 
     init(workspaceId: UUID, requestId: String, diff: EditDiff) {
@@ -55,9 +53,9 @@ final class EditReviewPanel: ObservableObject, Panel {
     }
 
     func triggerFlash(reason: WorkspaceAttentionFlashReason) {
+        // No-op: this is a transient review panel that opens above the agent and closes on the
+        // accept/reject decision, so it has no attention-flash affordance to drive.
         _ = reason
-        guard NotificationPaneFlashSettings.isEnabled() else { return }
-        focusFlashToken += 1
     }
 
     deinit {
