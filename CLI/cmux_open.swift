@@ -1,3 +1,4 @@
+import CmuxLayoutPolicy
 import Darwin
 import Foundation
 
@@ -141,6 +142,9 @@ extension CMUXCLI {
         var pane: String?
         var focus: String?
         var noFocus = false
+        var forceHere = false
+        var split: String?
+        var noReuse = false
         var targets: [String] = []
     }
 
@@ -701,6 +705,15 @@ extension CMUXCLI {
 
         var payloads: [[String: Any]] = []
 
+        // Parse the optional --split orientation into a forced split (validated up front so a typo
+        // fails before we touch the socket).
+        let forcedSplit = try parsedArgs.split.map { try parseSplitOrientation($0) }
+
+        // Smart placement runs the layout policy to decide where a bare `cmux open <file>` lands.
+        // An explicit pane/surface destination preserves the legacy batched `file.open` behavior;
+        // --here and --split route through the placement engine with the policy overridden.
+        let useSmartPlacement = parsedArgs.pane == nil && parsedArgs.surface == nil
+
         var pendingFiles: [String] = []
         func flushPendingFiles() throws {
             guard !pendingFiles.isEmpty else { return }
@@ -717,10 +730,75 @@ extension CMUXCLI {
             fileCount += files.count
         }
 
+        // Opens a single file using the placement returned by ``PlacementPolicy``. Falls back to
+        // a plain `file.open` (legacy behavior) when the snapshot lacks a usable anchor.
+        func placeFileSmart(_ path: String) throws {
+            guard let anchorSurfaceId = surfaceHandle else {
+                pendingFiles.append(path)
+                try flushPendingFiles()
+                return
+            }
+
+            // --split forces a beside split in the requested direction; the policy itself does not
+            // consume forcedSplit, so honor it directly without consulting the layout.
+            if let direction = parsedArgs.split {
+                let payload = try executeSplitOpen(
+                    path: path,
+                    direction: direction,
+                    anchorSurfaceId: anchorSurfaceId,
+                    focus: focus,
+                    windowHandle: windowHandle,
+                    workspaceHandle: workspaceHandle,
+                    client: client
+                )
+                payloads.append(["kind": "file", "payload": payload])
+                fileCount += 1
+                return
+            }
+
+            var snapshotParams: [String: Any] = ["surface_id": anchorSurfaceId]
+            if let windowHandle { snapshotParams["window_id"] = windowHandle }
+            if let workspaceHandle { snapshotParams["workspace_id"] = workspaceHandle }
+            let snapshotResult = try client.sendV2(method: "workspace.snapshot", params: snapshotParams)
+
+            guard let snapshot = decodeLayoutSnapshot(snapshotResult) else {
+                pendingFiles.append(path)
+                try flushPendingFiles()
+                return
+            }
+
+            let overrides = PlacementOverrides(
+                forceHere: parsedArgs.forceHere,
+                forcedSplit: forcedSplit,
+                allowReuse: !parsedArgs.noReuse
+            )
+            let placement = PlacementPolicy().decide(
+                filePath: path,
+                in: snapshot,
+                anchorSurfaceId: anchorSurfaceId,
+                overrides: overrides
+            )
+
+            let payload = try executePlacement(
+                placement,
+                path: path,
+                focus: focus,
+                windowHandle: windowHandle,
+                workspaceHandle: workspaceHandle,
+                client: client
+            )
+            payloads.append(["kind": "file", "payload": payload])
+            fileCount += 1
+        }
+
         for target in targets {
             switch target {
             case .file(let path):
-                pendingFiles.append(path)
+                if useSmartPlacement {
+                    try placeFileSmart(path)
+                } else {
+                    pendingFiles.append(path)
+                }
             case .directory(let directory):
                 try flushPendingFiles()
                 var params: [String: Any] = ["cwd": directory]
@@ -753,6 +831,344 @@ extension CMUXCLI {
             directoryCount: directoryCount,
             idFormat: idFormat
         ))
+    }
+
+    /// Maps a `--split left|right|up|down` value to the split orientation the placement policy uses.
+    private func parseSplitOrientation(_ raw: String) throws -> LayoutNode.Orientation {
+        switch raw.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() {
+        case "left", "right":
+            return .horizontal
+        case "up", "down":
+            return .vertical
+        default:
+            throw CLIError(message: "--split must be one of left|right|up|down")
+        }
+    }
+
+    /// Decodes a `workspace.snapshot` result dictionary into a ``LayoutSnapshot``, or `nil` if the
+    /// payload cannot be re-serialized/decoded (callers fall back to a plain `file.open`).
+    private func decodeLayoutSnapshot(_ result: [String: Any]) -> LayoutSnapshot? {
+        guard JSONSerialization.isValidJSONObject(result),
+              let data = try? JSONSerialization.data(withJSONObject: result, options: []) else {
+            return nil
+        }
+        return try? JSONDecoder().decode(LayoutSnapshot.self, from: data)
+    }
+
+    /// Executes a ``Placement`` against the socket and returns the payload of the final mutation.
+    private func executePlacement(
+        _ placement: Placement,
+        path: String,
+        focus: Bool,
+        windowHandle: String?,
+        workspaceHandle: String?,
+        client: SocketClient
+    ) throws -> [String: Any] {
+        switch placement {
+        case .reuse(let surfaceId):
+            if focus {
+                var params: [String: Any] = ["surface_id": surfaceId]
+                if let windowHandle { params["window_id"] = windowHandle }
+                if let workspaceHandle { params["workspace_id"] = workspaceHandle }
+                return try client.sendV2(method: "surface.focus", params: params)
+            }
+            // --no-focus: the file is already open; report the existing surface without focusing.
+            return ["surface_id": surfaceId, "reused": true]
+        case .newTab(let paneId):
+            return try openFile(
+                path: path,
+                paneId: paneId,
+                focus: focus,
+                windowHandle: windowHandle,
+                workspaceHandle: workspaceHandle,
+                client: client
+            )
+        case .here(let paneId):
+            return try openFile(
+                path: path,
+                paneId: paneId,
+                focus: focus,
+                windowHandle: windowHandle,
+                workspaceHandle: workspaceHandle,
+                client: client
+            )
+        case .splitRight(let fromSurfaceId):
+            return try executeSplitOpen(
+                path: path,
+                direction: "right",
+                anchorSurfaceId: fromSurfaceId,
+                focus: focus,
+                windowHandle: windowHandle,
+                workspaceHandle: workspaceHandle,
+                client: client
+            )
+        }
+    }
+
+    /// Creates a new pane beside the anchor surface, then opens `path` as a tab in that pane.
+    private func executeSplitOpen(
+        path: String,
+        direction: String,
+        anchorSurfaceId: String,
+        focus: Bool,
+        windowHandle: String?,
+        workspaceHandle: String?,
+        client: SocketClient
+    ) throws -> [String: Any] {
+        var createParams: [String: Any] = ["direction": direction, "surface_id": anchorSurfaceId, "focus": focus]
+        if let windowHandle { createParams["window_id"] = windowHandle }
+        if let workspaceHandle { createParams["workspace_id"] = workspaceHandle }
+        let createResult = try client.sendV2(method: "pane.create", params: createParams)
+        guard let newPaneId = createResult["pane_id"] as? String else {
+            throw CLIError(message: "pane.create did not return a pane_id")
+        }
+        return try openFile(
+            path: path,
+            paneId: newPaneId,
+            focus: focus,
+            windowHandle: windowHandle,
+            workspaceHandle: workspaceHandle,
+            client: client
+        )
+    }
+
+    /// Opens a single file as a tab in the given pane.
+    private func openFile(
+        path: String,
+        paneId: String,
+        focus: Bool,
+        windowHandle: String?,
+        workspaceHandle: String?,
+        client: SocketClient
+    ) throws -> [String: Any] {
+        var params: [String: Any] = ["paths": [path], "focus": focus, "pane_id": paneId]
+        if let windowHandle { params["window_id"] = windowHandle }
+        if let workspaceHandle { params["workspace_id"] = workspaceHandle }
+        return try client.sendV2(method: "file.open", params: params)
+    }
+
+    func runSnapshotCommand(
+        commandArgs: [String],
+        socketPath: String,
+        explicitPassword: String?
+    ) throws {
+        var workspaceArg: String?
+        var surfaceArg: String?
+        var windowArg: String?
+        var index = 0
+        while index < commandArgs.count {
+            let arg = commandArgs[index]
+            switch arg {
+            case "--workspace":
+                index += 1
+                workspaceArg = index < commandArgs.count ? commandArgs[index] : nil
+            case "--surface":
+                index += 1
+                surfaceArg = index < commandArgs.count ? commandArgs[index] : nil
+            case "--window":
+                index += 1
+                windowArg = index < commandArgs.count ? commandArgs[index] : nil
+            default:
+                throw CLIError(message: "snapshot: unknown flag '\(arg)'. Usage: cmux snapshot [--workspace <id|ref|index>] [--surface <id|ref|index>] [--window <id|ref|index>]")
+            }
+            index += 1
+        }
+
+        let client = try connectClient(
+            socketPath: socketPath,
+            explicitPassword: explicitPassword,
+            launchIfNeeded: false
+        )
+        defer { client.close() }
+
+        let windowHandle = try normalizeWindowHandle(windowArg, client: client)
+        let workspaceRaw = workspaceArg ?? (windowArg == nil ? ProcessInfo.processInfo.environment["CMUX_WORKSPACE_ID"] : nil)
+        let workspaceHandle = try normalizeWorkspaceHandle(workspaceRaw, client: client, windowHandle: windowHandle)
+        let surfaceRaw = surfaceArg ?? (windowArg == nil ? ProcessInfo.processInfo.environment["CMUX_SURFACE_ID"] : nil)
+        let surfaceHandle = try normalizeSurfaceHandle(surfaceRaw, client: client, workspaceHandle: workspaceHandle, windowHandle: windowHandle)
+
+        var params: [String: Any] = [:]
+        if let windowHandle { params["window_id"] = windowHandle }
+        if let workspaceHandle { params["workspace_id"] = workspaceHandle }
+        if let surfaceHandle { params["surface_id"] = surfaceHandle }
+
+        let payload = try client.sendV2(method: "workspace.snapshot", params: params)
+
+        // Pretty-print to a TTY for human/agent readability; compact when piped.
+        let isTTY = isatty(fileno(stdout)) != 0
+        let options: JSONSerialization.WritingOptions = isTTY ? [.prettyPrinted, .sortedKeys] : []
+        guard JSONSerialization.isValidJSONObject(payload),
+              let data = try? JSONSerialization.data(withJSONObject: payload, options: options),
+              let json = String(data: data, encoding: .utf8) else {
+            throw CLIError(message: "Failed to encode snapshot JSON")
+        }
+        print(json)
+    }
+
+    /// Connects, fetches `workspace.snapshot`, and decodes it into a ``LayoutSnapshot`` plus the
+    /// resolved socket handles, for the reorg verbs that resolve human-friendly refs.
+    private func snapshotForReorg(
+        workspaceArg: String?,
+        windowArg: String?,
+        client: SocketClient
+    ) throws -> (snapshot: LayoutSnapshot, windowHandle: String?, workspaceHandle: String?, anchorPaneId: String?) {
+        let windowHandle = try normalizeWindowHandle(windowArg, client: client)
+        let workspaceRaw = workspaceArg ?? (windowArg == nil ? ProcessInfo.processInfo.environment["CMUX_WORKSPACE_ID"] : nil)
+        let workspaceHandle = try normalizeWorkspaceHandle(workspaceRaw, client: client, windowHandle: windowHandle)
+        let anchorSurfaceRaw = windowArg == nil ? ProcessInfo.processInfo.environment["CMUX_SURFACE_ID"] : nil
+        let anchorSurfaceHandle = try normalizeSurfaceHandle(anchorSurfaceRaw, client: client, workspaceHandle: workspaceHandle, windowHandle: windowHandle)
+
+        var params: [String: Any] = [:]
+        if let windowHandle { params["window_id"] = windowHandle }
+        if let workspaceHandle { params["workspace_id"] = workspaceHandle }
+        if let anchorSurfaceHandle { params["surface_id"] = anchorSurfaceHandle }
+        let result = try client.sendV2(method: "workspace.snapshot", params: params)
+        guard let snapshot = decodeLayoutSnapshot(result) else {
+            throw CLIError(message: "Failed to decode workspace.snapshot for the current workspace")
+        }
+        // Prefer the anchor pane the app resolved from CMUX_SURFACE_ID; fall back to the focused pane.
+        let anchorPaneId = snapshot.anchor.paneId ?? snapshot.focusedPaneId
+        return (snapshot, windowHandle, workspaceHandle, anchorPaneId)
+    }
+
+    /// Returns the value following `name` in `args`, or `nil` if the flag is absent or has no value.
+    private func reorgOptionValue(_ args: [String], name: String) -> String? {
+        var index = 0
+        while index < args.count {
+            if args[index] == name, index + 1 < args.count {
+                return args[index + 1]
+            }
+            index += 1
+        }
+        return nil
+    }
+
+    func runMoveTabCommand(
+        commandArgs: [String],
+        socketPath: String,
+        explicitPassword: String?,
+        jsonOutput: Bool,
+        idFormat: CLIIDFormat
+    ) throws {
+        let positionals = commandArgs.filter { !$0.hasPrefix("-") }
+        guard let surfaceRef = positionals.first else {
+            throw CLIError(message: "move-tab requires a <surfaceRef>. Usage: cmux move-tab <surfaceRef> --to-pane <paneRef> [--focus]")
+        }
+        guard let paneRef = reorgOptionValue(commandArgs, name: "--to-pane") else {
+            throw CLIError(message: "move-tab requires --to-pane <paneRef>")
+        }
+        let focus = commandArgs.contains("--focus")
+        let workspaceArg = reorgOptionValue(commandArgs, name: "--workspace")
+        let windowArg = reorgOptionValue(commandArgs, name: "--window")
+
+        let client = try connectClient(socketPath: socketPath, explicitPassword: explicitPassword, launchIfNeeded: false)
+        defer { client.close() }
+
+        let ctx = try snapshotForReorg(workspaceArg: workspaceArg, windowArg: windowArg, client: client)
+        let resolver = TargetResolver()
+        guard let surfaceId = resolver.resolveSurface(surfaceRef, in: ctx.snapshot) else {
+            throw CLIError(message: "move-tab: could not resolve surface '\(surfaceRef)' (no match or ambiguous)")
+        }
+        guard let paneId = resolver.resolvePane(paneRef, anchorPaneId: ctx.anchorPaneId, in: ctx.snapshot) else {
+            throw CLIError(message: "move-tab: could not resolve pane '\(paneRef)' (no match)")
+        }
+
+        var params: [String: Any] = ["surface_id": surfaceId, "pane_id": paneId, "focus": focus]
+        if let windowHandle = ctx.windowHandle { params["window_id"] = windowHandle }
+        if let workspaceHandle = ctx.workspaceHandle { params["workspace_id"] = workspaceHandle }
+        let payload = try client.sendV2(method: "surface.move", params: params)
+        printV2Payload(payload, jsonOutput: jsonOutput, idFormat: idFormat, fallbackText: "OK")
+    }
+
+    func runReorderTabCommand(
+        commandArgs: [String],
+        socketPath: String,
+        explicitPassword: String?,
+        jsonOutput: Bool,
+        idFormat: CLIIDFormat
+    ) throws {
+        let positionals = commandArgs.filter { !$0.hasPrefix("-") }
+        guard let surfaceRef = positionals.first else {
+            throw CLIError(message: "reorder-tab requires a <surfaceRef>. Usage: cmux reorder-tab <surfaceRef> --index N | --before <surfaceRef> | --after <surfaceRef>")
+        }
+        let indexRaw = reorgOptionValue(commandArgs, name: "--index")
+        let beforeRef = reorgOptionValue(commandArgs, name: "--before")
+        let afterRef = reorgOptionValue(commandArgs, name: "--after")
+        let targetCount = (indexRaw != nil ? 1 : 0) + (beforeRef != nil ? 1 : 0) + (afterRef != nil ? 1 : 0)
+        guard targetCount == 1 else {
+            throw CLIError(message: "reorder-tab requires exactly one of --index N | --before <surfaceRef> | --after <surfaceRef>")
+        }
+        let focus = commandArgs.contains("--focus")
+        let workspaceArg = reorgOptionValue(commandArgs, name: "--workspace")
+        let windowArg = reorgOptionValue(commandArgs, name: "--window")
+
+        let client = try connectClient(socketPath: socketPath, explicitPassword: explicitPassword, launchIfNeeded: false)
+        defer { client.close() }
+
+        let ctx = try snapshotForReorg(workspaceArg: workspaceArg, windowArg: windowArg, client: client)
+        let resolver = TargetResolver()
+        guard let surfaceId = resolver.resolveSurface(surfaceRef, in: ctx.snapshot) else {
+            throw CLIError(message: "reorder-tab: could not resolve surface '\(surfaceRef)' (no match or ambiguous)")
+        }
+
+        var params: [String: Any] = ["surface_id": surfaceId, "focus": focus]
+        if let windowHandle = ctx.windowHandle { params["window_id"] = windowHandle }
+        if let workspaceHandle = ctx.workspaceHandle { params["workspace_id"] = workspaceHandle }
+        if let indexRaw {
+            guard let index = Int(indexRaw) else {
+                throw CLIError(message: "reorder-tab: --index must be an integer")
+            }
+            params["index"] = index
+        } else if let beforeRef {
+            guard let beforeId = resolver.resolveSurface(beforeRef, in: ctx.snapshot) else {
+                throw CLIError(message: "reorder-tab: could not resolve --before surface '\(beforeRef)' (no match or ambiguous)")
+            }
+            params["before_surface_id"] = beforeId
+        } else if let afterRef {
+            guard let afterId = resolver.resolveSurface(afterRef, in: ctx.snapshot) else {
+                throw CLIError(message: "reorder-tab: could not resolve --after surface '\(afterRef)' (no match or ambiguous)")
+            }
+            params["after_surface_id"] = afterId
+        }
+
+        let payload = try client.sendV2(method: "surface.reorder", params: params)
+        printV2Payload(payload, jsonOutput: jsonOutput, idFormat: idFormat, fallbackText: "OK")
+    }
+
+    func runSwapPanesCommand(
+        commandArgs: [String],
+        socketPath: String,
+        explicitPassword: String?,
+        jsonOutput: Bool,
+        idFormat: CLIIDFormat
+    ) throws {
+        let positionals = commandArgs.filter { !$0.hasPrefix("-") }
+        guard positionals.count >= 2 else {
+            throw CLIError(message: "swap-panes requires two pane refs. Usage: cmux swap-panes <paneRefA> <paneRefB> [--focus]")
+        }
+        let refA = positionals[0]
+        let refB = positionals[1]
+        let focus = commandArgs.contains("--focus")
+        let workspaceArg = reorgOptionValue(commandArgs, name: "--workspace")
+        let windowArg = reorgOptionValue(commandArgs, name: "--window")
+
+        let client = try connectClient(socketPath: socketPath, explicitPassword: explicitPassword, launchIfNeeded: false)
+        defer { client.close() }
+
+        let ctx = try snapshotForReorg(workspaceArg: workspaceArg, windowArg: windowArg, client: client)
+        let resolver = TargetResolver()
+        guard let paneA = resolver.resolvePane(refA, anchorPaneId: ctx.anchorPaneId, in: ctx.snapshot) else {
+            throw CLIError(message: "swap-panes: could not resolve pane '\(refA)' (no match)")
+        }
+        guard let paneB = resolver.resolvePane(refB, anchorPaneId: ctx.anchorPaneId, in: ctx.snapshot) else {
+            throw CLIError(message: "swap-panes: could not resolve pane '\(refB)' (no match)")
+        }
+
+        var params: [String: Any] = ["pane_id": paneA, "target_pane_id": paneB, "focus": focus]
+        if let windowHandle = ctx.windowHandle { params["window_id"] = windowHandle }
+        if let workspaceHandle = ctx.workspaceHandle { params["workspace_id"] = workspaceHandle }
+        let payload = try client.sendV2(method: "pane.swap", params: params)
+        printV2Payload(payload, jsonOutput: jsonOutput, idFormat: idFormat, fallbackText: "OK")
     }
 
     func runDiffCommand(
@@ -1113,9 +1529,21 @@ extension CMUXCLI {
                     parsed.noFocus = true
                     index += 1
                     continue
+                case "--here", "--tab":
+                    parsed.forceHere = true
+                    index += 1
+                    continue
+                case "--split":
+                    parsed.split = try openOptionValue(commandArgs, index: index, name: arg)
+                    index += 2
+                    continue
+                case "--no-reuse":
+                    parsed.noReuse = true
+                    index += 1
+                    continue
                 default:
                     if arg.hasPrefix("-") {
-                        throw CLIError(message: "open: unknown flag '\(arg)'. Usage: cmux open <path-or-url>... [--workspace <id|ref|index>] [--surface <id|ref|index>] [--pane <id|ref|index>] [--window <id|ref|index>] [--focus true|false] [--no-focus]")
+                        throw CLIError(message: "open: unknown flag '\(arg)'. Usage: cmux open <path-or-url>... [--workspace <id|ref|index>] [--surface <id|ref|index>] [--pane <id|ref|index>] [--window <id|ref|index>] [--focus true|false] [--no-focus] [--here|--tab] [--split left|right|up|down] [--no-reuse]")
                     }
                 }
             }

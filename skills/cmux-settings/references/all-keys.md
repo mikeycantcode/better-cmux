@@ -108,6 +108,7 @@ Socket control and automation settings from Settings > Automation.
 | `automation.socketControlMode` | `"off"` or `"cmuxOnly"` or `"automation"` or `"password"` or `"allowAll"` or `"openAccess"` or `"fullOpenAccess"` or `"notifications"` or `"full"` | `"cmuxOnly"` | Socket control mode. Legacy aliases are accepted and normalized. |
 | `automation.socketPassword` | string or null | `""` | Password for password-mode socket access. Use null or an empty string to clear it. |
 | `automation.claudeCodeIntegration` | boolean | `true` | Enable cmux integration hooks for Claude Code. |
+| `automation.agentCapabilityBrief` | boolean | `true` | Tell coding agents about cmux layout commands. When enabled, cmux appends a short brief to Claude Code's system prompt so it runs `cmux open`, `cmux snapshot`, and the move/reorder/swap commands when you ask to view or arrange files. |
 | `automation.claudeBinaryPath` | string | `""` | Custom path to the claude binary. |
 | `automation.cursorIntegration` | boolean | `true` | Enable cmux integration hooks for Cursor. |
 | `automation.geminiIntegration` | boolean | `true` | Enable cmux integration hooks for Gemini. |

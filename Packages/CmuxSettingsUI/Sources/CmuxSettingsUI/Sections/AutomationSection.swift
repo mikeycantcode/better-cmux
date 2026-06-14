@@ -17,6 +17,7 @@ public struct AutomationSection: View {
     @State private var claudePathModel: DefaultsValueModel<String>
     @State private var ripgrepPathModel: DefaultsValueModel<String>
     @State private var suppressSubagentModel: DefaultsValueModel<Bool>
+    @State private var agentCapabilityBriefModel: DefaultsValueModel<Bool>
     @State private var ampModel: DefaultsValueModel<Bool>
     @State private var cursorModel: DefaultsValueModel<Bool>
     @State private var geminiModel: DefaultsValueModel<Bool>
@@ -53,6 +54,7 @@ public struct AutomationSection: View {
         _claudePathModel = State(initialValue: DefaultsValueModel(store: defaultsStore, key: catalog.integrations.claudeCodeCustomClaudePath))
         _ripgrepPathModel = State(initialValue: DefaultsValueModel(store: defaultsStore, key: catalog.integrations.ripgrepCustomBinaryPath))
         _suppressSubagentModel = State(initialValue: DefaultsValueModel(store: defaultsStore, key: catalog.integrations.suppressSubagentNotifications))
+        _agentCapabilityBriefModel = State(initialValue: DefaultsValueModel(store: defaultsStore, key: catalog.automation.agentCapabilityBrief))
         _ampModel = State(initialValue: DefaultsValueModel(store: defaultsStore, key: catalog.integrations.ampHooksEnabled))
         _cursorModel = State(initialValue: DefaultsValueModel(store: defaultsStore, key: catalog.integrations.cursorHooksEnabled))
         _geminiModel = State(initialValue: DefaultsValueModel(store: defaultsStore, key: catalog.integrations.geminiHooksEnabled))
@@ -73,6 +75,7 @@ public struct AutomationSection: View {
             claudePathCard
             ripgrepPathCard
             suppressSubagentCard
+            agentCapabilityBriefCard
             ampCard
             cursorCard
             geminiCard
@@ -278,6 +281,26 @@ public struct AutomationSection: View {
             }
             SettingsCardDivider()
             SettingsCardNote(String(localized: "settings.automation.suppressSubagentNotifications.note", defaultValue: "Uses process ancestry from hook processes. Disable if nested Codex or Claude sessions should trigger completion notifications."))
+        }
+    }
+
+    @ViewBuilder
+    private var agentCapabilityBriefCard: some View {
+        SettingsCard {
+            SettingsCardRow(
+                configurationReview: .json("automation.agentCapabilityBrief"),
+                String(localized: "settings.automation.agentCapabilityBrief", defaultValue: "Tell Agents About cmux Layout Commands"),
+                subtitle: agentCapabilityBriefModel.current
+                    ? String(localized: "settings.automation.agentCapabilityBrief.subtitleOn", defaultValue: "Agents are told how to open and arrange files with cmux commands.")
+                    : String(localized: "settings.automation.agentCapabilityBrief.subtitleOff", defaultValue: "Agents are not told about cmux layout commands.")
+            ) {
+                Toggle("", isOn: Binding(get: { agentCapabilityBriefModel.current }, set: { agentCapabilityBriefModel.set($0) }))
+                    .labelsHidden()
+                    .controlSize(.small)
+                    .accessibilityIdentifier("SettingsAgentCapabilityBriefToggle")
+            }
+            SettingsCardDivider()
+            SettingsCardNote(String(localized: "settings.automation.agentCapabilityBrief.note", defaultValue: "When enabled, cmux appends a short brief to Claude Code's system prompt so it knows to run `cmux open`, `cmux snapshot`, and the move/reorder/swap commands when you ask to view or arrange files."))
         }
     }
 

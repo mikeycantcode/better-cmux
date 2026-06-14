@@ -95843,6 +95843,74 @@
         }
       }
     },
+    "settings.automation.agentCapabilityBrief": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tell Agents About cmux Layout Commands"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "エージェントにcmuxのレイアウトコマンドを伝える"
+          }
+        }
+      }
+    },
+    "settings.automation.agentCapabilityBrief.note": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "When enabled, cmux appends a short brief to Claude Code's system prompt so it knows to run `cmux open`, `cmux snapshot`, and the move/reorder/swap commands when you ask to view or arrange files."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "有効にすると、cmuxはClaude Codeのシステムプロンプトに短い説明を追加し、ファイルの表示や配置を依頼した際に`cmux open`、`cmux snapshot`、move/reorder/swapコマンドを実行できるようにします。"
+          }
+        }
+      }
+    },
+    "settings.automation.agentCapabilityBrief.subtitleOff": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Agents are not told about cmux layout commands."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "エージェントにcmuxのレイアウトコマンドは伝えられません。"
+          }
+        }
+      }
+    },
+    "settings.automation.agentCapabilityBrief.subtitleOn": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Agents are told how to open and arrange files with cmux commands."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "エージェントにcmuxコマンドでファイルを開いて配置する方法が伝えられます。"
+          }
+        }
+      }
+    },
     "settings.automation.amp": {
       "extractionState": "manual",
       "localizations": {

@@ -77,6 +77,12 @@ public struct AutomationCatalogSection: SettingCatalogSection {
         userDefaultsKey: "kiroNotificationLevel"
     )
 
+    public let agentCapabilityBrief = DefaultsKey<Bool>(
+        id: "automation.agentCapabilityBrief",
+        defaultValue: true,
+        userDefaultsKey: "automation.agentCapabilityBrief"
+    )
+
     public let portBase = DefaultsKey<Int>(
         id: "automation.portBase",
         defaultValue: 9100,

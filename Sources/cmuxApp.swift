@@ -5194,6 +5194,19 @@ enum AmpIntegrationSettings {
     }
 }
 
+enum AgentCapabilityBriefSettings {
+    static let enabledKey = "automation.agentCapabilityBrief"
+    static let defaultEnabled = true
+    static let environmentKey = "CMUX_AGENT_CAPABILITY_BRIEF"
+
+    static func isEnabled(defaults: UserDefaults = .standard) -> Bool {
+        if defaults.object(forKey: enabledKey) == nil {
+            return defaultEnabled
+        }
+        return defaults.bool(forKey: enabledKey)
+    }
+}
+
 enum WelcomeSettings {
     static let shownKey = "cmuxWelcomeShown"
 }

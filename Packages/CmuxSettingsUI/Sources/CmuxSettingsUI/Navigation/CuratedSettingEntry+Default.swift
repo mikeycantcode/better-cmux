@@ -25,6 +25,7 @@ extension Array where Element == CuratedSettingEntry {
             .init(section: .automation, id: "claude-path", title: "Claude Binary Path", synonyms: "automation.claudeBinaryPath claude binary executable path cli command custom"),
             .init(section: .automation, id: "ripgrep-path", title: "Ripgrep Binary Path", synonyms: "automation.ripgrepBinaryPath ripgrep rg binary executable path search find nix custom"),
             .init(section: .automation, id: "subagent-notifications", title: "Suppress Subagent Notifications", synonyms: "automation.suppressSubagentNotifications subagent nested child agent codex claude hooks notifications"),
+            .init(section: .automation, id: "agent-capability-brief", title: "Tell Agents About cmux Layout Commands", synonyms: "automation.agentCapabilityBrief agent claude capability brief layout commands cmux open snapshot move-tab reorder swap panes system prompt discover"),
             .init(section: .automation, id: "cursor", title: "Cursor Integration", synonyms: "automation.cursorIntegration cursor ide agent hooks notifications"),
             .init(section: .automation, id: "gemini", title: "Gemini CLI Integration", synonyms: "automation.geminiIntegration gemini cli google agent hooks notifications"),
 
