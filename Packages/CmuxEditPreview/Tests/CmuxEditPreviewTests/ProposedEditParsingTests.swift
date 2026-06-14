@@ -32,4 +32,11 @@ import Testing
     @Test func rejectsMalformedJSON() {
         #expect(ProposedEdit.from(toolName: "Write", toolInputJSON: "not json") == nil)
     }
+
+    @Test func parsesToolNameCaseInsensitively() {
+        let write = ProposedEdit.from(toolName: "write", toolInputJSON: #"{"file_path":"/a","content":"x"}"#)
+        #expect(write == ProposedEdit(filePath: "/a", kind: .write(content: "x")))
+        let multi = ProposedEdit.from(toolName: "MULTIEDIT", toolInputJSON: #"{"file_path":"/a","edits":[{"old_string":"a","new_string":"b"}]}"#)
+        #expect(multi == ProposedEdit(filePath: "/a", kind: .multiEdit([SingleEdit(oldString: "a", newString: "b", replaceAll: false)])))
+    }
 }

@@ -42,17 +42,17 @@ public struct EditPreviewComputer: Sendable {
         }
     }
 
-    /// Applies replacements in order; returns `nil` if any `old_string` is not found at its turn.
+    /// Applies replacements in order; returns `nil` if any `old_string` is absent (or empty) at its turn.
     private static func apply(_ edits: [SingleEdit], to original: String) -> String? {
         var text = original
         for edit in edits {
-            guard text.contains(edit.oldString) else { return nil }
+            guard !edit.oldString.isEmpty else { return nil }
             if edit.replaceAll {
+                guard text.contains(edit.oldString) else { return nil }
                 text = text.replacingOccurrences(of: edit.oldString, with: edit.newString)
-            } else if let range = text.range(of: edit.oldString) {
-                text.replaceSubrange(range, with: edit.newString)
             } else {
-                return nil
+                guard let range = text.range(of: edit.oldString) else { return nil }
+                text.replaceSubrange(range, with: edit.newString)
             }
         }
         return text

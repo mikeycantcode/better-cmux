@@ -51,4 +51,19 @@ import Testing
                                 kind: .edit(SingleEdit(oldString: "x", newString: "y", replaceAll: false)))
         #expect(computer.compute(edit, originalText: nil) == nil)
     }
+
+    @Test func multiEditPartialFailureIsNonApplicable() {
+        // Second edit's old_string is absent in the original AND not produced by the first edit.
+        let edit = ProposedEdit(filePath: "/a.txt", kind: .multiEdit([
+            SingleEdit(oldString: "a", newString: "b", replaceAll: false),
+            SingleEdit(oldString: "zzz", newString: "c", replaceAll: false),
+        ]))
+        #expect(computer.compute(edit, originalText: "a") == nil)
+    }
+
+    @Test func editWithEmptyOldStringIsNonApplicable() {
+        let edit = ProposedEdit(filePath: "/a.txt",
+                                kind: .edit(SingleEdit(oldString: "", newString: "y", replaceAll: false)))
+        #expect(computer.compute(edit, originalText: "abc") == nil)
+    }
 }
