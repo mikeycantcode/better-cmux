@@ -129,8 +129,8 @@ public struct AppSection: View {
         Group {
             SettingsSectionHeader(String(localized: "settings.section.app", defaultValue: "App"), section: .app)
                 .accessibilityIdentifier("SettingsAppSection")
-            welcomePaneOnLaunchCard
             mainCard
+            welcomePaneOnLaunchCard
         }
         .task {
             if languageAtAppear == nil { languageAtAppear = language.current }
