@@ -11100,7 +11100,6 @@ final class Workspace: Identifiable, ObservableObject {
                 initialTabId = tabId
             }
             welcomePanel.onNewTerminal = { [weak self, weak welcomePanel] in
-                AppDelegate.shared?.endDeferredSessionRestore(discardSnapshot: true)
                 guard let self, let welcomePanel,
                       let pane = self.paneId(forPanelId: welcomePanel.id) else { return }
                 // Create the terminal first; only close the welcome surface if that succeeded, so a
@@ -14557,6 +14556,9 @@ final class Workspace: Identifiable, ObservableObject {
         remotePTYSessionID: String? = nil,
         suppressWorkspaceRemoteStartupCommand: Bool = false
     ) -> TerminalPanel? {
+        // Any terminal creation (welcome button, ⌘T, command palette, split) ends the welcome
+        // pane's deferred-restore state and re-enables session saving. No-op when not deferred.
+        AppDelegate.shared?.endDeferredSessionRestore(discardSnapshot: true)
         let shouldFocusNewTab = focus ?? (bonsplitController.focusedPaneId == paneId)
         let previousFocusedPanelId = focusedPanelId
         let previousHostedView = focusedTerminalPanel?.hostedView

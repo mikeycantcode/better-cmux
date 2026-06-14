@@ -3098,11 +3098,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
         // If the primary window opened to the welcome pane, do not auto-apply the saved session.
         // Suppress saves (so the welcome-only window can't clobber the saved file) and offer the
         // user a "Restore previous session" button instead.
-        let welcomePanel = primaryContext.tabManager.selectedWorkspace?.panels.values
-            .compactMap { $0 as? WelcomePanel }.first
+        let welcomePanel = primaryContext.tabManager.tabs
+            .flatMap { $0.panels.values }
+            .compactMap { $0 as? WelcomePanel }
+            .first
         if let welcomePanel {
             deferredSessionRestorePending = true
-            let restorable = startupSessionSnapshot.map { Self.snapshotHasRestorableContent($0) } ?? false
+            let restorable = startupSessionSnapshot.map { $0.windows.contains { $0.hasRestorablePanels } } ?? false
             welcomePanel.hasPreviousSession = restorable
             if restorable {
                 welcomePanel.onRestoreSession = { [weak self, weak primaryWindow] in
@@ -3185,13 +3187,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
         isManualReopen: Bool
     ) -> Bool {
         !isManualReopen
-    }
-
-    /// Whether a loaded session snapshot has real restorable content (at least one workspace with a panel).
-    nonisolated static func snapshotHasRestorableContent(_ snapshot: AppSessionSnapshot) -> Bool {
-        snapshot.windows.contains { window in
-            window.tabManager.workspaces.contains { !$0.panels.isEmpty }
-        }
     }
 
     /// Applies the deferred (saved) session into the welcome window on user request, then resumes saving.

@@ -1,6 +1,7 @@
 import SwiftUI
 
-/// The better cmux welcome screen: red app-icon logo, title, credits, and a "+ New Terminal" button.
+/// The better cmux welcome screen: the bundled app-icon asset for the current appearance
+/// (AppIconDark / AppIconLight), title, credits, and a "+ New Terminal" button.
 struct WelcomePanelView: View {
     @ObservedObject var panel: WelcomePanel
     let appearance: PanelAppearance
