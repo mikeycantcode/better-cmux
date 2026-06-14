@@ -1058,6 +1058,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
     private var didPrepareStartupSessionSnapshot = false
     var didAttemptStartupSessionRestore = false
     private var isApplyingSessionRestore = false
+    private var deferredSessionRestorePending = false
     private var sessionAutosaveTimer: DispatchSourceTimer?
     private var sessionAutosaveTickInFlight = false
     private var sessionAutosaveDeferredRetryPending = false
@@ -3094,6 +3095,23 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
         guard !didHandleExplicitOpenIntentAtStartup else { return false }
         guard let primaryContext = contextForMainTerminalWindow(primaryWindow) else { return false }
 
+        // If the primary window opened to the welcome pane, do not auto-apply the saved session.
+        // Suppress saves (so the welcome-only window can't clobber the saved file) and offer the
+        // user a "Restore previous session" button instead.
+        let welcomePanel = primaryContext.tabManager.selectedWorkspace?.panels.values
+            .compactMap { $0 as? WelcomePanel }.first
+        if let welcomePanel {
+            deferredSessionRestorePending = true
+            let restorable = startupSessionSnapshot.map { Self.snapshotHasRestorableContent($0) } ?? false
+            welcomePanel.hasPreviousSession = restorable
+            if restorable {
+                welcomePanel.onRestoreSession = { [weak self, weak primaryWindow] in
+                    self?.applyDeferredSessionRestore(into: primaryWindow)
+                }
+            }
+            return false
+        }
+
         let startupSnapshot = startupSessionSnapshot
         let primaryWindowSnapshot = startupSnapshot?.windows.first
         if let primaryWindowSnapshot {
@@ -3167,6 +3185,37 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
         isManualReopen: Bool
     ) -> Bool {
         !isManualReopen
+    }
+
+    /// Whether a loaded session snapshot has real restorable content (at least one workspace with a panel).
+    nonisolated static func snapshotHasRestorableContent(_ snapshot: AppSessionSnapshot) -> Bool {
+        snapshot.windows.contains { window in
+            window.tabManager.workspaces.contains { !$0.panels.isEmpty }
+        }
+    }
+
+    /// Applies the deferred (saved) session into the welcome window on user request, then resumes saving.
+    func applyDeferredSessionRestore(into window: NSWindow?) {
+        guard deferredSessionRestorePending, let snapshot = startupSessionSnapshot,
+              let primaryWindowSnapshot = snapshot.windows.first else { return }
+        let targetWindow = window ?? NSApp.keyWindow ?? NSApp.mainWindow
+        guard let targetWindow, let primaryContext = contextForMainTerminalWindow(targetWindow) else { return }
+        deferredSessionRestorePending = false  // re-enable saves
+        isApplyingSessionRestore = true
+        applySessionWindowSnapshot(primaryWindowSnapshot, to: primaryContext, window: targetWindow)
+        let additionalWindows = Array(snapshot.windows.dropFirst()
+            .prefix(max(0, SessionPersistencePolicy.maxWindowsPerSnapshot - 1)))
+        for windowSnapshot in additionalWindows {
+            _ = createMainWindow(sessionWindowSnapshot: windowSnapshot)
+        }
+        completeSessionRestoreOperation(isManualReopen: true)
+    }
+
+    /// Ends the deferred-restore state (re-enables saving). Called when the user picks "+ New Terminal".
+    func endDeferredSessionRestore(discardSnapshot: Bool) {
+        guard deferredSessionRestorePending else { return }
+        deferredSessionRestorePending = false
+        if discardSnapshot { startupSessionSnapshot = nil }
     }
 
     @discardableResult
@@ -4168,6 +4217,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
         persistedGeometryData: Data?,
         synchronously: Bool
     ) {
+        // Suppress all session writes while the welcome pane is showing so a welcome-only window
+        // never overwrites the user's saved session (data-loss guard). Cleared when the user
+        // restores the previous session or starts a new terminal.
+        guard !deferredSessionRestorePending else { return }
+
         guard snapshot != nil || removeWhenEmpty || persistedGeometryData != nil else { return }
 
         let writeBlock = {

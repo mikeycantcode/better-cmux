@@ -8,10 +8,15 @@ struct WelcomePanelView: View {
     private let originalURL = URL(string: "https://github.com/manaflow-ai/cmux")!
     private let buildURL = URL(string: "https://github.com/mikeycantcode")!
 
+    private var isDark: Bool { !appearance.backgroundColor.isLightColor }
+    private var logoImage: NSImage {
+        NSImage(named: isDark ? "AppIconDark" : "AppIconLight") ?? NSApplication.shared.applicationIconImage
+    }
+
     var body: some View {
         VStack(spacing: 18) {
             Spacer()
-            Image(nsImage: NSApplication.shared.applicationIconImage)
+            Image(nsImage: logoImage)
                 .resizable()
                 .frame(width: 88, height: 88)
             Text(String(localized: "welcome.title", defaultValue: "better cmux"))
@@ -39,6 +44,12 @@ struct WelcomePanelView: View {
             }
             .controlSize(.large)
             .keyboardShortcut(.defaultAction)
+            if panel.hasPreviousSession {
+                Button(String(localized: "welcome.restorePrevious", defaultValue: "Restore previous session")) {
+                    panel.onRestoreSession?()
+                }
+                .controlSize(.regular)
+            }
             Text(String(localized: "welcome.shortcutHint", defaultValue: "⌘T also opens a terminal"))
                 .font(.caption2)
                 .foregroundStyle(.tertiary)

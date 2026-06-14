@@ -11100,6 +11100,7 @@ final class Workspace: Identifiable, ObservableObject {
                 initialTabId = tabId
             }
             welcomePanel.onNewTerminal = { [weak self, weak welcomePanel] in
+                AppDelegate.shared?.endDeferredSessionRestore(discardSnapshot: true)
                 guard let self, let welcomePanel,
                       let pane = self.paneId(forPanelId: welcomePanel.id) else { return }
                 // Create the terminal first; only close the welcome surface if that succeeded, so a

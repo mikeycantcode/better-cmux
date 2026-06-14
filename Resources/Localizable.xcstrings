@@ -176803,6 +176803,23 @@
         }
       }
     },
+    "welcome.restorePrevious": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Restore previous session"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "前回のセッションを復元"
+          }
+        }
+      }
+    },
     "welcome.shortcutHint": {
       "extractionState": "manual",
       "localizations": {
