@@ -3166,7 +3166,8 @@ final class WorkspaceCreationPlacementTests: XCTestCase {
             configTemplate: CmuxSurfaceConfigTemplate?,
             initialTerminalCommand: String?,
             initialTerminalInput: String?,
-            initialTerminalEnvironment: [String: String]
+            initialTerminalEnvironment: [String: String],
+            createWelcomePanel: Bool
         ) -> Workspace {
             beforeCreateWorkspace?()
             return super.makeWorkspaceForCreation(
@@ -3176,7 +3177,8 @@ final class WorkspaceCreationPlacementTests: XCTestCase {
                 configTemplate: configTemplate,
                 initialTerminalCommand: initialTerminalCommand,
                 initialTerminalInput: initialTerminalInput,
-                initialTerminalEnvironment: initialTerminalEnvironment
+                initialTerminalEnvironment: initialTerminalEnvironment,
+                createWelcomePanel: createWelcomePanel
             )
         }
     }
@@ -3465,7 +3467,8 @@ final class WorkspaceCreationConfigSanitizationTests: XCTestCase {
             configTemplate: CmuxSurfaceConfigTemplate?,
             initialTerminalCommand: String?,
             initialTerminalInput: String?,
-            initialTerminalEnvironment: [String: String]
+            initialTerminalEnvironment: [String: String],
+            createWelcomePanel: Bool
         ) -> Workspace {
             capturedConfigTemplate = configTemplate
             return super.makeWorkspaceForCreation(
@@ -3475,7 +3478,8 @@ final class WorkspaceCreationConfigSanitizationTests: XCTestCase {
                 configTemplate: configTemplate,
                 initialTerminalCommand: initialTerminalCommand,
                 initialTerminalInput: initialTerminalInput,
-                initialTerminalEnvironment: initialTerminalEnvironment
+                initialTerminalEnvironment: initialTerminalEnvironment,
+                createWelcomePanel: createWelcomePanel
             )
         }
     }
