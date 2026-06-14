@@ -18371,6 +18371,23 @@
         }
       }
     },
+    "about.betterCmux": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "better cmux"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "better cmux"
+          }
+        }
+      }
+    },
     "about.build": {
       "extractionState": "manual",
       "localizations": {
@@ -18605,6 +18622,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "Коміт"
+          }
+        }
+      }
+    },
+    "about.credit": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "better cmux — built on cmux by manaflow-ai. This build: github.com/mikeycantcode"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "better cmux — cmux（manaflow-ai 製）を基にしています。このビルド: github.com/mikeycantcode"
           }
         }
       }

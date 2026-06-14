@@ -2804,6 +2804,7 @@ private struct AboutPanelView: View {
 
     private let githubURL = URL(string: "https://github.com/manaflow-ai/cmux")
     private let docsURL = URL(string: "https://cmux.com/docs")
+    private let betterCmuxURL = URL(string: "https://github.com/mikeycantcode")
 
     private var version: String? { Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String }
     private var build: String? { Bundle.main.infoDictionary?["CFBundleVersion"] as? String }
@@ -2838,6 +2839,12 @@ private struct AboutPanelView: View {
                 }
                 .textSelection(.enabled)
 
+                Text(String(localized: "about.credit", defaultValue: "better cmux — built on cmux by manaflow-ai. This build: github.com/mikeycantcode"))
+                    .multilineTextAlignment(.center)
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                    .textSelection(.enabled)
+
                 VStack(spacing: 2) {
                     if let version {
                         AboutPropertyRow(label: String(localized: "about.version", defaultValue: "Version"), text: version)
@@ -2861,6 +2868,11 @@ private struct AboutPanelView: View {
                     }
                     if let url = githubURL {
                         Button(String(localized: "about.github", defaultValue: "GitHub")) {
+                            openURL(url)
+                        }
+                    }
+                    if let url = betterCmuxURL {
+                        Button(String(localized: "about.betterCmux", defaultValue: "better cmux")) {
                             openURL(url)
                         }
                     }
