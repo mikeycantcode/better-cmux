@@ -7976,11 +7976,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
     ) -> UUID {
         reserveInitialSocketPathIfNeeded()
         let windowId = UUID()
+        let welcomePane = InitialSurfaceKind.resolve(
+            isFreshLaunch: sessionWindowSnapshot == nil,
+            hasInitialInput: initialTerminalInput != nil,
+            welcomeEnabled: WelcomePaneSettings.isEnabled()
+        ) == .welcome
         let tabManager = TabManager(
             initialWorkspaceTitle: initialWorkspaceTitle,
             initialWorkingDirectory: initialWorkingDirectory,
             initialTerminalInput: initialTerminalInput,
-            autoWelcomeIfNeeded: initialTerminalInput == nil
+            autoWelcomeIfNeeded: initialTerminalInput == nil,
+            createWelcomePanel: welcomePane
         )
         if let sessionWindowSnapshot {
             let restoredPanelIdsByWorkspaceIndex = tabManager.restoreSessionSnapshot(

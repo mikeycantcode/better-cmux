@@ -11019,7 +11019,8 @@ final class Workspace: Identifiable, ObservableObject {
         configTemplate: CmuxSurfaceConfigTemplate? = nil,
         initialTerminalCommand: String? = nil,
         initialTerminalInput: String? = nil,
-        initialTerminalEnvironment: [String: String] = [:], initialDetachedSurface: DetachedSurfaceTransfer? = nil
+        initialTerminalEnvironment: [String: String] = [:], initialDetachedSurface: DetachedSurfaceTransfer? = nil,
+        createWelcomePanel: Bool = false
     ) {
         self.id = UUID()
         self.portOrdinal = portOrdinal
@@ -11083,6 +11084,28 @@ final class Workspace: Identifiable, ObservableObject {
             if let initialPaneId = bonsplitController.allPaneIds.first,
                attachDetachedSurface(initialDetachedSurface, inPane: initialPaneId, focus: false) != nil {
                 initialTabId = surfaceIdFromPanelId(initialDetachedSurface.panelId)
+            }
+        } else if createWelcomePanel {
+            let welcomePanel = WelcomePanel(workspaceId: id)
+            panels[welcomePanel.id] = welcomePanel
+            panelTitles[welcomePanel.id] = welcomePanel.displayTitle
+            if let tabId = bonsplitController.createTab(
+                title: welcomePanel.displayTitle,
+                icon: "sparkles",
+                kind: SurfaceKind.filePreview,
+                isDirty: false,
+                isPinned: false
+            ) {
+                surfaceIdToPanelId[tabId] = welcomePanel.id
+                initialTabId = tabId
+            }
+            welcomePanel.onNewTerminal = { [weak self, weak welcomePanel] in
+                guard let self, let welcomePanel,
+                      let pane = self.paneId(forPanelId: welcomePanel.id) else { return }
+                // Create the terminal first; only close the welcome surface if that succeeded, so a
+                // (near-impossible) creation failure never strands an empty pane.
+                guard self.newTerminalSurface(inPane: pane, focus: true) != nil else { return }
+                _ = self.closePanel(welcomePanel.id, force: true)
             }
         } else {
             // Create initial terminal panel

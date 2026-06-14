@@ -1297,6 +1297,7 @@ class TabManager: ObservableObject {
         initialWorkingDirectory: String? = nil,
         initialTerminalInput: String? = nil,
         autoWelcomeIfNeeded: Bool = true,
+        createWelcomePanel: Bool = false,
         commandRunner: any CommandRunning = CommandRunner(),
         gitMetadataService: GitMetadataService = GitMetadataService(),
         workspaceGitMetadataReader: (any WorkspaceGitMetadataReading)? = nil,
@@ -1318,7 +1319,8 @@ class TabManager: ObservableObject {
             title: initialWorkspaceTitle,
             workingDirectory: initialWorkingDirectory,
             initialTerminalInput: initialTerminalInput,
-            autoWelcomeIfNeeded: autoWelcomeIfNeeded
+            autoWelcomeIfNeeded: autoWelcomeIfNeeded,
+            createWelcomePanel: createWelcomePanel
         )
         observers.append(NotificationCenter.default.addObserver(
             forName: .ghosttyDidSetTitle,
@@ -2523,7 +2525,8 @@ class TabManager: ObservableObject {
         configTemplate: CmuxSurfaceConfigTemplate?,
         initialTerminalCommand: String?,
         initialTerminalInput: String? = nil,
-        initialTerminalEnvironment: [String: String]
+        initialTerminalEnvironment: [String: String],
+        createWelcomePanel: Bool = false
     ) -> Workspace {
         Workspace(
             title: title,
@@ -2532,7 +2535,8 @@ class TabManager: ObservableObject {
             configTemplate: configTemplate,
             initialTerminalCommand: initialTerminalCommand,
             initialTerminalInput: initialTerminalInput,
-            initialTerminalEnvironment: initialTerminalEnvironment
+            initialTerminalEnvironment: initialTerminalEnvironment,
+            createWelcomePanel: createWelcomePanel
         )
     }
 
@@ -2614,7 +2618,8 @@ class TabManager: ObservableObject {
         placementOverride: NewWorkspacePlacement? = nil,
         autoWelcomeIfNeeded: Bool = true,
         autoRefreshMetadata: Bool = true,
-        normalizeWorkspaceGroupsAfterInsert: Bool = true
+        normalizeWorkspaceGroupsAfterInsert: Bool = true,
+        createWelcomePanel: Bool = false
     ) -> Workspace {
         let sourceWorkspace = selectedWorkspace
         let capturedTabs = tabs
@@ -2660,7 +2665,8 @@ class TabManager: ObservableObject {
                 configTemplate: inheritedConfig,
                 initialTerminalCommand: initialTerminalCommand,
                 initialTerminalInput: initialTerminalInput,
-                initialTerminalEnvironment: initialTerminalEnvironment
+                initialTerminalEnvironment: initialTerminalEnvironment,
+                createWelcomePanel: createWelcomePanel
             )
             applyCreationChromeInheritance(
                 to: newWorkspace,
@@ -2720,7 +2726,8 @@ class TabManager: ObservableObject {
                 "selectedTabId": select ? newWorkspace.id.uuidString : (snapshot.selectedTabId?.uuidString ?? "")
             ])
 #endif
-            if autoWelcomeIfNeeded && select && !UserDefaults.standard.bool(forKey: WelcomeSettings.shownKey) {
+            if autoWelcomeIfNeeded && select && !createWelcomePanel
+               && !UserDefaults.standard.bool(forKey: WelcomeSettings.shownKey) {
                 if let appDelegate = AppDelegate.shared {
                     appDelegate.sendWelcomeCommandWhenReady(to: newWorkspace, markShownOnSend: true)
                 } else {
