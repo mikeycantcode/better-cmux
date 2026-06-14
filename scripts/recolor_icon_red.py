@@ -28,6 +28,8 @@ SAT_MIN = 0.08
 TARGETS = [
     "AppIcon.icon/Assets/cmux-icon-chevron 2.png",
     "design/cmux-icon-chevron.png",
+    "Assets.xcassets/AppIconLight.imageset/AppIconLight.png",
+    "Assets.xcassets/AppIconDark.imageset/AppIconDark.png",
     "web/app/icon.png",
     "web/app/apple-icon.png",
     "web/public/logo.png",
