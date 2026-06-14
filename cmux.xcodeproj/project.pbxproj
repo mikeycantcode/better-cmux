@@ -666,6 +666,8 @@
 		ACE4FE2A8F1CC6C0B6A673AB /* VMClientSocketCommands.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9CEC6F0035B71AE59FA45BA7 /* VMClientSocketCommands.swift */; };
 		C37800000000000000000001 /* VMSSHCommandTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C37800000000000000000002 /* VMSSHCommandTests.swift */; };
 		BBC0DE0000000000000000A0 /* WeakMonacoScriptMessageHandler.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBC0DE0000000000000000A1 /* WeakMonacoScriptMessageHandler.swift */; };
+		A0DC18A5286E4D5C914A7197 /* WelcomePanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A49D15B13A3E4476930CFD77 /* WelcomePanel.swift */; };
+		CFC25D57E7C24E48A9E8AD7A /* WelcomePanelView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DA3FC359A1ED4212A02BCFA3 /* WelcomePanelView.swift */; };
 		A500120C /* WindowAccessor.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5001222 /* WindowAccessor.swift */; };
 		063BC42CEE257D6213A2E30C /* WindowAndDragTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BEE83F8394D90ACACD8E19DD /* WindowAndDragTests.swift */; };
 		A5001700A1B2C3D4E5F60718 /* WindowAppearanceSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5001701A1B2C3D4E5F60718 /* WindowAppearanceSnapshot.swift */; };
@@ -1395,6 +1397,8 @@
 		9CEC6F0035B71AE59FA45BA7 /* VMClientSocketCommands.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = VMClientSocketCommands.swift; sourceTree = "<group>"; };
 		C37800000000000000000002 /* VMSSHCommandTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VMSSHCommandTests.swift; sourceTree = "<group>"; };
 		BBC0DE0000000000000000A1 /* WeakMonacoScriptMessageHandler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Monaco/WeakMonacoScriptMessageHandler.swift"; sourceTree = "<group>"; };
+		A49D15B13A3E4476930CFD77 /* WelcomePanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Panels/WelcomePanel.swift; sourceTree = "<group>"; };
+		DA3FC359A1ED4212A02BCFA3 /* WelcomePanelView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Panels/WelcomePanelView.swift; sourceTree = "<group>"; };
 		A5001222 /* WindowAccessor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WindowAccessor.swift; sourceTree = "<group>"; };
 		BEE83F8394D90ACACD8E19DD /* WindowAndDragTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WindowAndDragTests.swift; sourceTree = "<group>"; };
 		A5001701A1B2C3D4E5F60718 /* WindowAppearanceSnapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Windowing/WindowAppearanceSnapshot.swift; sourceTree = "<group>"; };
@@ -1956,6 +1960,8 @@
 				A5001423 /* FilePreviewPanel.swift */,
 				ED17ED17ED17ED17ED170012 /* EditReviewPanel.swift */,
 				ED17ED17ED17ED17ED170014 /* EditReviewPanelView.swift */,
+				A49D15B13A3E4476930CFD77 /* WelcomePanel.swift */,
+				DA3FC359A1ED4212A02BCFA3 /* WelcomePanelView.swift */,
 				A5C0DE0000000000000000B1 /* ProjectPanel.swift */,
 				A5C0DE0000000000000000B3 /* ProjectPanelView.swift */,
 				A5C0DE0000000000000000B5 /* ProjectFilesTabView.swift */,
@@ -3020,6 +3026,8 @@
 				ACE4FE1A8F1CC6C0B6A673AB /* VMClient.swift in Sources */,
 				ACE4FE2A8F1CC6C0B6A673AB /* VMClientSocketCommands.swift in Sources */,
 				BBC0DE0000000000000000A0 /* WeakMonacoScriptMessageHandler.swift in Sources */,
+				A0DC18A5286E4D5C914A7197 /* WelcomePanel.swift in Sources */,
+				CFC25D57E7C24E48A9E8AD7A /* WelcomePanelView.swift in Sources */,
 				A500120C /* WindowAccessor.swift in Sources */,
 				A5001700A1B2C3D4E5F60718 /* WindowAppearanceSnapshot.swift in Sources */,
 				A5001800A1B2C3D4E5F60718 /* WindowBackdropController.swift in Sources */,

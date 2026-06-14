@@ -73,7 +73,9 @@ struct PanelContentView: View {
                 )
             }
         case .filePreview:
-            if let editReviewPanel = panel as? EditReviewPanel {
+            if let welcomePanel = panel as? WelcomePanel {
+                WelcomePanelView(panel: welcomePanel, appearance: appearance)
+            } else if let editReviewPanel = panel as? EditReviewPanel {
                 EditReviewPanelView(
                     panel: editReviewPanel,
                     appearance: appearance
