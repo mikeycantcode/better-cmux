@@ -14,6 +14,7 @@ final class MonacoWebController: NSObject, WKNavigationDelegate, WKScriptMessage
 
     private var isReady = false
     private var pendingLoad: (text: String, language: String, theme: String)?
+    private var pendingDiff: (original: String, modified: String, language: String, theme: String)?
     // The text/language last pushed into the editor, used to make `load` idempotent.
     // SwiftUI re-runs the representable's `updateNSView` on every parent change and
     // calls `load` each time; without this guard, re-applying the same buffer would
@@ -106,6 +107,25 @@ final class MonacoWebController: NSObject, WKNavigationDelegate, WKScriptMessage
         )
     }
 
+    /// Loads a read-only two-pane diff (original vs modified) into the editor.
+    ///
+    /// If the web view is not ready yet, the diff is queued and applied on `ready`.
+    /// A controller used for a diff shows only the diff editor; it does not also call ``load``.
+    func loadDiff(original: String, modified: String, language: String, theme: String) {
+        pendingDiff = (original, modified, language, theme)
+        guard isReady else { return }
+        applyPendingDiff()
+    }
+
+    private func applyPendingDiff() {
+        guard let webView, let d = pendingDiff else { return }
+        let args = jsonArgs(d.original, d.modified, d.language, d.theme)
+        webView.evaluateJavaScript(
+            "window.cmuxMonaco && window.cmuxMonaco.setDiff(\(args)[0], \(args)[1], \(args)[2], \(args)[3]);",
+            completionHandler: nil
+        )
+    }
+
     /// Replaces the editor buffer with `text` from an external on-disk change,
     /// preserving the cursor position.
     func applyExternalChange(_ text: String) {
@@ -165,6 +185,7 @@ final class MonacoWebController: NSObject, WKNavigationDelegate, WKScriptMessage
         case .ready:
             isReady = true
             applyPendingLoad()
+            applyPendingDiff()
         case .change(let content):
             // The editor now holds `content`; record it so a subsequent `load`
             // echoing the same text (e.g. from the panel persisting its buffer)
@@ -194,6 +215,7 @@ final class MonacoWebController: NSObject, WKNavigationDelegate, WKScriptMessage
         lastAppliedContent = nil
         lastAppliedTheme = nil
         pendingLoad = nil
+        pendingDiff = nil
     }
 
     // MARK: WKNavigationDelegate

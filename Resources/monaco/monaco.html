@@ -62,6 +62,8 @@
         fontLigatures: true
       });
 
+      var diffEditor = null;
+
       var suppressChange = false;   // true while we apply content from Swift
       var saveTimer = null;
       var SAVE_DEBOUNCE_MS = 600;
@@ -100,6 +102,22 @@
 
       // Swift -> JS API.
       window.cmuxMonaco = {
+        setDiff: function (original, modified, language, theme) {
+          if (theme) monaco.editor.setTheme(theme);
+          var originalModel = monaco.editor.createModel(original, language || "plaintext");
+          var modifiedModel = monaco.editor.createModel(modified, language || "plaintext");
+          if (!diffEditor) {
+            diffEditor = monaco.editor.createDiffEditor(document.getElementById("container"), {
+              automaticLayout: true,
+              readOnly: true,
+              originalEditable: false,
+              renderSideBySide: true,
+              minimap: { enabled: false },
+              scrollBeyondLastLine: false
+            });
+          }
+          diffEditor.setModel({ original: originalModel, modified: modifiedModel });
+        },
         setContent: function (text, language, theme) {
           suppressChange = true;
           var model = editor.getModel();

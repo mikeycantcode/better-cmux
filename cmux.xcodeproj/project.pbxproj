@@ -413,6 +413,7 @@
 		BBC0DE00000000000000001E /* MonacoAtomicTextSaverTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBC0DE00000000000000001D /* MonacoAtomicTextSaverTests.swift */; };
 		BBC0DE00000000000000000A /* MonacoBridgeMessage.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBC0DE000000000000000009 /* MonacoBridgeMessage.swift */; };
 		BBC0DE00000000000000001A /* MonacoBridgeMessageTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBC0DE000000000000000019 /* MonacoBridgeMessageTests.swift */; };
+		BBC0DE000000000003000002 /* MonacoDiffView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBC0DE000000000003000001 /* MonacoDiffView.swift */; };
 		BBC0DE000000000000000010 /* MonacoEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBC0DE00000000000000000F /* MonacoEditorView.swift */; };
 		BBC0DE00000000000000000C /* MonacoLanguageMap.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBC0DE00000000000000000B /* MonacoLanguageMap.swift */; };
 		BBC0DE00000000000000001C /* MonacoLanguageMapTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBC0DE00000000000000001B /* MonacoLanguageMapTests.swift */; };
@@ -1133,6 +1134,7 @@
 		BBC0DE00000000000000001D /* MonacoAtomicTextSaverTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MonacoAtomicTextSaverTests.swift; sourceTree = "<group>"; };
 		BBC0DE000000000000000009 /* MonacoBridgeMessage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Monaco/MonacoBridgeMessage.swift"; sourceTree = "<group>"; };
 		BBC0DE000000000000000019 /* MonacoBridgeMessageTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MonacoBridgeMessageTests.swift; sourceTree = "<group>"; };
+		BBC0DE000000000003000001 /* MonacoDiffView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Monaco/MonacoDiffView.swift"; sourceTree = "<group>"; };
 		BBC0DE00000000000000000F /* MonacoEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Monaco/MonacoEditorView.swift"; sourceTree = "<group>"; };
 		BBC0DE00000000000000000B /* MonacoLanguageMap.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Monaco/MonacoLanguageMap.swift"; sourceTree = "<group>"; };
 		BBC0DE00000000000000001B /* MonacoLanguageMapTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MonacoLanguageMapTests.swift; sourceTree = "<group>"; };
@@ -1678,6 +1680,7 @@
 				BBC0DE00000000000000000D /* MonacoWebController.swift */,
 				BBC0DE0000000000000000A1 /* WeakMonacoScriptMessageHandler.swift */,
 				BBC0DE00000000000000000F /* MonacoEditorView.swift */,
+				BBC0DE000000000003000001 /* MonacoDiffView.swift */,
 				BBC0DE000000000000000011 /* MonacoAtomicTextSaver.swift */,
 				BBC0DE000000000000000013 /* CodeEditorChoice.swift */,
 				BBC0DE000000000000000015 /* CodeEditorPreferenceSettings.swift */,
@@ -2799,6 +2802,7 @@
 				BBC0DE000000000000000008 /* MonacoAssetURLSchemeHandler.swift in Sources */,
 				BBC0DE000000000000000012 /* MonacoAtomicTextSaver.swift in Sources */,
 				BBC0DE00000000000000000A /* MonacoBridgeMessage.swift in Sources */,
+				BBC0DE000000000003000002 /* MonacoDiffView.swift in Sources */,
 				BBC0DE000000000000000010 /* MonacoEditorView.swift in Sources */,
 				BBC0DE00000000000000000C /* MonacoLanguageMap.swift in Sources */,
 				BBC0DE00000000000000000E /* MonacoWebController.swift in Sources */,
