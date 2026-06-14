@@ -165,3 +165,24 @@ the localization audit before handoff.
   confirm the section exists (General vs Appearance vs Automation) during planning.
 - **Icon imaging dependency** — Pillow (or equivalent) must be available to the recolor script;
   document the install in the script and keep it out of the app build (offline asset step).
+
+---
+
+## Update (2026-06-14): welcome every launch + restore-previous-session
+
+Refinement after dogfooding (user request "every time with an option to go to prev session"):
+
+- The welcome pane now shows on **every** launch (the saved session is no longer auto-applied over
+  it). Auto-restore is deferred to a user action.
+- While the welcome pane is showing, **all session saves are suppressed** via a single
+  `deferredSessionRestorePending` guard at the `AppDelegate.persistSessionSnapshot(...)` chokepoint,
+  so a welcome-only window can never overwrite the saved session file (verified: the saved session
+  is byte-identical after a welcome-launch + quit cycle).
+- The welcome pane shows a **"Restore previous session"** button when the loaded snapshot has real
+  content (`SessionWindowSnapshot.hasRestorablePanels`); clicking it applies the saved session into
+  the current window and resumes saving.
+- The deferred state ends (saves resume) when the user creates **any** terminal — wired at the
+  shared `Workspace.newTerminalSurface(inPane:)` chokepoint so ⌘T / command palette / split all
+  clear it, not just the welcome button (shared-behavior policy).
+- The in-app welcome logo renders the bundled `AppIconDark`/`AppIconLight` asset (recolored red) for
+  the current appearance, instead of the OS-cached app icon.
