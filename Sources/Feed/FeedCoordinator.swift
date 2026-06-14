@@ -138,8 +138,24 @@ final class FeedCoordinator: @unchecked Sendable {
         // diff pane can be opened with the pre-edit content during the upcoming main hop.
         let editToolName = event.toolName
         let editToolInputJSON = event.toolInputJSON
-        let editOriginalText: String? = {
+        // Files larger than this threshold produce unreadable diffs and would stall the socket
+        // worker allocating the full content; skip edit-review diff for oversized files.
+        let maxEditDiffBytes = 2 * 1024 * 1024
+        let withinDiffSizeCap: Bool = {
             guard let toolName = editToolName,
+                  Self.isFileEditTool(toolName),
+                  let toolInputJSON = editToolInputJSON,
+                  let edit = ProposedEdit.from(toolName: toolName, toolInputJSON: toolInputJSON)
+            else { return true }
+            // A missing file (new-file Write) has no size to check — proceed.
+            guard let attrs = try? FileManager.default.attributesOfItem(atPath: edit.filePath),
+                  let fileSize = (attrs[.size] as? NSNumber)?.intValue
+            else { return true }
+            return fileSize <= maxEditDiffBytes
+        }()
+        let editOriginalText: String? = {
+            guard withinDiffSizeCap,
+                  let toolName = editToolName,
                   Self.isFileEditTool(toolName),
                   let toolInputJSON = editToolInputJSON,
                   let edit = ProposedEdit.from(toolName: toolName, toolInputJSON: toolInputJSON)
@@ -159,7 +175,8 @@ final class FeedCoordinator: @unchecked Sendable {
                 if let ppid = event.ppid, ppid > 0 {
                     FeedCoordinator.shared.armPidWatcher(ppid: ppid)
                 }
-                if let toolName = editToolName,
+                if withinDiffSizeCap,
+                   let toolName = editToolName,
                    Self.isFileEditTool(toolName),
                    let toolInputJSON = editToolInputJSON {
                     FeedCoordinator.shared.editReviewCoordinator.handlePending(
