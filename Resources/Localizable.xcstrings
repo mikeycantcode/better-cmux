@@ -97042,6 +97042,74 @@
         }
       }
     },
+    "settings.automation.manualEditDiff" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Manual Edit Diff"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "手動編集の差分"
+          }
+        }
+      }
+    },
+    "settings.automation.manualEditDiff.note" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "When enabled, file-edit permissions in manual approval mode show a Monaco diff for review. When disabled, edits use the traditional Feed permission row."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "有効にすると、手動承認モードのファイル編集許可がレビュー用のMonaco差分を表示します。無効にすると、従来のFeedの許可行を使用します。"
+          }
+        }
+      }
+    },
+    "settings.automation.manualEditDiff.subtitleOff" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "File edits use the Feed permission row."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ファイル編集はFeedの許可行を使用します。"
+          }
+        }
+      }
+    },
+    "settings.automation.manualEditDiff.subtitleOn" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "File edits show a Monaco diff in a split above the agent."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ファイル編集はエージェントの上の分割にMonaco差分を表示します。"
+          }
+        }
+      }
+    },
     "settings.automation.cursor": {
       "extractionState": "manual",
       "localizations": {

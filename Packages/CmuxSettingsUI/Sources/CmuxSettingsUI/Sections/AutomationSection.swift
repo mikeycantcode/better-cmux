@@ -17,6 +17,7 @@ public struct AutomationSection: View {
     @State private var claudePathModel: DefaultsValueModel<String>
     @State private var ripgrepPathModel: DefaultsValueModel<String>
     @State private var suppressSubagentModel: DefaultsValueModel<Bool>
+    @State private var manualEditDiffModel: DefaultsValueModel<Bool>
     @State private var ampModel: DefaultsValueModel<Bool>
     @State private var cursorModel: DefaultsValueModel<Bool>
     @State private var geminiModel: DefaultsValueModel<Bool>
@@ -53,6 +54,7 @@ public struct AutomationSection: View {
         _claudePathModel = State(initialValue: DefaultsValueModel(store: defaultsStore, key: catalog.integrations.claudeCodeCustomClaudePath))
         _ripgrepPathModel = State(initialValue: DefaultsValueModel(store: defaultsStore, key: catalog.integrations.ripgrepCustomBinaryPath))
         _suppressSubagentModel = State(initialValue: DefaultsValueModel(store: defaultsStore, key: catalog.integrations.suppressSubagentNotifications))
+        _manualEditDiffModel = State(initialValue: DefaultsValueModel(store: defaultsStore, key: catalog.automation.manualEditDiff))
         _ampModel = State(initialValue: DefaultsValueModel(store: defaultsStore, key: catalog.integrations.ampHooksEnabled))
         _cursorModel = State(initialValue: DefaultsValueModel(store: defaultsStore, key: catalog.integrations.cursorHooksEnabled))
         _geminiModel = State(initialValue: DefaultsValueModel(store: defaultsStore, key: catalog.integrations.geminiHooksEnabled))
@@ -73,6 +75,7 @@ public struct AutomationSection: View {
             claudePathCard
             ripgrepPathCard
             suppressSubagentCard
+            manualEditDiffCard
             ampCard
             cursorCard
             geminiCard
@@ -278,6 +281,26 @@ public struct AutomationSection: View {
             }
             SettingsCardDivider()
             SettingsCardNote(String(localized: "settings.automation.suppressSubagentNotifications.note", defaultValue: "Uses process ancestry from hook processes. Disable if nested Codex or Claude sessions should trigger completion notifications."))
+        }
+    }
+
+    @ViewBuilder
+    private var manualEditDiffCard: some View {
+        SettingsCard {
+            SettingsCardRow(
+                configurationReview: .json("automation.manualEditDiff"),
+                String(localized: "settings.automation.manualEditDiff", defaultValue: "Manual Edit Diff"),
+                subtitle: manualEditDiffModel.current
+                    ? String(localized: "settings.automation.manualEditDiff.subtitleOn", defaultValue: "File edits show a Monaco diff in a split above the agent.")
+                    : String(localized: "settings.automation.manualEditDiff.subtitleOff", defaultValue: "File edits use the Feed permission row.")
+            ) {
+                Toggle("", isOn: Binding(get: { manualEditDiffModel.current }, set: { manualEditDiffModel.set($0) }))
+                    .labelsHidden()
+                    .controlSize(.small)
+                    .accessibilityIdentifier("SettingsManualEditDiffToggle")
+            }
+            SettingsCardDivider()
+            SettingsCardNote(String(localized: "settings.automation.manualEditDiff.note", defaultValue: "When enabled, file-edit permissions in manual approval mode show a Monaco diff for review. When disabled, edits use the traditional Feed permission row."))
         }
     }
 

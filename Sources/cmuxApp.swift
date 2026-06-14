@@ -5117,6 +5117,18 @@ enum AgentSubagentNotificationSettings {
     }
 }
 
+enum ManualEditDiffSettings {
+    static let manualEditDiffKey = "manualEditDiff"
+    static let defaultManualEditDiff = true
+
+    static func isEnabled(defaults: UserDefaults = .standard) -> Bool {
+        if defaults.object(forKey: manualEditDiffKey) == nil {
+            return defaultManualEditDiff
+        }
+        return defaults.bool(forKey: manualEditDiffKey)
+    }
+}
+
 enum CursorIntegrationSettings {
     static let hooksEnabledKey = "cursorHooksEnabled"
     static let defaultHooksEnabled = true
