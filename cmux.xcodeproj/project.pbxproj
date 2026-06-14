@@ -251,6 +251,7 @@
 		BB57A700000000000000000A /* EditorLauncher.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB57A700000000000000000B /* EditorLauncher.swift */; };
 		BB57A700000000000000000C /* EditorLauncherTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB57A7000000000000000009 /* EditorLauncherTests.swift */; };
 		BB57A7000000000000000008 /* EditorPreferenceSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB57A7000000000000000007 /* EditorPreferenceSettings.swift */; };
+		FEED0000000000000000FE02 /* EditReviewCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEED0000000000000000FE01 /* EditReviewCoordinator.swift */; };
 		ED17ED17ED17ED17ED170011 /* EditReviewPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = ED17ED17ED17ED17ED170012 /* EditReviewPanel.swift */; };
 		ED17ED17ED17ED17ED170013 /* EditReviewPanelView.swift in Sources */ = {isa = PBXBuildFile; fileRef = ED17ED17ED17ED17ED170014 /* EditReviewPanelView.swift */; };
 		E4C001000000000000000001 /* ExtensionSidebarWorkspaceRowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E4C001000000000000000002 /* ExtensionSidebarWorkspaceRowView.swift */; };
@@ -976,6 +977,7 @@
 		BB57A700000000000000000B /* EditorLauncher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatusBar/EditorLauncher.swift; sourceTree = "<group>"; };
 		BB57A7000000000000000009 /* EditorLauncherTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditorLauncherTests.swift; sourceTree = "<group>"; };
 		BB57A7000000000000000007 /* EditorPreferenceSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatusBar/EditorPreferenceSettings.swift; sourceTree = "<group>"; };
+		FEED0000000000000000FE01 /* EditReviewCoordinator.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = EditReviewCoordinator.swift; sourceTree = "<group>"; };
 		ED17ED17ED17ED17ED170012 /* EditReviewPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Panels/EditReviewPanel.swift; sourceTree = "<group>"; };
 		ED17ED17ED17ED17ED170014 /* EditReviewPanelView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Panels/EditReviewPanelView.swift; sourceTree = "<group>"; };
 		E4C001000000000000000002 /* ExtensionSidebarWorkspaceRowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExtensionSidebarWorkspaceRowView.swift; sourceTree = "<group>"; };
@@ -2222,6 +2224,7 @@
 			isa = PBXGroup;
 			children = (
 				FEED0000000000000000F001 /* FeedCoordinator.swift */,
+				FEED0000000000000000FE01 /* EditReviewCoordinator.swift */,
 				FEED0000000000000000F004 /* FeedPanelView.swift */,
 				FEED0000000000000000F012 /* FeedPermissionActionPolicy.swift */,
 				FEED0000000000000000F010 /* FeedPanelViewModel.swift */,
@@ -2710,6 +2713,7 @@
 				D0B10014A1B2C3D4E5F60001 /* DragOverlayRoutingPolicy.swift in Sources */,
 				BB57A700000000000000000A /* EditorLauncher.swift in Sources */,
 				BB57A7000000000000000008 /* EditorPreferenceSettings.swift in Sources */,
+				FEED0000000000000000FE02 /* EditReviewCoordinator.swift in Sources */,
 				ED17ED17ED17ED17ED170011 /* EditReviewPanel.swift in Sources */,
 				ED17ED17ED17ED17ED170013 /* EditReviewPanelView.swift in Sources */,
 				E4C001000000000000000001 /* ExtensionSidebarWorkspaceRowView.swift in Sources */,
