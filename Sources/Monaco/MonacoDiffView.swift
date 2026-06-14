@@ -27,6 +27,8 @@ struct MonacoDiffView: NSViewRepresentable {
 
     func updateNSView(_ nsView: WKWebView, context: Context) {
         applyAppearance(to: nsView)
+        // The diff content is immutable once set (the panel is review-only: Accept/Reject are the
+        // only actions), so updates only re-apply the theme — not the diff models.
         controller.setTheme(theme)
     }
 
