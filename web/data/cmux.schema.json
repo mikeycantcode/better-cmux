@@ -384,6 +384,11 @@
           "type": "boolean",
           "default": false,
           "description": "Search every surface in the command palette switcher instead of only the active workspace."
+        },
+        "welcomePaneOnLaunch": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show the better cmux welcome pane on a fresh launch instead of an immediate terminal."
         }
       }
     },

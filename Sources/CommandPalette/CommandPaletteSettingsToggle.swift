@@ -787,6 +787,28 @@ enum CommandPaletteSettingsToggleCommands {
                 defaultsKey: ManualEditDiffSettings.manualEditDiffKey
             ),
             CommandPaletteSettingToggleDescriptor(
+                commandId: commandIdPrefix + "welcomePaneOnLaunch",
+                settingsKey: "app.welcomePaneOnLaunch",
+                title: {
+                    String(
+                        localized: "settings.app.welcomePaneOnLaunch",
+                        defaultValue: "Welcome Pane on Launch"
+                    )
+                },
+                sectionTitle: app,
+                keywords: [
+                    "app.welcomePaneOnLaunch",
+                    "welcome",
+                    "launch",
+                    "startup",
+                    "new",
+                    "terminal",
+                    "pane",
+                ],
+                defaultValue: WelcomePaneSettings.defaultWelcomePaneOnLaunch,
+                defaultsKey: WelcomePaneSettings.welcomePaneOnLaunchKey
+            ),
+            CommandPaletteSettingToggleDescriptor(
                 commandId: commandIdPrefix + "cursorIntegration",
                 settingsKey: "automation.cursorIntegration",
                 title: {

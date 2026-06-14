@@ -5129,6 +5129,18 @@ enum ManualEditDiffSettings {
     }
 }
 
+enum WelcomePaneSettings {
+    static let welcomePaneOnLaunchKey = "welcomePaneOnLaunch"
+    static let defaultWelcomePaneOnLaunch = true
+
+    static func isEnabled(defaults: UserDefaults = .standard) -> Bool {
+        if defaults.object(forKey: welcomePaneOnLaunchKey) == nil {
+            return defaultWelcomePaneOnLaunch
+        }
+        return defaults.bool(forKey: welcomePaneOnLaunchKey)
+    }
+}
+
 enum CursorIntegrationSettings {
     static let hooksEnabledKey = "cursorHooksEnabled"
     static let defaultHooksEnabled = true

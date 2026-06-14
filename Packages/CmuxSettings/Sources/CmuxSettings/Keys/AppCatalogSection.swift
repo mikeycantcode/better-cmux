@@ -193,5 +193,11 @@ public struct AppCatalogSection: SettingCatalogSection {
         userDefaultsKey: "systemWideHotkey.enabled"
     )
 
+    public let welcomePaneOnLaunch = DefaultsKey<Bool>(
+        id: "app.welcomePaneOnLaunch",
+        defaultValue: true,
+        userDefaultsKey: "welcomePaneOnLaunch"
+    )
+
     public init() {}
 }

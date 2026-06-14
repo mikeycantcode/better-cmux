@@ -89891,6 +89891,74 @@
         }
       }
     },
+    "settings.app.welcomePaneOnLaunch": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Welcome Pane on Launch"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "起動時のウェルカムペイン"
+          }
+        }
+      }
+    },
+    "settings.app.welcomePaneOnLaunch.subtitleOn": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "New windows open to a welcome pane with a New Terminal button."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "新しいウィンドウは「新規ターミナル」ボタン付きのウェルカムペインで開きます。"
+          }
+        }
+      }
+    },
+    "settings.app.welcomePaneOnLaunch.subtitleOff": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "New windows open a terminal immediately."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "新しいウィンドウはすぐにターミナルを開きます。"
+          }
+        }
+      }
+    },
+    "settings.app.welcomePaneOnLaunch.note": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "When enabled, opening a fresh window (no restored session) shows the better cmux welcome pane instead of an immediate terminal. Restored sessions are unaffected."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "有効にすると、（復元セッションのない）新規ウィンドウで、すぐにターミナルを開く代わりに better cmux のウェルカムペインを表示します。復元されたセッションには影響しません。"
+          }
+        }
+      }
+    },
     "settings.app.reorderOnNotification": {
       "extractionState": "manual",
       "localizations": {

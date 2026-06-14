@@ -60,6 +60,7 @@ public struct AppSection: View {
     @State private var hideCloseButton: DefaultsValueModel<Bool>
     @State private var renameSelects: DefaultsValueModel<Bool>
     @State private var paletteAllSurfaces: DefaultsValueModel<Bool>
+    @State private var welcomePaneOnLaunchModel: DefaultsValueModel<Bool>
 
     @State private var languageAtAppear: AppLanguage?
     @State private var telemetryAtAppear: Bool?
@@ -108,6 +109,7 @@ public struct AppSection: View {
         _hideCloseButton = State(initialValue: DefaultsValueModel(store: defaultsStore, key: catalog.app.hideTabCloseButton))
         _renameSelects = State(initialValue: DefaultsValueModel(store: defaultsStore, key: catalog.app.renameSelectsExistingName))
         _paletteAllSurfaces = State(initialValue: DefaultsValueModel(store: defaultsStore, key: catalog.app.commandPaletteSearchesAllSurfaces))
+        _welcomePaneOnLaunchModel = State(initialValue: DefaultsValueModel(store: defaultsStore, key: catalog.app.welcomePaneOnLaunch))
     }
 
     private static let columnWidth: CGFloat = 196
@@ -127,11 +129,32 @@ public struct AppSection: View {
         Group {
             SettingsSectionHeader(String(localized: "settings.section.app", defaultValue: "App"), section: .app)
                 .accessibilityIdentifier("SettingsAppSection")
+            welcomePaneOnLaunchCard
             mainCard
         }
         .task {
             if languageAtAppear == nil { languageAtAppear = language.current }
             if telemetryAtAppear == nil { telemetryAtAppear = telemetry.current }
+        }
+    }
+
+    @ViewBuilder
+    private var welcomePaneOnLaunchCard: some View {
+        SettingsCard {
+            SettingsCardRow(
+                configurationReview: .json("app.welcomePaneOnLaunch"),
+                String(localized: "settings.app.welcomePaneOnLaunch", defaultValue: "Welcome Pane on Launch"),
+                subtitle: welcomePaneOnLaunchModel.current
+                    ? String(localized: "settings.app.welcomePaneOnLaunch.subtitleOn", defaultValue: "New windows open to a welcome pane with a New Terminal button.")
+                    : String(localized: "settings.app.welcomePaneOnLaunch.subtitleOff", defaultValue: "New windows open a terminal immediately.")
+            ) {
+                Toggle("", isOn: Binding(get: { welcomePaneOnLaunchModel.current }, set: { welcomePaneOnLaunchModel.set($0) }))
+                    .labelsHidden()
+                    .controlSize(.small)
+                    .accessibilityIdentifier("SettingsWelcomePaneOnLaunchToggle")
+            }
+            SettingsCardDivider()
+            SettingsCardNote(String(localized: "settings.app.welcomePaneOnLaunch.note", defaultValue: "When enabled, opening a fresh window (no restored session) shows the better cmux welcome pane instead of an immediate terminal. Restored sessions are unaffected."))
         }
     }
 

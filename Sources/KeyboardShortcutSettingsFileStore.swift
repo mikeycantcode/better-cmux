@@ -499,6 +499,9 @@ final class CmuxSettingsFileStore {
         if let value = jsonBool(section["commandPaletteSearchesAllSurfaces"]) {
             snapshot.managedUserDefaults[CommandPaletteSwitcherSearchSettings.searchAllSurfacesKey] = .bool(value)
         }
+        if let value = jsonBool(section["welcomePaneOnLaunch"]) {
+            snapshot.managedUserDefaults[WelcomePaneSettings.welcomePaneOnLaunchKey] = .bool(value)
+        }
     }
 
     private func parseNotificationsSection(
