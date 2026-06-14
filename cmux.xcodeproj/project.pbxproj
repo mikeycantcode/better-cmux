@@ -147,6 +147,8 @@
 		C0DEF0A10000000000000001 /* CmuxConfigUI.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0DEF0A10000000000000002 /* CmuxConfigUI.swift */; };
 		C750100000000000000000A3 /* CmuxControlSocket in Frameworks */ = {isa = PBXBuildFile; productRef = C750100000000000000000A2 /* CmuxControlSocket */; };
 		D1320AA0D1320AA0D1320AA2 /* CmuxDockTilePlugin.plugin in Copy Dock Tile Plugin */ = {isa = PBXBuildFile; fileRef = D1320AA0D1320AA0D1320AA5 /* CmuxDockTilePlugin.plugin */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		ED17ED17ED17ED17ED170003 /* CmuxEditPreview in Frameworks */ = {isa = PBXBuildFile; productRef = ED17ED17ED17ED17ED170002 /* CmuxEditPreview */; };
+		ED17ED17ED17ED17ED170004 /* CmuxEditPreview in Frameworks */ = {isa = PBXBuildFile; productRef = ED17ED17ED17ED17ED170002 /* CmuxEditPreview */; };
 		E7E000000000000000000005 /* CmuxEventBus.swift in Sources */ = {isa = PBXBuildFile; fileRef = E7E000000000000000000006 /* CmuxEventBus.swift */; };
 		E7E000000000000000000003 /* CmuxEventBusTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E7E000000000000000000004 /* CmuxEventBusTests.swift */; };
 		E7E00000000000000000000D /* CmuxEventLogWriter.swift in Sources */ = {isa = PBXBuildFile; fileRef = E7E00000000000000000000E /* CmuxEventLogWriter.swift */; };
@@ -254,6 +256,9 @@
 		BB57A700000000000000000A /* EditorLauncher.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB57A700000000000000000B /* EditorLauncher.swift */; };
 		BB57A700000000000000000C /* EditorLauncherTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB57A7000000000000000009 /* EditorLauncherTests.swift */; };
 		BB57A7000000000000000008 /* EditorPreferenceSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB57A7000000000000000007 /* EditorPreferenceSettings.swift */; };
+		FEED0000000000000000FE02 /* EditReviewCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEED0000000000000000FE01 /* EditReviewCoordinator.swift */; };
+		ED17ED17ED17ED17ED170011 /* EditReviewPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = ED17ED17ED17ED17ED170012 /* EditReviewPanel.swift */; };
+		ED17ED17ED17ED17ED170013 /* EditReviewPanelView.swift in Sources */ = {isa = PBXBuildFile; fileRef = ED17ED17ED17ED17ED170014 /* EditReviewPanelView.swift */; };
 		E4C001000000000000000001 /* ExtensionSidebarWorkspaceRowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E4C001000000000000000002 /* ExtensionSidebarWorkspaceRowView.swift */; };
 		E4C001000000000000000003 /* ExtensionWorktreePrototype.swift in Sources */ = {isa = PBXBuildFile; fileRef = E4C001000000000000000004 /* ExtensionWorktreePrototype.swift */; };
 		E50320010000000000000001 /* ExtensionWorktreeSpawnArgsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E50320010000000000000002 /* ExtensionWorktreeSpawnArgsTests.swift */; };
@@ -418,6 +423,7 @@
 		BBC0DE00000000000000001E /* MonacoAtomicTextSaverTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBC0DE00000000000000001D /* MonacoAtomicTextSaverTests.swift */; };
 		BBC0DE00000000000000000A /* MonacoBridgeMessage.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBC0DE000000000000000009 /* MonacoBridgeMessage.swift */; };
 		BBC0DE00000000000000001A /* MonacoBridgeMessageTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBC0DE000000000000000019 /* MonacoBridgeMessageTests.swift */; };
+		ED17ED17ED17ED17ED170022 /* MonacoDiffView.swift in Sources */ = {isa = PBXBuildFile; fileRef = ED17ED17ED17ED17ED170021 /* MonacoDiffView.swift */; };
 		BBC0DE000000000000000010 /* MonacoEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBC0DE00000000000000000F /* MonacoEditorView.swift */; };
 		BBC0DE00000000000000000C /* MonacoLanguageMap.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBC0DE00000000000000000B /* MonacoLanguageMap.swift */; };
 		BBC0DE00000000000000001C /* MonacoLanguageMapTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBC0DE00000000000000001B /* MonacoLanguageMapTests.swift */; };
@@ -989,6 +995,9 @@
 		BB57A700000000000000000B /* EditorLauncher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatusBar/EditorLauncher.swift; sourceTree = "<group>"; };
 		BB57A7000000000000000009 /* EditorLauncherTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditorLauncherTests.swift; sourceTree = "<group>"; };
 		BB57A7000000000000000007 /* EditorPreferenceSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatusBar/EditorPreferenceSettings.swift; sourceTree = "<group>"; };
+		FEED0000000000000000FE01 /* EditReviewCoordinator.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = EditReviewCoordinator.swift; sourceTree = "<group>"; };
+		ED17ED17ED17ED17ED170012 /* EditReviewPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Panels/EditReviewPanel.swift; sourceTree = "<group>"; };
+		ED17ED17ED17ED17ED170014 /* EditReviewPanelView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Panels/EditReviewPanelView.swift; sourceTree = "<group>"; };
 		E4C001000000000000000002 /* ExtensionSidebarWorkspaceRowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExtensionSidebarWorkspaceRowView.swift; sourceTree = "<group>"; };
 		E4C001000000000000000004 /* ExtensionWorktreePrototype.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExtensionWorktreePrototype.swift; sourceTree = "<group>"; };
 		E50320010000000000000002 /* ExtensionWorktreeSpawnArgsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExtensionWorktreeSpawnArgsTests.swift; sourceTree = "<group>"; };
@@ -1151,6 +1160,7 @@
 		BBC0DE00000000000000001D /* MonacoAtomicTextSaverTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MonacoAtomicTextSaverTests.swift; sourceTree = "<group>"; };
 		BBC0DE000000000000000009 /* MonacoBridgeMessage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Monaco/MonacoBridgeMessage.swift"; sourceTree = "<group>"; };
 		BBC0DE000000000000000019 /* MonacoBridgeMessageTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MonacoBridgeMessageTests.swift; sourceTree = "<group>"; };
+		ED17ED17ED17ED17ED170021 /* MonacoDiffView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Monaco/MonacoDiffView.swift"; sourceTree = "<group>"; };
 		BBC0DE00000000000000000F /* MonacoEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Monaco/MonacoEditorView.swift"; sourceTree = "<group>"; };
 		BBC0DE00000000000000000B /* MonacoLanguageMap.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Monaco/MonacoLanguageMap.swift"; sourceTree = "<group>"; };
 		BBC0DE00000000000000001B /* MonacoLanguageMapTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MonacoLanguageMapTests.swift; sourceTree = "<group>"; };
@@ -1445,6 +1455,7 @@
 				5EDB6027B346C46521A93C74 /* CMUXAuthCore in Frameworks */,
 				53750003A0B1C2D3E4F50003 /* CmuxAuthRuntime in Frameworks */,
 				C750100000000000000000A3 /* CmuxControlSocket in Frameworks */,
+				ED17ED17ED17ED17ED170003 /* CmuxEditPreview in Frameworks */,
 				C0DE46000000000000000001 /* CMUXExtensionHostSupport in Frameworks */,
 				C0DE45000000000000000001 /* CmuxExtensionKit in Frameworks */,
 				C0DE49000000000000000001 /* CmuxExtensionSidebarExamples in Frameworks */,
@@ -1512,6 +1523,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				ED17ED17ED17ED17ED170004 /* CmuxEditPreview in Frameworks */,
 				C1A40720000000000000A004 /* CmuxLayoutPolicy in Frameworks */,
 				EFB18E3C0000000000000001 /* CMUXMobileCore in Frameworks */,
 				C52830000000000000000002 /* CmuxTerminalCopyMode in Frameworks */,
@@ -1716,6 +1728,7 @@
 				BBC0DE00000000000000000D /* MonacoWebController.swift */,
 				BBC0DE0000000000000000A1 /* WeakMonacoScriptMessageHandler.swift */,
 				BBC0DE00000000000000000F /* MonacoEditorView.swift */,
+				ED17ED17ED17ED17ED170021 /* MonacoDiffView.swift */,
 				BBC0DE000000000000000011 /* MonacoAtomicTextSaver.swift */,
 				BBC0DE000000000000000013 /* CodeEditorChoice.swift */,
 				BBC0DE000000000000000015 /* CodeEditorPreferenceSettings.swift */,
@@ -1941,6 +1954,8 @@
 				A50014F8 /* MarkdownWebSupport.swift */,
 				A50014F1 /* MarkdownViewerAssets.swift */,
 				A5001423 /* FilePreviewPanel.swift */,
+				ED17ED17ED17ED17ED170012 /* EditReviewPanel.swift */,
+				ED17ED17ED17ED17ED170014 /* EditReviewPanelView.swift */,
 				A5C0DE0000000000000000B1 /* ProjectPanel.swift */,
 				A5C0DE0000000000000000B3 /* ProjectPanelView.swift */,
 				A5C0DE0000000000000000B5 /* ProjectFilesTabView.swift */,
@@ -2252,6 +2267,7 @@
 			isa = PBXGroup;
 			children = (
 				FEED0000000000000000F001 /* FeedCoordinator.swift */,
+				FEED0000000000000000FE01 /* EditReviewCoordinator.swift */,
 				FEED0000000000000000F004 /* FeedPanelView.swift */,
 				FEED0000000000000000F012 /* FeedPermissionActionPolicy.swift */,
 				FEED0000000000000000F010 /* FeedPanelViewModel.swift */,
@@ -2297,6 +2313,7 @@
 				29813FE5A6CBC1019289A251 /* CMUXAuthCore */,
 				53750002A0B1C2D3E4F50002 /* CmuxAuthRuntime */,
 				AA11BB22CC33DD44EE550002 /* CMUXWorkstream */,
+				ED17ED17ED17ED17ED170002 /* CmuxEditPreview */,
 				C0DE46000000000000000002 /* CMUXExtensionHostSupport */,
 				C0DE45000000000000000002 /* CmuxExtensionKit */,
 				C0DE4A000000000000000002 /* CmuxSidebarProviderKit */,
@@ -2409,6 +2426,7 @@
 				EFB18E3B3099DFE2ECA3C263 /* CMUXMobileCore */,
 				C52830000000000000000004 /* CmuxTerminalCopyMode */,
 				C1A40720000000000000A002 /* CmuxLayoutPolicy */,
+				ED17ED17ED17ED17ED170002 /* CmuxEditPreview */,
 			);
 			productName = cmuxTests;
 			productReference = F1000002A1B2C3D4E5F60718 /* cmuxTests.xctest */;
@@ -2459,6 +2477,7 @@
 				40B63BB4A170F0BD2D1DEFD1 /* XCLocalSwiftPackageReference "CMUXAuthCore" */,
 				53750001A0B1C2D3E4F50001 /* XCLocalSwiftPackageReference "CmuxAuthRuntime" */,
 				AA11BB22CC33DD44EE550003 /* XCLocalSwiftPackageReference "CMUXWorkstream" */,
+				ED17ED17ED17ED17ED170001 /* XCLocalSwiftPackageReference "CmuxEditPreview" */,
 				C0DE46000000000000000003 /* XCLocalSwiftPackageReference "CMUXExtensionHostSupport" */,
 				C0DE45000000000000000003 /* XCLocalSwiftPackageReference "CmuxExtensionKit" */,
 				C0DE4A000000000000000003 /* XCLocalSwiftPackageReference "CmuxSidebarProviderKit" */,
@@ -2742,6 +2761,9 @@
 				D0B10014A1B2C3D4E5F60001 /* DragOverlayRoutingPolicy.swift in Sources */,
 				BB57A700000000000000000A /* EditorLauncher.swift in Sources */,
 				BB57A7000000000000000008 /* EditorPreferenceSettings.swift in Sources */,
+				FEED0000000000000000FE02 /* EditReviewCoordinator.swift in Sources */,
+				ED17ED17ED17ED17ED170011 /* EditReviewPanel.swift in Sources */,
+				ED17ED17ED17ED17ED170013 /* EditReviewPanelView.swift in Sources */,
 				E4C001000000000000000001 /* ExtensionSidebarWorkspaceRowView.swift in Sources */,
 				E4C001000000000000000003 /* ExtensionWorktreePrototype.swift in Sources */,
 				FEED0000000000000000F00D /* FeedButtonStyleDebugWindowController.swift in Sources */,
@@ -2847,6 +2869,7 @@
 				BBC0DE000000000000000008 /* MonacoAssetURLSchemeHandler.swift in Sources */,
 				BBC0DE000000000000000012 /* MonacoAtomicTextSaver.swift in Sources */,
 				BBC0DE00000000000000000A /* MonacoBridgeMessage.swift in Sources */,
+				ED17ED17ED17ED17ED170022 /* MonacoDiffView.swift in Sources */,
 				BBC0DE000000000000000010 /* MonacoEditorView.swift in Sources */,
 				BBC0DE00000000000000000C /* MonacoLanguageMap.swift in Sources */,
 				BBC0DE00000000000000000E /* MonacoWebController.swift in Sources */,
@@ -3725,6 +3748,10 @@
 			isa = XCLocalSwiftPackageReference;
 			relativePath = Packages/CmuxLayoutPolicy;
 		};
+		ED17ED17ED17ED17ED170001 /* XCLocalSwiftPackageReference "CmuxEditPreview" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = Packages/CmuxEditPreview;
+		};
 		A5B00001A1B2C3D4E5F60718 /* XCLocalSwiftPackageReference "CMUXAgentLaunch" */ = {
 			isa = XCLocalSwiftPackageReference;
 			relativePath = Packages/CMUXAgentLaunch;
@@ -3916,6 +3943,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = C1A40720000000000000A001 /* XCLocalSwiftPackageReference "CmuxLayoutPolicy" */;
 			productName = CmuxLayoutPolicy;
+		};
+		ED17ED17ED17ED17ED170002 /* CmuxEditPreview */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = ED17ED17ED17ED17ED170001 /* XCLocalSwiftPackageReference "CmuxEditPreview" */;
+			productName = CmuxEditPreview;
 		};
 		C52830000000000000000004 /* CmuxTerminalCopyMode */ = {
 			isa = XCSwiftPackageProductDependency;

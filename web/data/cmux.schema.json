@@ -943,6 +943,11 @@
           "default": "standard",
           "description": "Controls how many Kiro tool events appear in Feed."
         },
+        "manualEditDiff": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show a Monaco diff for file edits in manual approval mode."
+        },
         "portBase": {
           "type": "integer",
           "minimum": 1,

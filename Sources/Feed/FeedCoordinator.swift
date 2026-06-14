@@ -1,4 +1,5 @@
 import AppKit
+import CmuxEditPreview
 import CMUXWorkstream
 import Foundation
 @preconcurrency import UserNotifications
@@ -35,6 +36,32 @@ final class FeedCoordinator: @unchecked Sendable {
     @MainActor private var pidWatchers: [Int: DispatchSourceProcess] = [:]
     private let pidWatcherQueue = DispatchQueue(
         label: "cmux.feed.pidWatcher", qos: .utility
+    )
+
+    /// Owns the open-edit-review-pane registry. Lazily constructed on the main actor with the
+    /// anchor/pane resolvers injected, so the diff pane opens above the agent for a pending
+    /// file-edit permission and closes when the permission resolves or times out.
+    @MainActor lazy var editReviewCoordinator = EditReviewCoordinator(
+        resolveAnchor: { workstreamId in
+            FeedJumpResolver.parse(workstreamId)
+                .flatMap { FeedJumpResolver.lookup(agent: $0.agent, sessionId: $0.sessionId) }
+                .map { ($0.workspaceId, $0.surfaceId) }
+        },
+        resolvePane: { workspaceId, surfaceId in
+            // `surfaceId` is the agent panel's UUID (the same id `surface.focus` resolves).
+            // Locate its owning workspace globally, prefer the anchored workspaceId, then map
+            // the panel id to its bonsplit pane.
+            guard let appDelegate = AppDelegate.shared,
+                  let panelUUID = UUID(uuidString: surfaceId),
+                  let located = appDelegate.locateSurface(surfaceId: panelUUID)
+            else { return nil }
+            let preferredWorkspaceUUID = UUID(uuidString: workspaceId)
+            guard let workspace = located.tabManager.tabs.first(where: { $0.id == located.workspaceId }),
+                  preferredWorkspaceUUID == nil || preferredWorkspaceUUID == workspace.id,
+                  let paneId = workspace.paneId(forPanelId: panelUUID)
+            else { return nil }
+            return (workspace, paneId)
+        }
     )
 
     private init() {}
@@ -106,6 +133,36 @@ final class FeedCoordinator: @unchecked Sendable {
         waiters[requestId] = waiter
         waiterLock.unlock()
 
+        // For an applicable file-edit permission, read the original file off the main actor
+        // (socket-threading policy: no file I/O on the permission hot path's main hop) so the
+        // diff pane can be opened with the pre-edit content during the upcoming main hop.
+        let editToolName = event.toolName
+        let editToolInputJSON = event.toolInputJSON
+        // Files larger than this threshold produce unreadable diffs and would stall the socket
+        // worker allocating the full content; skip edit-review diff for oversized files.
+        let maxEditDiffBytes = 2 * 1024 * 1024
+        let withinDiffSizeCap: Bool = {
+            guard let toolName = editToolName,
+                  Self.isFileEditTool(toolName),
+                  let toolInputJSON = editToolInputJSON,
+                  let edit = ProposedEdit.from(toolName: toolName, toolInputJSON: toolInputJSON)
+            else { return true }
+            // A missing file (new-file Write) has no size to check — proceed.
+            guard let attrs = try? FileManager.default.attributesOfItem(atPath: edit.filePath),
+                  let fileSize = (attrs[.size] as? NSNumber)?.intValue
+            else { return true }
+            return fileSize <= maxEditDiffBytes
+        }()
+        let editOriginalText: String? = {
+            guard withinDiffSizeCap,
+                  let toolName = editToolName,
+                  Self.isFileEditTool(toolName),
+                  let toolInputJSON = editToolInputJSON,
+                  let edit = ProposedEdit.from(toolName: toolName, toolInputJSON: toolInputJSON)
+            else { return nil }
+            return try? String(contentsOfFile: edit.filePath, encoding: .utf8)
+        }()
+
         // Hop to main to actually insert the item + install the
         // kqueue watcher for the agent's PID. The watcher handler
         // caps the pending lifetime to the agent process lifetime
@@ -117,6 +174,23 @@ final class FeedCoordinator: @unchecked Sendable {
                 itemIdSlot.value = FeedCoordinator.shared.store.items.last?.id
                 if let ppid = event.ppid, ppid > 0 {
                     FeedCoordinator.shared.armPidWatcher(ppid: ppid)
+                }
+                if withinDiffSizeCap,
+                   let toolName = editToolName,
+                   Self.isFileEditTool(toolName),
+                   let toolInputJSON = editToolInputJSON {
+                    FeedCoordinator.shared.editReviewCoordinator.handlePending(
+                        requestId: requestId,
+                        workstreamId: event.sessionId,
+                        toolName: toolName,
+                        toolInputJSON: toolInputJSON,
+                        originalText: editOriginalText,
+                        reply: { rid, mode in
+                            FeedCoordinator.shared.deliverReply(
+                                requestId: rid, decision: .permission(mode)
+                            )
+                        }
+                    )
                 }
                 #if DEBUG
                 FeedCoordinatorTestHooks.afterBlockingEventIngested?(event, requestId)
@@ -143,11 +217,28 @@ final class FeedCoordinator: @unchecked Sendable {
             }
             cancelNotification(requestId: requestId)
             expireTimedOutItem(itemIdSlot.value)
+            closeEditReviewPane(requestId: requestId)
             return .timedOut(itemId: itemIdSlot.value)
         case .timedOut:
             cancelNotification(requestId: requestId)
             expireTimedOutItem(itemIdSlot.value)
+            closeEditReviewPane(requestId: requestId)
             return .timedOut(itemId: itemIdSlot.value)
+        }
+    }
+
+    /// Hops to the main actor and closes any open edit-review pane for `requestId`.
+    /// Used on the timed-out path so a stale diff pane doesn't linger after the agent gives up.
+    private func closeEditReviewPane(requestId: String) {
+        let close: @Sendable () -> Void = { [requestId] in
+            MainActor.assumeIsolated {
+                FeedCoordinator.shared.editReviewCoordinator.handleResolved(requestId: requestId)
+            }
+        }
+        if Thread.isMainThread {
+            close()
+        } else {
+            DispatchQueue.main.async(execute: close)
         }
     }
 
@@ -168,6 +259,9 @@ final class FeedCoordinator: @unchecked Sendable {
                 if let itemId = Self.findItemId(for: requestId, in: store.items) {
                     store.markResolved(itemId, decision: decision)
                 }
+                // Close the edit-review pane whether the decision came from the diff toolbar or
+                // the Feed row — both decision paths terminate here.
+                FeedCoordinator.shared.editReviewCoordinator.handleResolved(requestId: requestId)
             }
         }
         if Thread.isMainThread {
@@ -184,6 +278,17 @@ final class FeedCoordinator: @unchecked Sendable {
         defer { waiterLock.unlock() }
         guard let waiter = waiters[requestId] else { return false }
         return waiter.decision == nil
+    }
+
+    /// Whether `toolName` is a Claude file-edit tool that the edit-review diff applies to.
+    /// Case-insensitive so `Edit`, `Write`, and `MultiEdit` match regardless of casing.
+    private static func isFileEditTool(_ toolName: String) -> Bool {
+        switch toolName.lowercased() {
+        case "edit", "write", "multiedit":
+            return true
+        default:
+            return false
+        }
     }
 
     private static func findItemId(

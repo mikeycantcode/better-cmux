@@ -765,6 +765,28 @@ enum CommandPaletteSettingsToggleCommands {
                 defaultsKey: AgentCapabilityBriefSettings.enabledKey
             ),
             CommandPaletteSettingToggleDescriptor(
+                commandId: commandIdPrefix + "manualEditDiff",
+                settingsKey: "automation.manualEditDiff",
+                title: {
+                    String(
+                        localized: "settings.automation.manualEditDiff",
+                        defaultValue: "Manual Edit Diff"
+                    )
+                },
+                sectionTitle: automation,
+                keywords: [
+                    "automation.manualEditDiff",
+                    "edit",
+                    "diff",
+                    "monaco",
+                    "approval",
+                    "permission",
+                    "manual",
+                ],
+                defaultValue: ManualEditDiffSettings.defaultManualEditDiff,
+                defaultsKey: ManualEditDiffSettings.manualEditDiffKey
+            ),
+            CommandPaletteSettingToggleDescriptor(
                 commandId: commandIdPrefix + "cursorIntegration",
                 settingsKey: "automation.cursorIntegration",
                 title: {

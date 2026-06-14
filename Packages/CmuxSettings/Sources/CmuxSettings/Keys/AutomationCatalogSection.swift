@@ -37,6 +37,12 @@ public struct AutomationCatalogSection: SettingCatalogSection {
         userDefaultsKey: "suppressSubagentNotifications"
     )
 
+    public let manualEditDiff = DefaultsKey<Bool>(
+        id: "automation.manualEditDiff",
+        defaultValue: true,
+        userDefaultsKey: "manualEditDiff"
+    )
+
     // Several agent-integration toggles are intentionally exposed under both
     // `automation.*` (this catalog) and `integrations.*` (IntegrationsCatalogSection)
     // with the same `userDefaultsKey`, so writes through either namespace land

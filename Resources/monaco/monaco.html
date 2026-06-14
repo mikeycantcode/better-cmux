@@ -62,6 +62,8 @@
         fontLigatures: true
       });
 
+      var diffEditor = null;
+
       var suppressChange = false;   // true while we apply content from Swift
       var saveTimer = null;
       var SAVE_DEBOUNCE_MS = 600;
@@ -100,6 +102,26 @@
 
       // Swift -> JS API.
       window.cmuxMonaco = {
+        setDiff: function (original, modified, language, theme) {
+          if (theme) monaco.editor.setTheme(theme);
+          // This page always mounts the single `editor` at load; a diff controller only ever
+          // calls setDiff. Hide the (empty) single editor so it does not show as a blank strip
+          // above the diff sharing the same #container.
+          if (editor && editor.getDomNode()) editor.getDomNode().style.display = "none";
+          var originalModel = monaco.editor.createModel(original, language || "plaintext");
+          var modifiedModel = monaco.editor.createModel(modified, language || "plaintext");
+          if (!diffEditor) {
+            diffEditor = monaco.editor.createDiffEditor(document.getElementById("container"), {
+              automaticLayout: true,
+              readOnly: true,
+              originalEditable: false,
+              renderSideBySide: true,
+              minimap: { enabled: false },
+              scrollBeyondLastLine: false
+            });
+          }
+          diffEditor.setModel({ original: originalModel, modified: modifiedModel });
+        },
         setContent: function (text, language, theme) {
           suppressChange = true;
           var model = editor.getModel();

@@ -3,6 +3,7 @@ import SwiftUI
 import AppKit
 import Bonsplit
 import CMUXAgentLaunch
+import CmuxEditPreview
 import CmuxSocketControl
 import Combine
 import CryptoKit
@@ -15492,6 +15493,46 @@ final class Workspace: Identifiable, ObservableObject {
         filePreviewPanel.focus()
         installFilePreviewPanelSubscription(filePreviewPanel)
         return filePreviewPanel
+    }
+
+    /// Splits `paneId` and hosts an ``EditReviewPanel`` showing `diff` for the pending
+    /// permission `requestId`. Mirrors ``splitPaneWithFilePreview(targetPane:orientation:insertFirst:filePath:)``
+    /// but hosts an edit-review diff (no file-preview subscription). With `.vertical` +
+    /// `insertFirst: true` the new pane is placed above the agent's pane.
+    func splitPaneWithEditReview(
+        targetPane paneId: PaneID,
+        orientation: SplitOrientation,
+        insertFirst: Bool,
+        requestId: String,
+        diff: EditDiff
+    ) -> EditReviewPanel? {
+        let editReviewPanel = EditReviewPanel(workspaceId: id, requestId: requestId, diff: diff)
+        panels[editReviewPanel.id] = editReviewPanel
+        panelTitles[editReviewPanel.id] = editReviewPanel.displayTitle
+
+        let newTab = Bonsplit.Tab(
+            title: editReviewPanel.displayTitle,
+            icon: RenderableSystemSymbol.resolvedSurfaceTabIcon(editReviewPanel.displayIcon),
+            kind: SurfaceKind.filePreview,
+            isDirty: editReviewPanel.isDirty,
+            isLoading: false,
+            isPinned: false
+        )
+        surfaceIdToPanelId[newTab.id] = editReviewPanel.id
+
+        isProgrammaticSplit = true
+        defer { isProgrammaticSplit = false }
+        guard let newPaneId = bonsplitController.splitPane(paneId, orientation: orientation, withTab: newTab, insertFirst: insertFirst) else {
+            panels.removeValue(forKey: editReviewPanel.id)
+            panelTitles.removeValue(forKey: editReviewPanel.id)
+            surfaceIdToPanelId.removeValue(forKey: newTab.id)
+            return nil
+        }
+        publishCmuxSplitCreated(newPaneId, sourcePaneId: paneId, orientation: orientation, surfaceId: editReviewPanel.id, kind: "edit_review", origin: "edit_review_split", focused: true)
+
+        bonsplitController.selectTab(newTab.id)
+        editReviewPanel.focus()
+        return editReviewPanel
     }
 
     /// Tear down all panels in this workspace, freeing their Ghostty surfaces.
