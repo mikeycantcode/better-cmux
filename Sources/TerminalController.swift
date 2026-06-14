@@ -19830,11 +19830,18 @@ class TerminalController {
                     branch: branch,
                     isDirty: isDirty
                 )
+                CmuxEventBus.shared.publishReportBranch(
+                    workspaceId: scope.workspaceId,
+                    surfaceId: scope.panelId,
+                    branch: branch,
+                    status: status
+                )
             }
             return "OK"
         }
 
         var result = "OK"
+        var publishedScope: (workspaceId: UUID, surfaceId: UUID)?
         v2MainSync {
             guard let tab = resolveTabForReport(args) else {
                 result = parsed.options["tab"] != nil ? "ERROR: Tab not found" : "ERROR: No tab selected"
@@ -19849,6 +19856,17 @@ class TerminalController {
             tab.gitBranch = SidebarGitBranchState(
                 branch: branch,
                 isDirty: nextIsDirty
+            )
+            if let focused = tab.focusedPanelId {
+                publishedScope = (tab.id, focused)
+            }
+        }
+        if let publishedScope {
+            CmuxEventBus.shared.publishReportBranch(
+                workspaceId: publishedScope.workspaceId,
+                surfaceId: publishedScope.surfaceId,
+                branch: branch,
+                status: status
             )
         }
         return result
@@ -19949,6 +19967,15 @@ class TerminalController {
                 status: status,
                 branch: branch
             )
+            CmuxEventBus.shared.publishReportPr(
+                workspaceId: tab.id,
+                surfaceId: surfaceId,
+                number: number,
+                url: url.absoluteString,
+                state: status.rawValue,
+                label: label,
+                branch: branch
+            )
         }
     }
 
@@ -19977,6 +20004,7 @@ class TerminalController {
         }
 
         var result = "OK"
+        var publishedScope: (workspaceId: UUID, surfaceId: UUID)?
         v2MainSync {
             guard let tab = resolveTabForReport(args) else {
                 result = parsed.options["tab"] != nil ? "ERROR: Tab not found" : "ERROR: No tab selected"
@@ -20013,6 +20041,14 @@ class TerminalController {
 
             tab.surfaceListeningPorts[surfaceId] = ports
             tab.recomputeListeningPorts()
+            publishedScope = (tab.id, surfaceId)
+        }
+        if let publishedScope {
+            CmuxEventBus.shared.publishReportPorts(
+                workspaceId: publishedScope.workspaceId,
+                surfaceId: publishedScope.surfaceId,
+                ports: ports
+            )
         }
         return result
     }
@@ -20035,10 +20071,16 @@ class TerminalController {
                 tab.pruneSurfaceMetadata(validSurfaceIds: validSurfaceIds)
                 guard validSurfaceIds.contains(scope.panelId) else { return }
                 tabManager.updateSurfaceDirectory(tabId: scope.workspaceId, surfaceId: scope.panelId, directory: directory)
+                CmuxEventBus.shared.publishReportPwd(
+                    workspaceId: scope.workspaceId,
+                    surfaceId: scope.panelId,
+                    path: directory
+                )
             }
             return "OK"
         }
         var result = "OK"
+        var publishedScope: (workspaceId: UUID, surfaceId: UUID)?
         v2MainSync {
             guard let tab = resolveTabForReport(args) else {
                 result = parsed.options["tab"] != nil ? "ERROR: Tab not found" : "ERROR: No tab selected"
@@ -20074,6 +20116,14 @@ class TerminalController {
             }
 
             tabManager.updateSurfaceDirectory(tabId: tab.id, surfaceId: surfaceId, directory: directory)
+            publishedScope = (tab.id, surfaceId)
+        }
+        if let publishedScope {
+            CmuxEventBus.shared.publishReportPwd(
+                workspaceId: publishedScope.workspaceId,
+                surfaceId: publishedScope.surfaceId,
+                path: directory
+            )
         }
         return result
     }
@@ -20099,12 +20149,18 @@ class TerminalController {
                 guard let tabManager = AppDelegate.shared?.tabManagerFor(tabId: scope.workspaceId) else { return }
                 tabManager.updateSurfaceShellActivity(tabId: scope.workspaceId, surfaceId: scope.panelId, state: state)
             }
+            CmuxEventBus.shared.publishReportShellState(
+                workspaceId: scope.workspaceId,
+                surfaceId: scope.panelId,
+                state: state.rawValue
+            )
             return "OK"
         }
 
         guard let tabManager else { return "ERROR: TabManager not available" }
 
         var result = "OK"
+        var publishedScope: (workspaceId: UUID, surfaceId: UUID)?
         v2MainSync {
             guard let tab = resolveTabForReport(args) else {
                 result = parsed.options["tab"] != nil ? "ERROR: Tab not found" : "ERROR: No tab selected"
@@ -20140,6 +20196,14 @@ class TerminalController {
             }
 
             tabManager.updateSurfaceShellActivity(tabId: tab.id, surfaceId: surfaceId, state: state)
+            publishedScope = (tab.id, surfaceId)
+        }
+        if let publishedScope {
+            CmuxEventBus.shared.publishReportShellState(
+                workspaceId: publishedScope.workspaceId,
+                surfaceId: publishedScope.surfaceId,
+                state: state.rawValue
+            )
         }
         return result
     }

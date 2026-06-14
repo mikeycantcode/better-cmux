@@ -423,6 +423,15 @@
 		734F49D37E543DD01C2F4FEF /* NotificationAndMenuBarTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D2C075029771815DD5DA1332 /* NotificationAndMenuBarTests.swift */; };
 		4E5F60720000000000000001 /* NotificationSoundSettingsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4E5F60720000000000000002 /* NotificationSoundSettingsTests.swift */; };
 		A5001094 /* NotificationsPage.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5001091 /* NotificationsPage.swift */; };
+		BBC0DE000000000003000006 /* NotificationWebSocketCommand.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBC0DE000000000003000005 /* NotificationWebSocketCommand.swift */; };
+		BBC0DE000000000003000106 /* NotificationWebSocketCommandRouter.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBC0DE000000000003000105 /* NotificationWebSocketCommandRouter.swift */; };
+		BBC0DE00000000000300000C /* NotificationWebSocketCommandTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBC0DE00000000000300000B /* NotificationWebSocketCommandTests.swift */; };
+		BBC0DE000000000003000104 /* NotificationWebSocketConnection.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBC0DE000000000003000103 /* NotificationWebSocketConnection.swift */; };
+		BBC0DE000000000003000004 /* NotificationWebSocketEventFrame.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBC0DE000000000003000003 /* NotificationWebSocketEventFrame.swift */; };
+		BBC0DE00000000000300000A /* NotificationWebSocketEventFrameTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBC0DE000000000003000009 /* NotificationWebSocketEventFrameTests.swift */; };
+		BBC0DE000000000003000102 /* NotificationWebSocketServer.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBC0DE000000000003000101 /* NotificationWebSocketServer.swift */; };
+		BBC0DE000000000003000002 /* NotificationWebSocketSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBC0DE000000000003000001 /* NotificationWebSocketSettings.swift */; };
+		BBC0DE000000000003000008 /* NotificationWebSocketSettingsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBC0DE000000000003000007 /* NotificationWebSocketSettingsTests.swift */; };
 		D36090020000000000000001 /* NSWindow+CmuxPeerWindow.swift in Sources */ = {isa = PBXBuildFile; fileRef = D36090020000000000000002 /* NSWindow+CmuxPeerWindow.swift */; };
 		4378399A7C0245EF8186F306 /* OmnibarAndToolsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B09C007F42697761B5F1A2AB /* OmnibarAndToolsTests.swift */; };
 		0A0F00550000000000000001 /* OmpSupportTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A0F00550000000000000002 /* OmpSupportTests.swift */; };
@@ -1145,6 +1154,15 @@
 		D2C075029771815DD5DA1332 /* NotificationAndMenuBarTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationAndMenuBarTests.swift; sourceTree = "<group>"; };
 		4E5F60720000000000000002 /* NotificationSoundSettingsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationSoundSettingsTests.swift; sourceTree = "<group>"; };
 		A5001091 /* NotificationsPage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationsPage.swift; sourceTree = "<group>"; };
+		BBC0DE000000000003000005 /* NotificationWebSocketCommand.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "NotificationWebSocket/NotificationWebSocketCommand.swift"; sourceTree = "<group>"; };
+		BBC0DE000000000003000105 /* NotificationWebSocketCommandRouter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "NotificationWebSocket/NotificationWebSocketCommandRouter.swift"; sourceTree = "<group>"; };
+		BBC0DE00000000000300000B /* NotificationWebSocketCommandTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationWebSocketCommandTests.swift; sourceTree = "<group>"; };
+		BBC0DE000000000003000103 /* NotificationWebSocketConnection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "NotificationWebSocket/NotificationWebSocketConnection.swift"; sourceTree = "<group>"; };
+		BBC0DE000000000003000003 /* NotificationWebSocketEventFrame.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "NotificationWebSocket/NotificationWebSocketEventFrame.swift"; sourceTree = "<group>"; };
+		BBC0DE000000000003000009 /* NotificationWebSocketEventFrameTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationWebSocketEventFrameTests.swift; sourceTree = "<group>"; };
+		BBC0DE000000000003000101 /* NotificationWebSocketServer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "NotificationWebSocket/NotificationWebSocketServer.swift"; sourceTree = "<group>"; };
+		BBC0DE000000000003000001 /* NotificationWebSocketSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "NotificationWebSocket/NotificationWebSocketSettings.swift"; sourceTree = "<group>"; };
+		BBC0DE000000000003000007 /* NotificationWebSocketSettingsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationWebSocketSettingsTests.swift; sourceTree = "<group>"; };
 		D36090020000000000000002 /* NSWindow+CmuxPeerWindow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "App/NSWindow+CmuxPeerWindow.swift"; sourceTree = "<group>"; };
 		B09C007F42697761B5F1A2AB /* OmnibarAndToolsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OmnibarAndToolsTests.swift; sourceTree = "<group>"; };
 		0A0F00550000000000000002 /* OmpSupportTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OmpSupportTests.swift; sourceTree = "<group>"; };
@@ -1673,6 +1691,12 @@
 				BB57A7000000000000000016 /* BottomBarStagedDiffStore.swift */,
 				BB57A7000000000000000018 /* BottomBarWorkspaceBridge.swift */,
 				BBC0DE000000000004000001 /* ClaudeResumeLast.swift */,
+				BBC0DE000000000003000101 /* NotificationWebSocketServer.swift */,
+				BBC0DE000000000003000103 /* NotificationWebSocketConnection.swift */,
+				BBC0DE000000000003000105 /* NotificationWebSocketCommandRouter.swift */,
+				BBC0DE000000000003000001 /* NotificationWebSocketSettings.swift */,
+				BBC0DE000000000003000003 /* NotificationWebSocketEventFrame.swift */,
+				BBC0DE000000000003000005 /* NotificationWebSocketCommand.swift */,
 				BBC0DE000000000002000001 /* FilePreviewMonacoDecision.swift */,
 				BBC0DE000000000000000001 /* MonacoAssets.swift */,
 				BBC0DE000000000000000003 /* MonacoAssetMime.swift */,
@@ -2154,6 +2178,9 @@
 				BB57A7000000000000000004 /* StagedDiffStatsTests.swift */,
 				BB57A7000000000000000009 /* EditorLauncherTests.swift */,
 				BBC0DE000000000004000003 /* ClaudeResumeLastTests.swift */,
+				BBC0DE000000000003000007 /* NotificationWebSocketSettingsTests.swift */,
+				BBC0DE000000000003000009 /* NotificationWebSocketEventFrameTests.swift */,
+				BBC0DE00000000000300000B /* NotificationWebSocketCommandTests.swift */,
 				BBC0DE000000000002000003 /* FilePreviewMonacoDecisionTests.swift */,
 				BBC0DE0000000000000000A3 /* FilePreviewTextDecodeTests.swift */,
 				BBC0DE000000000000000017 /* MonacoAssetTests.swift */,
@@ -2810,6 +2837,12 @@
 				BBC0DE00000000000000000C /* MonacoLanguageMap.swift in Sources */,
 				BBC0DE00000000000000000E /* MonacoWebController.swift in Sources */,
 				A5001094 /* NotificationsPage.swift in Sources */,
+				BBC0DE000000000003000006 /* NotificationWebSocketCommand.swift in Sources */,
+				BBC0DE000000000003000106 /* NotificationWebSocketCommandRouter.swift in Sources */,
+				BBC0DE000000000003000104 /* NotificationWebSocketConnection.swift in Sources */,
+				BBC0DE000000000003000004 /* NotificationWebSocketEventFrame.swift in Sources */,
+				BBC0DE000000000003000102 /* NotificationWebSocketServer.swift in Sources */,
+				BBC0DE000000000003000002 /* NotificationWebSocketSettings.swift in Sources */,
 				D36090020000000000000001 /* NSWindow+CmuxPeerWindow.swift in Sources */,
 				D0B1001CA1B2C3D4E5F60001 /* PaneDropRoutingSupport.swift in Sources */,
 				A5001400 /* Panel.swift in Sources */,
@@ -3172,6 +3205,9 @@
 				BBC0DE00000000000000001C /* MonacoLanguageMapTests.swift in Sources */,
 				734F49D37E543DD01C2F4FEF /* NotificationAndMenuBarTests.swift in Sources */,
 				4E5F60720000000000000001 /* NotificationSoundSettingsTests.swift in Sources */,
+				BBC0DE00000000000300000C /* NotificationWebSocketCommandTests.swift in Sources */,
+				BBC0DE00000000000300000A /* NotificationWebSocketEventFrameTests.swift in Sources */,
+				BBC0DE000000000003000008 /* NotificationWebSocketSettingsTests.swift in Sources */,
 				4378399A7C0245EF8186F306 /* OmnibarAndToolsTests.swift in Sources */,
 				0A0F00550000000000000001 /* OmpSupportTests.swift in Sources */,
 				A5E01203A1B2C3D4E5F60718 /* OpenCodeHookRegressionTests.swift in Sources */,

@@ -478,6 +478,94 @@ extension CmuxEventBus {
         return try? encoder.encode(value).count
     }
 
+    func publishReportBranch(workspaceId: UUID, surfaceId: UUID, branch: String, status: String?) {
+        publish(
+            name: "report.branch",
+            category: "report",
+            source: "report.git_branch",
+            workspaceId: workspaceId.uuidString,
+            surfaceId: surfaceId.uuidString,
+            payload: [
+                "workspace_id": workspaceId.uuidString,
+                "surface_id": surfaceId.uuidString,
+                "branch": branch,
+                "status": status ?? NSNull()
+            ]
+        )
+    }
+
+    func publishReportPr(
+        workspaceId: UUID,
+        surfaceId: UUID,
+        number: Int,
+        url: String,
+        state: String?,
+        label: String?,
+        branch: String?
+    ) {
+        publish(
+            name: "report.pr",
+            category: "report",
+            source: "report.pr",
+            workspaceId: workspaceId.uuidString,
+            surfaceId: surfaceId.uuidString,
+            payload: [
+                "workspace_id": workspaceId.uuidString,
+                "surface_id": surfaceId.uuidString,
+                "number": number,
+                "url": url,
+                "state": state ?? NSNull(),
+                "label": label ?? NSNull(),
+                "branch": branch ?? NSNull()
+            ]
+        )
+    }
+
+    func publishReportPorts(workspaceId: UUID, surfaceId: UUID, ports: [Int]) {
+        publish(
+            name: "report.ports",
+            category: "report",
+            source: "report.ports",
+            workspaceId: workspaceId.uuidString,
+            surfaceId: surfaceId.uuidString,
+            payload: [
+                "workspace_id": workspaceId.uuidString,
+                "surface_id": surfaceId.uuidString,
+                "ports": ports
+            ]
+        )
+    }
+
+    func publishReportPwd(workspaceId: UUID, surfaceId: UUID, path: String) {
+        publish(
+            name: "report.pwd",
+            category: "report",
+            source: "report.pwd",
+            workspaceId: workspaceId.uuidString,
+            surfaceId: surfaceId.uuidString,
+            payload: [
+                "workspace_id": workspaceId.uuidString,
+                "surface_id": surfaceId.uuidString,
+                "path": path
+            ]
+        )
+    }
+
+    func publishReportShellState(workspaceId: UUID, surfaceId: UUID, state: String) {
+        publish(
+            name: "report.shell_state",
+            category: "report",
+            source: "report.shell_state",
+            workspaceId: workspaceId.uuidString,
+            surfaceId: surfaceId.uuidString,
+            payload: [
+                "workspace_id": workspaceId.uuidString,
+                "surface_id": surfaceId.uuidString,
+                "state": state
+            ]
+        )
+    }
+
     private func workspacePayload(
         workspaceId: UUID,
         title: String,

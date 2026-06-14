@@ -532,6 +532,25 @@ final class CmuxSettingsFileStore {
         if let raw = jsonString(section["command"]) {
             snapshot.managedUserDefaults[NotificationSoundSettings.customCommandKey] = .string(raw)
         }
+        if let rawWebSocket = section["webSocket"],
+           let webSocket = rawWebSocket as? [String: Any] {
+            if let value = jsonBool(webSocket["enabled"]) {
+                snapshot.managedUserDefaults[NotificationWebSocketSettings.enabledKey] = .bool(value)
+            } else if webSocket.keys.contains("enabled") {
+                logInvalid("notifications.webSocket.enabled", sourcePath: sourcePath)
+            }
+            if let value = jsonInt(webSocket["port"]) {
+                if value >= 1, value <= 65535 {
+                    snapshot.managedUserDefaults[NotificationWebSocketSettings.portKey] = .int(value)
+                } else {
+                    logInvalid("notifications.webSocket.port", sourcePath: sourcePath)
+                }
+            } else if webSocket.keys.contains("port") {
+                logInvalid("notifications.webSocket.port", sourcePath: sourcePath)
+            }
+        } else if section.keys.contains("webSocket") {
+            logInvalid("notifications.webSocket", sourcePath: sourcePath)
+        }
     }
 
     private func parseTerminalSection(

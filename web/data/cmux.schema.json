@@ -623,6 +623,26 @@
               }
             }
           }
+        },
+        "webSocket": {
+          "title": "webSocket",
+          "type": "object",
+          "additionalProperties": false,
+          "description": "Loopback notification WebSocket server. WARNING: loopback-only and has no authentication. Any local process can read notifications and send actions while enabled.",
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": false,
+              "description": "Run a loopback-only WebSocket server that exposes notifications and accepts actions. No authentication: any local process can read notifications and send actions while enabled."
+            },
+            "port": {
+              "type": "integer",
+              "default": 51763,
+              "minimum": 1,
+              "maximum": 65535,
+              "description": "Loopback TCP port the notification WebSocket server listens on. Only meaningful when enabled."
+            }
+          }
         }
       }
     },

@@ -54,5 +54,28 @@ public struct NotificationsCatalogSection: SettingCatalogSection {
         defaultValue: "merge"
     )
 
+    /// Whether the loopback notification WebSocket server is enabled.
+    ///
+    /// When `true`, cmux runs a loopback-only WebSocket server (see the
+    /// `NotificationWebSocket` module) that exposes notifications and accepts
+    /// actions. The server has **no authentication**, so any local process can
+    /// read notifications and send actions while it is enabled.
+    public let webSocketEnabled = DefaultsKey<Bool>(
+        id: "notifications.webSocket.enabled",
+        defaultValue: false,
+        userDefaultsKey: "notifications.webSocket.enabled"
+    )
+
+    /// The loopback TCP port the notification WebSocket server listens on.
+    ///
+    /// Only meaningful when ``webSocketEnabled`` is `true`. Valid values are in
+    /// the range `1...65535`; out-of-range values are clamped to the default
+    /// by the server reader.
+    public let webSocketPort = DefaultsKey<Int>(
+        id: "notifications.webSocket.port",
+        defaultValue: 51763,
+        userDefaultsKey: "notifications.webSocket.port"
+    )
+
     public init() {}
 }

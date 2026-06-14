@@ -176326,6 +176326,74 @@
           }
         }
       }
+    },
+    "settings.notifications.webSocket.title": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Notification WebSocket server"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "通知 WebSocket サーバー"
+          }
+        }
+      }
+    },
+    "settings.notifications.webSocket.subtitle": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Run a loopback-only WebSocket server that exposes notifications and accepts actions. Warning: there is NO authentication — any local process can read your notifications and send actions while this is enabled."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ループバック専用の WebSocket サーバーを起動し、通知を配信してアクションを受け付けます。警告: 認証はありません。有効な間は、ローカルの任意のプロセスが通知を読み取り、アクションを送信できます。"
+          }
+        }
+      }
+    },
+    "settings.notifications.webSocket.port.title": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "WebSocket server port"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "WebSocket サーバーのポート"
+          }
+        }
+      }
+    },
+    "settings.notifications.webSocket.port.subtitle": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Loopback TCP port the notification WebSocket server listens on."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "通知 WebSocket サーバーが待ち受けるループバック TCP ポート。"
+          }
+        }
+      }
     }
   }
 }
