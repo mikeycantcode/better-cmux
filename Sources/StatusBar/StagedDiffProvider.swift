@@ -1,14 +1,17 @@
 import Foundation
 
-/// Computes staged-diff stats for a directory's git repository, off the main
-/// actor.
+/// Computes uncommitted-diff stats for a directory's git repository, off the
+/// main actor.
 ///
-/// Mirrors ``FileExplorerStore``'s `runGit` Process pattern. Pure parsing lives
-/// in ``StagedDiffStats/parseNumstat(_:)`` so it is unit-tested without a git
-/// process.
+/// Counts all uncommitted changes to tracked files (staged + unstaged) versus
+/// `HEAD` — i.e. `git diff HEAD --numstat` — so the bottom bar shows numbers
+/// whenever there are edits, not only after `git add`. Mirrors
+/// ``FileExplorerStore``'s `runGit` Process pattern. Pure parsing lives in
+/// ``StagedDiffStats/parseNumstat(_:)`` so it is unit-tested without a git process.
 actor StagedDiffProvider {
-    /// Returns staged stats for the git repo containing `directory`, or `nil`
-    /// when the directory is not in a git repo.
+    /// Returns uncommitted stats (vs `HEAD`) for the git repo containing
+    /// `directory`, or `nil` when the directory is not in a git repo (or has no
+    /// commits yet).
     /// - Parameter directory: any path inside the working tree.
     func stagedStats(in directory: String) -> StagedDiffStats? {
         let trimmed = directory.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -17,7 +20,9 @@ actor StagedDiffProvider {
             .trimmingCharacters(in: .whitespacesAndNewlines), !repoRoot.isEmpty else {
             return nil
         }
-        guard let numstat = Self.runGit(in: repoRoot, arguments: ["diff", "--cached", "--numstat"]) else {
+        // `diff HEAD` = working tree vs last commit = staged + unstaged changes to
+        // tracked files (untracked files are not counted, matching `git diff`).
+        guard let numstat = Self.runGit(in: repoRoot, arguments: ["diff", "HEAD", "--numstat"]) else {
             return nil
         }
         return StagedDiffStats.parseNumstat(numstat)

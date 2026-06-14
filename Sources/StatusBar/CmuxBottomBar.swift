@@ -29,8 +29,8 @@ struct CmuxBottomBar: View {
                 }
                 .accessibilityLabel(
                     String(
-                        localized: "bottomBar.staged.accessibility",
-                        defaultValue: "Staged changes"
+                        localized: "bottomBar.uncommitted.accessibility",
+                        defaultValue: "Uncommitted changes"
                     )
                 )
             }

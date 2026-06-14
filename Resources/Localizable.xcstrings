@@ -26682,23 +26682,6 @@
         }
       }
     },
-    "bottomBar.staged.accessibility": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Staged changes"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ステージされた変更"
-          }
-        }
-      }
-    },
     "browser.action.newTab": {
       "extractionState": "manual",
       "localizations": {
@@ -176289,6 +176272,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "Monaco"
+          }
+        }
+      }
+    },
+    "bottomBar.uncommitted.accessibility": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Uncommitted changes"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "コミットされていない変更"
           }
         }
       }
