@@ -176836,6 +176836,23 @@
           }
         }
       }
+    },
+    "sidebar.versionFooter": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "bettercmux v1.0.0 · built on cmux v%@"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "bettercmux v1.0.0 · cmux v%@ をベースに構築"
+          }
+        }
+      }
     }
   }
 }
