@@ -16,6 +16,8 @@ env:
 
 jobs:
   build-ghostty-cli-helper:
+    # Upstream-only: forks use release-fork.yml (no manaflow secrets/runners).
+    if: github.repository == 'manaflow-ai/cmux'
     runs-on: ${{ vars.MACOS_RUNNER_15 || 'warp-macos-15-arm64-6x' }}
     timeout-minutes: 20
     steps:
@@ -49,6 +51,7 @@ jobs:
           if-no-files-found: error
 
   build-sign-notarize:
+    if: github.repository == 'manaflow-ai/cmux'
     needs: build-ghostty-cli-helper
     # Build the app on macOS 26 so SDK-gated SwiftUI Liquid Glass code compiles
     # into stable releases. The real universal Ghostty CLI helper is built on
