@@ -14107,6 +14107,91 @@
         }
       }
     },
+    "sidebar.fileExplorer.newFile": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "New File"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "新規ファイル"
+          }
+        }
+      }
+    },
+    "sidebar.fileExplorer.newFile.failed": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Could not create file"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ファイルを作成できませんでした"
+          }
+        }
+      }
+    },
+    "sidebar.fileExplorer.newFile.message": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enter a name for the new file."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "新しいファイルの名前を入力してください。"
+          }
+        }
+      }
+    },
+    "sidebar.fileExplorer.newFile.placeholder": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "File name"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ファイル名"
+          }
+        }
+      }
+    },
+    "sidebar.fileExplorer.newFile.title": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "New File"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "新規ファイル"
+          }
+        }
+      }
+    },
     "sidebar.fileExplorer.title": {
       "extractionState": "manual",
       "localizations": {
@@ -128294,6 +128379,91 @@
           "stringUnit": {
             "state": "translated",
             "value": "Перемкнути масштаб панелі"
+          }
+        }
+      }
+    },
+    "fileExplorer.createFile.error.emptyName": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "File name cannot be empty."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ファイル名を空にすることはできません。"
+          }
+        }
+      }
+    },
+    "fileExplorer.createFile.error.exists": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A file with that name already exists."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "その名前のファイルはすでに存在します。"
+          }
+        }
+      }
+    },
+    "fileExplorer.createFile.error.failed": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Could not create the file."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ファイルを作成できませんでした。"
+          }
+        }
+      }
+    },
+    "fileExplorer.createFile.error.invalidName": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "File name cannot contain a slash."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ファイル名にスラッシュを含めることはできません。"
+          }
+        }
+      }
+    },
+    "fileExplorer.createFile.error.unsupported": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Creating files is only supported for local folders."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ファイルの作成はローカルフォルダでのみサポートされています。"
           }
         }
       }

@@ -959,6 +959,56 @@ final class FileExplorerStore: ObservableObject {
         loadTasks[rootPath] = task
     }
 
+    /// Whether the explorer can create new files in place.
+    ///
+    /// Only the local provider supports file creation; remote SSH roots are read-only here.
+    var canCreateFile: Bool {
+        provider is LocalFileExplorerProvider && !rootPath.trimmingCharacters(in: .whitespaces).isEmpty
+    }
+
+    /// Creates an empty file named `name` directly under the explorer root and reloads the tree.
+    ///
+    /// - Parameter name: The file name to create. Must be non-empty and contain no path separator.
+    /// - Returns: A localized error message on failure, or `nil` when the file was created.
+    func createFile(named name: String) -> String? {
+        let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedName.isEmpty else {
+            return String(
+                localized: "fileExplorer.createFile.error.emptyName",
+                defaultValue: "File name cannot be empty."
+            )
+        }
+        guard !trimmedName.contains("/") else {
+            return String(
+                localized: "fileExplorer.createFile.error.invalidName",
+                defaultValue: "File name cannot contain a slash."
+            )
+        }
+        let base = rootPath.trimmingCharacters(in: .whitespaces)
+        guard !base.isEmpty, provider is LocalFileExplorerProvider else {
+            return String(
+                localized: "fileExplorer.createFile.error.unsupported",
+                defaultValue: "Creating files is only supported for local folders."
+            )
+        }
+        let fullPath = (base as NSString).appendingPathComponent(trimmedName)
+        guard !FileManager.default.fileExists(atPath: fullPath) else {
+            return String(
+                localized: "fileExplorer.createFile.error.exists",
+                defaultValue: "A file with that name already exists."
+            )
+        }
+        guard FileManager.default.createFile(atPath: fullPath, contents: nil) else {
+            return String(
+                localized: "fileExplorer.createFile.error.failed",
+                defaultValue: "Could not create the file."
+            )
+        }
+        reload()
+        refreshGitStatus()
+        return nil
+    }
+
     func expand(node: FileExplorerNode) {
         guard node.isDirectory else { return }
         expandedPaths.insert(node.path)
