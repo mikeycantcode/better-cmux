@@ -128298,6 +128298,23 @@
         }
       }
     },
+    "fileExplorer.newFolder.defaultName": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "untitled folder"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "名称未設定フォルダ"
+          }
+        }
+      }
+    },
     "fileExplorer.empty": {
       "extractionState": "manual",
       "localizations": {
@@ -149918,6 +149935,40 @@
           "stringUnit": {
             "state": "translated",
             "value": "%@をペインで開く"
+          }
+        }
+      }
+    },
+    "rightSidebar.newFolder.accessibilityLabel": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "New Folder"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "新規フォルダ"
+          }
+        }
+      }
+    },
+    "rightSidebar.newFolder.tooltip": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "New folder"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "新規フォルダ"
           }
         }
       }

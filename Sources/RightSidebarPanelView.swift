@@ -291,6 +291,9 @@ struct RightSidebarPanelView: View {
                     }
                 }
                 Spacer(minLength: 0)
+                if fileExplorerState.mode == .files, fileExplorerStore.canCreateFolderInRoot {
+                    newFolderButton
+                }
                 if fileExplorerState.mode.canOpenAsPane {
                     openAsPaneButton(mode: fileExplorerState.mode)
                 }
@@ -308,6 +311,28 @@ struct RightSidebarPanelView: View {
             isVisible: true,
             titlebarHeight: titlebarHeight
         )
+    }
+
+    private var newFolderButton: some View {
+        Button {
+            fileExplorerStore.createFolderInRoot()
+        } label: {
+            Image(systemName: "folder.badge.plus")
+        }
+        .buttonStyle(RightSidebarHeaderIconButtonStyle(iconGeometryKeyPrefix: "rightSidebarHeaderNewFolderIcon"))
+        .frame(
+            width: RightSidebarChromeMetrics.headerControlSize,
+            height: RightSidebarChromeMetrics.headerControlSize
+        )
+        .reportRightSidebarChromeNamedGeometryForBonsplitUITest(
+            keyPrefix: "rightSidebarHeaderNewFolder",
+            isVisible: true
+        )
+        .rightSidebarHeaderControlAlignment()
+        .safeHelp(String(localized: "rightSidebar.newFolder.tooltip", defaultValue: "New folder"))
+        .accessibilityLabel(String(localized: "rightSidebar.newFolder.accessibilityLabel", defaultValue: "New Folder"))
+        .accessibilityIdentifier("RightSidebar.newFolderButton")
+        .titlebarInteractiveControl()
     }
 
     private func openAsPaneButton(mode: RightSidebarMode) -> some View {

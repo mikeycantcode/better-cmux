@@ -941,6 +941,45 @@ final class FileExplorerStore: ObservableObject {
     }
     #endif
 
+    /// Whether a "New Folder" action applies to the current root: a local
+    /// provider with a resolved root path. Remote (SSH) roots are read-only here.
+    var canCreateFolderInRoot: Bool {
+        provider is LocalFileExplorerProvider && !rootPath.isEmpty
+    }
+
+    /// Creates a new folder inside the current root directory using a unique
+    /// "untitled folder" name, reloads the tree, and returns the created path.
+    ///
+    /// Local provider only; returns `nil` when creation does not apply (no
+    /// local root) or the directory could not be created.
+    @discardableResult
+    func createFolderInRoot() -> String? {
+        guard canCreateFolderInRoot else { return nil }
+        let fm = FileManager.default
+        let baseName = String(
+            localized: "fileExplorer.newFolder.defaultName",
+            defaultValue: "untitled folder"
+        )
+        var name = baseName
+        var candidate = (rootPath as NSString).appendingPathComponent(name)
+        var counter = 2
+        while fm.fileExists(atPath: candidate) {
+            name = "\(baseName) \(counter)"
+            candidate = (rootPath as NSString).appendingPathComponent(name)
+            counter += 1
+        }
+        do {
+            try fm.createDirectory(atPath: candidate, withIntermediateDirectories: false)
+        } catch {
+            #if DEBUG
+            NSLog("[FileExplorer] createFolderInRoot failed: \(error)")
+            #endif
+            return nil
+        }
+        reload()
+        return candidate
+    }
+
     func reload() {
         #if DEBUG
         NSLog("[FileExplorer] reload() path=\(rootPath) provider=\(type(of: provider).self)")
