@@ -234,8 +234,14 @@ jobs:
           echo "::notice::No Developer ID secrets configured — producing an ad-hoc signed, un-notarized build."
           # Ad-hoc sign so the app launches locally; Gatekeeper still warns on first open.
           codesign --force --deep --sign - "$APP_PATH"
-          create-dmg --skip-jenkins "$APP_PATH" ./ || create-dmg "$APP_PATH" ./
-          mv ./cmux*.dmg "$DMG_RELEASE"
+          # create-dmg (v8) requires a code-signing identity, which this runner
+          # lacks, so build a plain drag-to-install DMG with hdiutil instead.
+          STAGING="$(mktemp -d)"
+          cp -R "$APP_PATH" "$STAGING/"
+          ln -s /Applications "$STAGING/Applications"
+          rm -f "$DMG_RELEASE"
+          hdiutil create -volname "bettercmux 1.0" -srcfolder "$STAGING" -ov -format UDZO "$DMG_RELEASE"
+          rm -rf "$STAGING"
 
       - name: Verify DMG exists
         run: |
