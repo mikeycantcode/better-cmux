@@ -153,6 +153,8 @@ extension TerminalController {
         case .filePreview: return "filePreview"
         case .project: return "project"
         case .rightSidebarTool: return "rightSidebarTool"
+        case .customSidebar: return "customSidebar"
+        case .agentSession: return "agentSession"
         case .none: return "unknown"
         }
     }

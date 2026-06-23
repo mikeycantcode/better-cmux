@@ -1,6 +1,6 @@
 import AppKit
 import CmuxEditPreview
-import CMUXWorkstream
+import CMUXAgentLaunch
 import Combine
 import Foundation
 import SwiftUI

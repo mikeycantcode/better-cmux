@@ -1,7 +1,7 @@
+import CmuxFoundation
 import AppKit
 import AVKit
 import Bonsplit
-import CmuxFileWatch
 import Combine
 import Foundation
 import PDFKit
@@ -101,8 +101,15 @@ enum FileExternalOpenAction {
     @discardableResult
     static func openDefault(fileURL: URL) -> Bool {
         let resolver = FileExternalOpenApplicationResolver.live
-        let primaryApplication = resolver.applications(for: fileURL).first
-        return open(fileURL: fileURL, applicationURL: primaryApplication?.url)
+        guard let defaultURL = resolver.defaultApplicationURL(fileURL) else {
+            return open(fileURL: fileURL, applicationURL: nil)
+        }
+        if resolver.shouldIncludeApplication(defaultURL) {
+            return open(fileURL: fileURL, applicationURL: defaultURL)
+        }
+        let fallbackURL = resolver.applicationURLs(fileURL).first(where: resolver.shouldIncludeApplication)
+        guard let fallbackURL else { return false }
+        return open(fileURL: fileURL, applicationURL: fallbackURL)
     }
 
     @discardableResult
@@ -278,7 +285,7 @@ struct FileExternalOpenMenu: View {
             PanelHeaderIconGlyph(systemName: "square.and.arrow.up")
         case .chrome:
             Image(systemName: "square.and.arrow.up")
-                .font(.system(size: 16, weight: .semibold))
+                .cmuxFont(size: 16, weight: .semibold)
                 .foregroundStyle(.secondary)
                 .frame(width: style.buttonSize.width, height: style.buttonSize.height)
                 .contentShape(Rectangle())
@@ -1695,19 +1702,19 @@ struct FilePreviewPanelView: View {
     private var fileUnavailableView: some View {
         VStack(spacing: 12) {
             Image(systemName: "doc.questionmark")
-                .font(.system(size: 40))
+                .cmuxFont(size: 40)
                 .foregroundStyle(.secondary)
             Text(String(localized: "filePreview.fileUnavailable.title", defaultValue: "File unavailable"))
-                .font(.headline)
+                .cmuxFont(.headline)
             Text(panel.filePath)
-                .font(.system(size: 12, design: .monospaced))
+                .cmuxFont(size: 12, design: .monospaced)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
                 .textSelection(.enabled)
                 .fixedSize(horizontal: false, vertical: true)
                 .padding(.horizontal, 24)
             Text(String(localized: "filePreview.fileUnavailable.message", defaultValue: "The file may have been moved or deleted."))
-                .font(.caption)
+                .cmuxFont(.caption)
                 .foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -1898,9 +1905,9 @@ private struct FilePreviewPDFSidebarChromeView: View {
         } label: {
             HStack(spacing: 8) {
                 Image(systemName: "sidebar.left")
-                    .font(.system(size: 17, weight: .regular))
+                    .cmuxFont(size: 17, weight: .regular)
                 Image(systemName: "chevron.down")
-                    .font(.system(size: 10, weight: .semibold))
+                    .cmuxFont(size: 10, weight: .semibold)
                     .foregroundStyle(.secondary)
             }
             .frame(width: 58, height: 36)
@@ -2079,7 +2086,7 @@ struct FilePreviewPDFZoomChromeView: View {
         } else {
             Button(action: action) {
                 Image(systemName: systemName)
-                    .font(.system(size: 16, weight: .regular))
+                    .cmuxFont(size: 16, weight: .regular)
                     .frame(width: 38, height: 36)
                     .contentShape(Rectangle())
             }
@@ -2109,7 +2116,7 @@ private struct FilePreviewChromeIconButton: View {
     var body: some View {
         Button(action: action) {
             Image(systemName: systemName)
-                .font(.system(size: 16, weight: .semibold))
+                .cmuxFont(size: 16, weight: .semibold)
                 .frame(width: 42, height: 40)
         }
         .buttonStyle(FilePreviewChromeHoverButtonStyle(isHovered: isHovered))
@@ -2129,9 +2136,9 @@ private struct FilePreviewChromeSidebarMenuLabel: View {
         HStack(spacing: 6) {
             Image(systemName: "sidebar.left")
             Image(systemName: "chevron.down")
-                .font(.system(size: 11, weight: .semibold))
+                .cmuxFont(size: 11, weight: .semibold)
         }
-        .font(.system(size: 16, weight: .semibold))
+        .cmuxFont(size: 16, weight: .semibold)
         .foregroundStyle(isHovered ? Color.primary : Color.secondary)
         .frame(width: 68, height: 34)
         .background {
@@ -2322,7 +2329,10 @@ struct FilePreviewPDFStandaloneChromeStyleModifier: ViewModifier {
 final class FilePreviewPDFThumbnailSidebarView: NSView, NSCollectionViewDataSource, NSCollectionViewDelegate, NSCollectionViewDelegateFlowLayout {
     private enum Metrics {
         static let thumbnailHeight = FilePreviewPDFSizing.thumbnailMaximumSize.height
-        static let labelHeight: CGFloat = 22
+        static func labelHeight() -> CGFloat {
+            let font = GlobalFontMagnification.monospacedDigitSystemFont(ofSize: 13, weight: .semibold)
+            return max(22, ceil(font.ascender - font.descender + font.leading) + 8)
+        }
         static let itemSpacing: CGFloat = 12
         static let verticalInset: CGFloat = 24
     }
@@ -2331,6 +2341,7 @@ final class FilePreviewPDFThumbnailSidebarView: NSView, NSCollectionViewDataSour
     private let collectionView = FilePreviewPDFThumbnailCollectionView()
     private let flowLayout = NSCollectionViewFlowLayout()
     private var document: PDFDocument?
+    private var labelHeight = Metrics.labelHeight()
     private var isApplyingSelection = false
     private var selectedPageIndex: Int?
     private var selectionIsActive = false
@@ -2347,7 +2358,6 @@ final class FilePreviewPDFThumbnailSidebarView: NSView, NSCollectionViewDataSour
     required init?(coder: NSCoder) {
         nil
     }
-
     override func layout() {
         super.layout()
         updateItemSize()
@@ -2368,6 +2378,12 @@ final class FilePreviewPDFThumbnailSidebarView: NSView, NSCollectionViewDataSour
         selectedPageIndex = nil
         collectionView.reloadData()
         selectPage(at: 0, scrollToVisible: false)
+    }
+
+    func reloadFontsForGlobalMagnification() {
+        labelHeight = Metrics.labelHeight(); flowLayout.invalidateLayout()
+        collectionView.reloadData()
+        updateItemSize()
     }
 
     func selectPage(at pageIndex: Int, scrollToVisible: Bool) {
@@ -2483,7 +2499,7 @@ final class FilePreviewPDFThumbnailSidebarView: NSView, NSCollectionViewDataSour
     private func thumbnailItemSize(width: CGFloat) -> NSSize {
         NSSize(
             width: max(1, width),
-            height: Metrics.thumbnailHeight + Metrics.labelHeight + 10
+            height: Metrics.thumbnailHeight + labelHeight + 10
         )
     }
 
@@ -2662,7 +2678,7 @@ private final class FilePreviewPDFThumbnailItemView: NSView {
         imageView.translatesAutoresizingMaskIntoConstraints = false
 
         pageLabel.alignment = .center
-        pageLabel.font = .monospacedDigitSystemFont(ofSize: 13, weight: .semibold)
+        pageLabel.font = GlobalFontMagnification.monospacedDigitSystemFont(ofSize: 13, weight: .semibold)
         pageLabel.lineBreakMode = .byTruncatingTail
         pageLabel.translatesAutoresizingMaskIntoConstraints = false
 
@@ -2747,6 +2763,7 @@ final class FilePreviewPDFContainerView: NSView, NSSplitViewDelegate, NSOutlineV
     private var previewBackgroundColor = NSColor.textBackgroundColor
     private var drawsPreviewBackground = true
     private var lastAppliedPDFScrollBackgroundAppearance: PDFScrollBackgroundAppearance?
+    private var fontMagnificationObserver: GlobalFontMagnificationChangeObserver?
     private static let documentLoadQueue = DispatchQueue(
         label: "com.cmux.file-preview.pdf-document-load",
         qos: .userInitiated
@@ -2767,6 +2784,11 @@ final class FilePreviewPDFContainerView: NSView, NSSplitViewDelegate, NSOutlineV
     override init(frame frameRect: NSRect) {
         super.init(frame: frameRect)
         setupView()
+        fontMagnificationObserver = GlobalFontMagnificationChangeObserver { [weak self] in
+            self?.applyFloatingChromeFonts()
+            self?.thumbnailView.reloadFontsForGlobalMagnification()
+            self?.outlineView.reloadData()
+        }
     }
 
     required init?(coder: NSCoder) {
@@ -3094,12 +3116,11 @@ final class FilePreviewPDFContainerView: NSView, NSSplitViewDelegate, NSOutlineV
         chromeHost.addSubview(zoomChromeHost)
         chromeHost.interactiveOverlayViews = [sidebarChromeHost, zoomChromeHost]
 
-        titleLabel.font = .systemFont(ofSize: 14, weight: .semibold)
+        applyFloatingChromeFonts()
         titleLabel.textColor = .labelColor
         titleLabel.lineBreakMode = .byTruncatingMiddle
         titleLabel.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
 
-        pageLabel.font = .systemFont(ofSize: 11)
         pageLabel.textColor = .secondaryLabelColor
         pageLabel.lineBreakMode = .byTruncatingTail
 
@@ -3128,6 +3149,11 @@ final class FilePreviewPDFContainerView: NSView, NSSplitViewDelegate, NSOutlineV
             titleStack.centerYAnchor.constraint(equalTo: sidebarChromeHost.centerYAnchor),
             titleStack.trailingAnchor.constraint(lessThanOrEqualTo: zoomChromeHost.leadingAnchor, constant: -12),
         ])
+    }
+
+    private func applyFloatingChromeFonts() {
+        titleLabel.font = GlobalFontMagnification.systemFont(ofSize: 14, weight: .semibold)
+        pageLabel.font = GlobalFontMagnification.systemFont(ofSize: 11)
     }
 
     private func layoutFloatingChrome() {

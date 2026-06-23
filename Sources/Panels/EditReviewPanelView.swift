@@ -1,5 +1,5 @@
 import CmuxEditPreview
-import CMUXWorkstream
+import CMUXAgentLaunch
 import SwiftUI
 
 /// The body for an ``EditReviewPanel``: a header, the Monaco diff, and the decision toolbar.

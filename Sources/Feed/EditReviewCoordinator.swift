@@ -1,7 +1,7 @@
 import AppKit
 import Bonsplit
 import CmuxEditPreview
-import CMUXWorkstream
+import CMUXAgentLaunch
 import Foundation
 
 /// Opens a read-only edit-review diff above the agent for a pending file-edit permission, and

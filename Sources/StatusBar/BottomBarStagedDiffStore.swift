@@ -1,4 +1,4 @@
-import CmuxFileWatch
+import CmuxFoundation
 import Foundation
 
 /// Owns the bottom bar's staged-diff state for the active workspace directory,

@@ -1,4 +1,5 @@
 import Foundation
+import CmuxSidebar
 
 /// Resolves the color of a compact-row status dot from a workspace's status
 /// entries.

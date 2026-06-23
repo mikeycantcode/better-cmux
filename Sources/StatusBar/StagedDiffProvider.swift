@@ -1,4 +1,5 @@
 import Foundation
+import CmuxFoundation
 
 /// Computes uncommitted-diff stats for a directory's git repository, off the
 /// main actor.
@@ -39,7 +40,7 @@ actor StagedDiffProvider {
         process.standardError = FileHandle.nullDevice
         do {
             try process.run()
-            let data = ProcessPipeReader.readDataToEndOfFileOrEmpty(from: pipe.fileHandleForReading)
+            let data = pipe.fileHandleForReading.readDataToEndOfFileOrEmpty()
             process.waitUntilExit()
             guard process.terminationStatus == 0 else { return nil }
             return String(data: data, encoding: .utf8)
