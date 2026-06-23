@@ -2,11 +2,19 @@
 
 All notable changes to cmux are documented here.
 
-## [Unreleased]
+## [1.0.0] - 2026-06-23
+
+First **bettercmux** release — built on cmux 0.64.16.
 
 ### Added
+- bettercmux branding: red app icon, app name "bettercmux 1.0", a welcome pane on launch (toggle `app.welcomePaneOnLaunch`), an About-panel credit, and a sidebar version footer.
 - Left-sidebar file explorer: a collapsible, resizable panel below the session list that follows the active session's working directory. Click a file to insert its path into the active terminal. Toggle with the collapse/expand button in the panel header.
 - Sidebar workspace rows are now compact single-line by default (status dot + title + path); full detail is in the hover tooltip. Toggle "Compact Sidebar Rows" in Settings (or `sidebar.compactRowMode` in cmux.json) to restore the detailed layout.
+- Bottom status bar (branch, staged diff, editor, version).
+- Monaco-backed file editor and a manual edit-review diff (`automation.manualEditDiff`).
+- Agent layout control: `cmux open` smart placement, `cmux snapshot`, and move-tab/reorder-tab/swap-panes verbs, plus an opt-in agent capability brief (`automation.agentCapabilityBrief`).
+- Loopback WebSocket notifications and a "Resume Last Claude Session" command-palette action.
+- Merged all upstream cmux changes through 0.64.16.
 
 ## [0.64.16] - 2026-06-15
 
