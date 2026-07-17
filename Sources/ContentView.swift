@@ -1663,11 +1663,15 @@ struct ContentView: View {
     }
 
     private var sidebarResizerOverlay: some View {
-        placedSidebarResizerOverlay(
+        // In the floating layout the panel's trailing edge sits at
+        // `inset + sidebarWidth` from the window's leading edge, so the resize
+        // handle must be offset by the same inset to line up with the panel edge.
+        let leadingInset = isFloatingSidebarLayout ? SidebarFloatingPanelMetrics.inset : 0
+        return placedSidebarResizerOverlay(
             handle: .divider,
             edge: .leading,
             accessibilityIdentifier: "SidebarResizer",
-            dividerX: { totalWidth in min(max(sidebarWidth, 0), totalWidth) }
+            dividerX: { totalWidth in min(max(sidebarWidth + leadingInset, 0), totalWidth) }
         )
     }
 
@@ -2555,6 +2559,13 @@ struct ContentView: View {
         return dir.isEmpty ? nil : dir
     }
 
+    /// True when the sidebar renders as a floating glass panel inset over the
+    /// full-width terminal (rather than pushing it aside in an HStack).
+    private var isFloatingSidebarLayout: Bool {
+        sidebarBlendMode == SidebarBlendModeOption.withinWindow.rawValue
+            && !sidebarMatchTerminalBackground
+    }
+
     private func contentAndSidebarLayout(appearance: WindowAppearanceSnapshot) -> AnyView {
         let layout: AnyView
         // When matching terminal background, use HStack so both sidebar and terminal
@@ -2581,6 +2592,10 @@ struct ContentView: View {
                             appearance: appearance,
                             cornerRadiusOverride: SidebarFloatingPanelMetrics.cornerRadius
                         )
+                        // Report the panel's exact frame (before the inset
+                        // padding) to the terminal portal so pointer events over
+                        // the glass panel are routed to SwiftUI, not the terminal.
+                        .background(FloatingSidebarPanelFrameReporter())
                         .padding(.leading, SidebarFloatingPanelMetrics.inset)
                         .padding(.vertical, SidebarFloatingPanelMetrics.inset)
                         .transition(.move(edge: .leading).combined(with: .opacity))
@@ -9684,6 +9699,70 @@ struct ContentView: View {
         String(format: "%.2fms", ms)
     }
 #endif
+}
+
+/// Reports the floating glass sidebar panel's frame (in window base coordinates)
+/// to the terminal window portal so pointer routing knows which region belongs
+/// to the SwiftUI panel. Uses an AppKit backing view: `convert(bounds, to: nil)`
+/// yields exact window coordinates with no SwiftUI coordinate-space flips, and
+/// reporting happens from AppKit layout callbacks (layout changes only, never
+/// per pointer event) directly into AppKit state — no @Published writes.
+private struct FloatingSidebarPanelFrameReporter: NSViewRepresentable {
+    func makeNSView(context: Context) -> ReporterView {
+        ReporterView()
+    }
+
+    func updateNSView(_ nsView: ReporterView, context: Context) {
+        nsView.reportFrameIfNeeded()
+    }
+
+    static func dismantleNSView(_ nsView: ReporterView, coordinator: Coordinator) {
+        nsView.clearReportedFrame()
+    }
+
+    final class ReporterView: NSView {
+        private weak var reportedWindow: NSWindow?
+
+        override func viewDidMoveToWindow() {
+            super.viewDidMoveToWindow()
+            if window == nil {
+                clearReportedFrame()
+            } else {
+                reportFrameIfNeeded()
+            }
+        }
+
+        override func setFrameSize(_ newSize: NSSize) {
+            super.setFrameSize(newSize)
+            reportFrameIfNeeded()
+        }
+
+        override func setFrameOrigin(_ newOrigin: NSPoint) {
+            super.setFrameOrigin(newOrigin)
+            reportFrameIfNeeded()
+        }
+
+        override func layout() {
+            super.layout()
+            reportFrameIfNeeded()
+        }
+
+        func reportFrameIfNeeded() {
+            guard let window else {
+                clearReportedFrame()
+                return
+            }
+            let frameInWindow = convert(bounds, to: nil)
+            reportedWindow = window
+            TerminalWindowPortalRegistry.setFloatingSidebarPanelFrame(frameInWindow, for: window)
+        }
+
+        func clearReportedFrame() {
+            guard let window = reportedWindow else { return }
+            TerminalWindowPortalRegistry.setFloatingSidebarPanelFrame(nil, for: window)
+            reportedWindow = nil
+        }
+    }
 }
 
 private struct SidebarResizerAccessibilityModifier: ViewModifier {

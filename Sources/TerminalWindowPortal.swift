@@ -9,6 +9,33 @@ import Bonsplit
 private var cmuxWindowTerminalPortalKey: UInt8 = 0
 private var cmuxWindowTerminalPortalCloseObserverKey: UInt8 = 0
 
+/// Pure pointer-routing decision for the floating glass sidebar panel.
+///
+/// Extracted so the delicate hit-testing rule can be unit-tested without an
+/// AppKit view hierarchy. Ordering matches `performHitTest`: a point inside the
+/// panel is routed to the panel even when it also overlaps the resize band.
+enum FloatingSidebarPointerRoute: Equatable {
+    /// Inside the glass panel — pass the event through to the SwiftUI panel.
+    case panel
+    /// On the sidebar divider band at the panel's trailing edge — pass through
+    /// to the SwiftUI resize handle.
+    case resizer
+    /// Neither — let the terminal beneath handle the event.
+    case none
+
+    static func route(point: CGPoint, panelFrame: CGRect) -> FloatingSidebarPointerRoute {
+        if panelFrame.contains(point) {
+            return .panel
+        }
+        if SidebarResizeInteraction.Edge.leading
+            .hitRange(dividerX: panelFrame.maxX)
+            .contains(point.x) {
+            return .resizer
+        }
+        return .none
+    }
+}
+
 final class WindowTerminalHostView: NSView {
     private typealias DividerRegion = PortalSplitDividerRegion
 
@@ -29,6 +56,13 @@ final class WindowTerminalHostView: NSView {
     private static let minimumVisibleLeadingContentWidth: CGFloat = 24
     private var cachedSidebarDividerX: CGFloat?
     private var sidebarDividerMissCount = 0
+    /// Frame of the floating glass sidebar panel in this host view's coordinate
+    /// space, or nil when the sidebar is hidden or the layout is not the
+    /// floating one. Set by the portal on layout changes only (never per-event).
+    /// When non-nil, pointer events inside this rect are passed through to the
+    /// SwiftUI glass panel, and the sidebar resize divider is inferred from
+    /// `maxX` instead of hosted-terminal geometry.
+    var floatingSidebarFrame: CGRect?
     private var cachedSplitDividerRegions: [DividerRegion]?
     private var cachedSplitDividerRootSubviewIds: [ObjectIdentifier]?
     private let splitDividerCacheInvalidator = PortalSplitDividerCacheInvalidator()
@@ -156,6 +190,14 @@ final class WindowTerminalHostView: NSView {
                 return nil
             }
 
+            if let panelFrame = floatingSidebarFrame,
+               FloatingSidebarPointerRoute.route(point: point, panelFrame: panelFrame) == .panel {
+                // Pointer is over the floating glass sidebar panel. Let the
+                // SwiftUI panel receive the event; the terminal beneath must not.
+                clearActiveDividerCursor(restoreArrow: true)
+                return nil
+            }
+
             if shouldPassThroughToSidebarResizer(at: point) {
                 clearActiveDividerCursor(restoreArrow: false)
                 return nil
@@ -278,6 +320,13 @@ final class WindowTerminalHostView: NSView {
 
         if shouldPassThroughToTrailingSidebarResizer(at: point, visibleHostedViews: visibleHostedViews) {
             return true
+        }
+
+        // Floating layout: the sidebar divider sits at the panel's trailing edge.
+        // The full-width terminal makes the hosted-view minX inference below think
+        // the sidebar is hidden, so use the explicit panel frame instead.
+        if let panelFrame = floatingSidebarFrame {
+            return FloatingSidebarPointerRoute.route(point: point, panelFrame: panelFrame) == .resizer
         }
 
         // If content is flush to the leading edge, sidebar is effectively hidden.
@@ -804,6 +853,29 @@ final class WindowTerminalPortal: NSObject {
             } else {
                 DispatchQueue.main.async(execute: performSync)
             }
+        }
+    }
+
+    /// Publishes the floating glass sidebar panel frame (in window base
+    /// coordinates) to the host view, converting it into host-view coordinates.
+    /// Pass nil to clear (sidebar hidden or non-floating layout). Called on
+    /// layout changes only — never per event.
+    func setFloatingSidebarPanelFrame(_ frameInWindow: CGRect?) {
+        guard let frameInWindow else {
+            if hostView.floatingSidebarFrame != nil {
+                hostView.floatingSidebarFrame = nil
+            }
+            return
+        }
+        let frameInHost = hostView.convert(frameInWindow, from: nil)
+        guard frameInHost.origin.x.isFinite,
+              frameInHost.origin.y.isFinite,
+              frameInHost.size.width.isFinite,
+              frameInHost.size.height.isFinite else {
+            return
+        }
+        if hostView.floatingSidebarFrame != frameInHost {
+            hostView.floatingSidebarFrame = frameInHost
         }
     }
 
@@ -2054,6 +2126,12 @@ enum TerminalWindowPortalRegistry {
 
     static func scheduleExternalGeometrySynchronize(for window: NSWindow, forceImmediate: Bool = true) {
         existingPortal(for: window)?.scheduleExternalGeometrySynchronize(forceImmediate: forceImmediate)
+    }
+
+    /// Forwards the floating glass sidebar panel frame (window base coordinates)
+    /// to the window's portal, or clears it when nil.
+    static func setFloatingSidebarPanelFrame(_ frameInWindow: CGRect?, for window: NSWindow) {
+        existingPortal(for: window)?.setFloatingSidebarPanelFrame(frameInWindow)
     }
 
 #if DEBUG
