@@ -1689,7 +1689,11 @@ struct ContentView: View {
             onOpenFileInEditor: { path in openSidebarFile(path: path) },
             windowId: windowId,
             onSendFeedback: presentFeedbackComposer,
-            onToggleSidebar: { sidebarState.toggle() },
+            onToggleSidebar: {
+                withAnimation(.spring(duration: 0.25)) {
+                    sidebarState.toggle()
+                }
+            },
             onNewTab: {
                 AppDelegate.shared?.performNewWorkspaceAction(
                     tabManager: tabManager,
@@ -1939,12 +1943,14 @@ struct ContentView: View {
     private func sidebarBackdropLayer(
         width: CGFloat,
         role: WindowBackdropRole,
-        appearance: WindowAppearanceSnapshot
+        appearance: WindowAppearanceSnapshot,
+        cornerRadiusOverride: CGFloat? = nil
     ) -> some View {
-        WindowBackdropLayer(role: role, snapshot: appearance)
+        let cornerRadius = cornerRadiusOverride ?? appearance.sidebarSettings.materialPolicy.cornerRadius
+        return WindowBackdropLayer(role: role, snapshot: appearance)
             .ignoresSafeArea()
             .frame(width: width)
-            .clipShape(RoundedRectangle(cornerRadius: appearance.sidebarSettings.materialPolicy.cornerRadius, style: .continuous))
+            .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
             .clipped()
             .allowsHitTesting(false)
     }
@@ -1954,18 +1960,19 @@ struct ContentView: View {
         alignment: Alignment,
         role: WindowBackdropRole,
         appearance: WindowAppearanceSnapshot,
+        cornerRadiusOverride: CGFloat? = nil,
         @ViewBuilder content: () -> Content
     ) -> some View {
         ZStack(alignment: alignment) {
-            sidebarBackdropLayer(width: width, role: role, appearance: appearance)
+            sidebarBackdropLayer(width: width, role: role, appearance: appearance, cornerRadiusOverride: cornerRadiusOverride)
             content()
                 .environment(\.colorScheme, appearance.sidebarContentColorScheme)
         }
         .frame(width: width)
     }
 
-    private func sidebarPanelWithBackdrop(appearance: WindowAppearanceSnapshot) -> some View {
-        sidebarPanelContainer(width: sidebarWidth, alignment: .leading, role: .leftSidebar, appearance: appearance) {
+    private func sidebarPanelWithBackdrop(appearance: WindowAppearanceSnapshot, cornerRadiusOverride: CGFloat? = nil) -> some View {
+        sidebarPanelContainer(width: sidebarWidth, alignment: .leading, role: .leftSidebar, appearance: appearance, cornerRadiusOverride: cornerRadiusOverride) {
             sidebarView
         }
     }
@@ -2045,7 +2052,7 @@ struct ContentView: View {
     @AppStorage("sidebarTintHex") private var sidebarTintHex = SidebarTintDefaults().hex
     @AppStorage("sidebarTintHexLight") private var sidebarTintHexLight: String?
     @AppStorage("sidebarTintHexDark") private var sidebarTintHexDark: String?
-    @AppStorage("sidebarMaterial") private var sidebarMaterial = SidebarMaterialOption.sidebar.rawValue
+    @AppStorage("sidebarMaterial") private var sidebarMaterial = SidebarMaterialOption.liquidGlass.rawValue
     @AppStorage("sidebarState") private var sidebarStateSetting = SidebarStateOption.followWindow.rawValue
     @AppStorage("sidebarCornerRadius") private var sidebarCornerRadius = 0.0
     @AppStorage("sidebarBlurOpacity") private var sidebarBlurOpacity = 1.0
@@ -2088,7 +2095,11 @@ struct ContentView: View {
         TitlebarControlsView(
             notificationStore: TerminalNotificationStore.shared,
             viewModel: fullscreenControlsViewModel,
-            onToggleSidebar: { sidebarState.toggle() },
+            onToggleSidebar: {
+                withAnimation(.spring(duration: 0.25)) {
+                    sidebarState.toggle()
+                }
+            },
             onToggleNotifications: { [fullscreenControlsViewModel] in
                 AppDelegate.shared?.toggleNotificationsPopover(
                     animated: true,
@@ -2559,16 +2570,20 @@ struct ContentView: View {
                     VStack(spacing: 0) {
                         HStack(spacing: 0) {
                             terminalContentWithSidebarDropOverlay(appearance: appearance)
-                                .padding(.leading, sidebarState.isVisible ? sidebarWidth : 0)
                                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                                 .layoutPriority(1)
                             rightSidebarPanelWithBackdrop(appearance: appearance)
                         }
                         bottomBarView()
-                            .padding(.leading, sidebarState.isVisible ? sidebarWidth : 0)
                     }
                     if sidebarState.isVisible {
-                        sidebarPanelWithBackdrop(appearance: appearance)
+                        sidebarPanelWithBackdrop(
+                            appearance: appearance,
+                            cornerRadiusOverride: SidebarFloatingPanelMetrics.cornerRadius
+                        )
+                        .padding(.leading, SidebarFloatingPanelMetrics.inset)
+                        .padding(.vertical, SidebarFloatingPanelMetrics.inset)
+                        .transition(.move(edge: .leading).combined(with: .opacity))
                     }
                 }
             )

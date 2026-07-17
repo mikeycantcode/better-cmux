@@ -2531,7 +2531,7 @@ private struct SidebarDebugView: View {
     @AppStorage("sidebarTintHex") private var sidebarTintHex = SidebarTintDefaults().hex
     @AppStorage("sidebarTintHexLight") private var sidebarTintHexLight: String?
     @AppStorage("sidebarTintHexDark") private var sidebarTintHexDark: String?
-    @AppStorage("sidebarMaterial") private var sidebarMaterial = SidebarMaterialOption.sidebar.rawValue
+    @AppStorage("sidebarMaterial") private var sidebarMaterial = SidebarMaterialOption.liquidGlass.rawValue
     @AppStorage("sidebarBlendMode") private var sidebarBlendMode = SidebarBlendModeOption.withinWindow.rawValue
     @AppStorage("sidebarState") private var sidebarState = SidebarStateOption.followWindow.rawValue
     @AppStorage("sidebarCornerRadius") private var sidebarCornerRadius = 0.0
