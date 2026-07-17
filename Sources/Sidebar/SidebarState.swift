@@ -16,6 +16,9 @@ final class SidebarState: ObservableObject {
     func toggle() {
         isVisible.toggle()
     }
+
+    func hide() { if isVisible { isVisible = false } }
+    func show() { if !isVisible { isVisible = true } }
 }
 
 enum SidebarResizeInteraction {
