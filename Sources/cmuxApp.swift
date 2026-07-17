@@ -325,10 +325,25 @@ struct cmuxApp: App {
         setenv(key, updated, 1)
     }
 
-    private func migrateSidebarAppearanceDefaultsIfNeeded(defaults: UserDefaults) {
-        let migrationKey = "sidebarAppearanceDefaultsVersion"
-        let targetVersion = 1
-        guard defaults.integer(forKey: migrationKey) < targetVersion else { return }
+    /// Keys read/written by the sidebar appearance migrations below.
+    static let sidebarAppearanceMigrationKeys = [
+        "sidebarMaterial", "sidebarBlendMode", "sidebarState",
+        "sidebarTintHex", "sidebarTintOpacity", "sidebarBlurOpacity", "sidebarCornerRadius",
+    ]
+
+    /// Pure decision function for the sidebar appearance migrations, factored out so it can be
+    /// unit-tested without touching real `UserDefaults`. `snapshot` holds only the keys that are
+    /// actually *stored* (present) in defaults; absent keys must not appear in the dictionary.
+    /// Returns the current-version -> target-version write plan: which keys to overwrite (and with
+    /// what values) for the v1 step and for the v2 step, plus the final version to persist.
+    static func sidebarAppearanceMigrationPlan(
+        currentVersion: Int,
+        snapshot: [String: String]
+    ) -> (v1Writes: [String: String], v2Writes: [String: String], finalVersion: Int) {
+        let targetVersion = 2
+        guard currentVersion < targetVersion else {
+            return ([:], [:], currentVersion)
+        }
 
         func normalizeHex(_ value: String) -> String {
             value
@@ -337,19 +352,28 @@ struct cmuxApp: App {
                 .uppercased()
         }
 
-        func approximatelyEqual(_ lhs: Double, _ rhs: Double, tolerance: Double = 0.0001) -> Bool {
-            abs(lhs - rhs) <= tolerance
+        func approximatelyEqual(_ lhs: String, _ rhs: Double, tolerance: Double = 0.0001) -> Bool {
+            guard let lhsValue = Double(lhs) else { return false }
+            return abs(lhsValue - rhs) <= tolerance
         }
 
-        let material = defaults.string(forKey: "sidebarMaterial") ?? SidebarMaterialOption.sidebar.rawValue
-        let blendMode = defaults.string(forKey: "sidebarBlendMode") ?? SidebarBlendModeOption.behindWindow.rawValue
-        let state = defaults.string(forKey: "sidebarState") ?? SidebarStateOption.followWindow.rawValue
-        let tintHex = defaults.string(forKey: "sidebarTintHex") ?? "#101010"
-        let tintOpacity = defaults.object(forKey: "sidebarTintOpacity") as? Double ?? 0.54
-        let blurOpacity = defaults.object(forKey: "sidebarBlurOpacity") as? Double ?? 0.79
-        let cornerRadius = defaults.object(forKey: "sidebarCornerRadius") as? Double ?? 0.0
+        let anyKeyStored = sidebarAppearanceMigrationKeys.contains { snapshot[$0] != nil }
 
-        let usesLegacyDefaults =
+        let material = snapshot["sidebarMaterial"] ?? SidebarMaterialOption.sidebar.rawValue
+        let blendMode = snapshot["sidebarBlendMode"] ?? SidebarBlendModeOption.behindWindow.rawValue
+        let state = snapshot["sidebarState"] ?? SidebarStateOption.followWindow.rawValue
+        let tintHex = snapshot["sidebarTintHex"] ?? "#101010"
+        let tintOpacity = snapshot["sidebarTintOpacity"] ?? "0.54"
+        let blurOpacity = snapshot["sidebarBlurOpacity"] ?? "0.79"
+        let cornerRadius = snapshot["sidebarCornerRadius"] ?? "0.0"
+
+        // Fresh installs (no sidebar appearance keys stored at all) must not be migrated: the
+        // @AppStorage literal defaults already reflect the current (liquid-glass) defaults, and
+        // writing explicit values here would shadow them. Only installs that actually persisted
+        // the exact legacy-default set (i.e. never customized, on a build old enough to have
+        // written those literal legacy values) are eligible for migration.
+        let matchesLegacyDefaultSet =
+            anyKeyStored &&
             material == SidebarMaterialOption.sidebar.rawValue &&
             blendMode == SidebarBlendModeOption.behindWindow.rawValue &&
             state == SidebarStateOption.followWindow.rawValue &&
@@ -358,19 +382,62 @@ struct cmuxApp: App {
             approximatelyEqual(blurOpacity, 0.79) &&
             approximatelyEqual(cornerRadius, 0.0)
 
-        if usesLegacyDefaults {
+        var v1Writes: [String: String] = [:]
+        if currentVersion < 1, matchesLegacyDefaultSet {
             let preset = SidebarPresetOption.nativeSidebar
-            defaults.set(preset.rawValue, forKey: "sidebarPreset")
-            defaults.set(preset.material.rawValue, forKey: "sidebarMaterial")
-            defaults.set(preset.blendMode.rawValue, forKey: "sidebarBlendMode")
-            defaults.set(preset.state.rawValue, forKey: "sidebarState")
-            defaults.set(preset.tintHex, forKey: "sidebarTintHex")
-            defaults.set(preset.tintOpacity, forKey: "sidebarTintOpacity")
-            defaults.set(preset.blurOpacity, forKey: "sidebarBlurOpacity")
-            defaults.set(preset.cornerRadius, forKey: "sidebarCornerRadius")
+            v1Writes = [
+                "sidebarPreset": preset.rawValue,
+                "sidebarMaterial": preset.material.rawValue,
+                "sidebarBlendMode": preset.blendMode.rawValue,
+                "sidebarState": preset.state.rawValue,
+                "sidebarTintHex": preset.tintHex,
+                "sidebarTintOpacity": String(preset.tintOpacity),
+                "sidebarBlurOpacity": String(preset.blurOpacity),
+                "sidebarCornerRadius": String(preset.cornerRadius),
+            ]
         }
 
-        defaults.set(targetVersion, forKey: migrationKey)
+        var v2Writes: [String: String] = [:]
+        if currentVersion < 2, matchesLegacyDefaultSet {
+            v2Writes = [
+                "sidebarMaterial": SidebarMaterialOption.liquidGlass.rawValue,
+                "sidebarBlendMode": SidebarBlendModeOption.withinWindow.rawValue,
+            ]
+        }
+
+        return (v1Writes, v2Writes, targetVersion)
+    }
+
+    private func migrateSidebarAppearanceDefaultsIfNeeded(defaults: UserDefaults) {
+        let migrationKey = "sidebarAppearanceDefaultsVersion"
+        let currentVersion = defaults.integer(forKey: migrationKey)
+        guard currentVersion < 2 else { return }
+
+        var snapshot: [String: String] = [:]
+        for key in Self.sidebarAppearanceMigrationKeys {
+            if let stringValue = defaults.string(forKey: key) {
+                snapshot[key] = stringValue
+            } else if let doubleValue = defaults.object(forKey: key) as? Double {
+                snapshot[key] = String(doubleValue)
+            }
+        }
+
+        let plan = Self.sidebarAppearanceMigrationPlan(currentVersion: currentVersion, snapshot: snapshot)
+
+        func applyWrites(_ writes: [String: String]) {
+            for (key, value) in writes {
+                switch key {
+                case "sidebarTintOpacity", "sidebarBlurOpacity", "sidebarCornerRadius":
+                    defaults.set(Double(value) ?? 0, forKey: key)
+                default:
+                    defaults.set(value, forKey: key)
+                }
+            }
+        }
+
+        applyWrites(plan.v1Writes)
+        applyWrites(plan.v2Writes)
+        defaults.set(plan.finalVersion, forKey: migrationKey)
     }
 
     var body: some Scene {
