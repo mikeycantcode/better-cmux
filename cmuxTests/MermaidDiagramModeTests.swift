@@ -53,6 +53,72 @@ final class MermaidDiagramModeTests {
         let padding = try await harness.evalString("getComputedStyle(document.body).padding")
         #expect(padding != "0px")
     }
+
+    @Test
+    func wheelWithoutModifierPansAndPinchZooms() async throws {
+        let harness = try await DiagramShellHarness.make()
+        defer { harness.tearDown() }
+
+        try await harness.render("```mermaid\nflowchart LR\n  a --> b\n```")
+        _ = try await harness.eval("window.__cmuxSetDiagramMode(true)")
+        _ = try await harness.eval("window.__cmuxDiagramSetCamera(0, 0, 1)")
+
+        // Plain wheel scroll pans; it must not scroll the document.
+        _ = try await harness.eval("""
+        document.getElementById('content').dispatchEvent(new WheelEvent('wheel', {
+          deltaX: 30, deltaY: 40, bubbles: true, cancelable: true
+        }));
+        """)
+        let panned = try await harness.evalString("JSON.stringify(window.__cmuxDiagramCamera())")
+        #expect(panned.contains("\"x\":-30"))
+        #expect(panned.contains("\"y\":-40"))
+
+        // ctrl+wheel is the trackpad pinch gesture WebKit synthesizes.
+        _ = try await harness.eval("window.__cmuxDiagramSetCamera(0, 0, 1)")
+        _ = try await harness.eval("""
+        document.getElementById('content').dispatchEvent(new WheelEvent('wheel', {
+          deltaY: -10, ctrlKey: true, clientX: 0, clientY: 0, bubbles: true, cancelable: true
+        }));
+        """)
+        let zoomed = try await harness.eval("window.__cmuxDiagramCamera().scale") as? Double
+        #expect((zoomed ?? 0) > 1.0)
+    }
+
+    @Test
+    func cameraScaleIsClamped() async throws {
+        let harness = try await DiagramShellHarness.make()
+        defer { harness.tearDown() }
+        try await harness.render("```mermaid\nflowchart LR\n  a --> b\n```")
+        _ = try await harness.eval("window.__cmuxSetDiagramMode(true)")
+
+        _ = try await harness.eval("window.__cmuxDiagramSetCamera(0, 0, 500)")
+        let high = try await harness.eval("window.__cmuxDiagramCamera().scale") as? Double
+        #expect((high ?? 0) <= 8.0)
+
+        _ = try await harness.eval("window.__cmuxDiagramSetCamera(0, 0, 0.0001)")
+        let low = try await harness.eval("window.__cmuxDiagramCamera().scale") as? Double
+        #expect((low ?? 0) >= 0.1)
+    }
+
+    @Test
+    func dotGridTransformsWithTheCamera() async throws {
+        let harness = try await DiagramShellHarness.make()
+        defer { harness.tearDown() }
+        try await harness.render("```mermaid\nflowchart LR\n  a --> b\n```")
+        _ = try await harness.eval("window.__cmuxSetDiagramMode(true)")
+        _ = try await harness.eval("window.__cmuxDiagramSetCamera(100, 50, 2)")
+
+        let canvasTransform = try await harness.evalString(
+            "document.getElementById('cmux-diagram-canvas').style.transform"
+        )
+        let contentTransform = try await harness.evalString(
+            "document.getElementById('content').style.transform"
+        )
+        // Both layers share the camera, so dots track the diagram exactly.
+        #expect(canvasTransform.contains("scale(2)"))
+        #expect(contentTransform.contains("scale(2)"))
+        #expect(contentTransform.contains("translate(100px, 50px)"))
+    }
 }
 
 @MainActor

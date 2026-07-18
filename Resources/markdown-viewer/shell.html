@@ -1759,10 +1759,131 @@ html { scroll-behavior: smooth; }
     }
   };
 
-  // ---- Diagram mode (placeholders; Task 5 implements the real camera) ---
+  // ---- Diagram mode: pan/zoom camera --------------------------------
+  // Camera: content and dot-grid share one transform, so the dots translate
+  // and scale with the diagram. transform-origin is 0 0 on both layers, and
+  // the order is translate-then-scale, which makes zoom-about-a-point a
+  // simple offset correction (see diagramZoomAt).
+  var DIAGRAM_MIN_SCALE = 0.1;
+  var DIAGRAM_MAX_SCALE = 8;
+  var diagramCamera = { x: 0, y: 0, scale: 1 };
   var diagramCameraInitialized = false;
-  function applyDiagramCamera() {}
-  window.__cmuxDiagramFit = function() { diagramCameraInitialized = true; };
+
+  function clampDiagramScale(value) {
+    var scale = Number(value);
+    if (!Number.isFinite(scale) || scale <= 0) { return 1; }
+    return Math.max(DIAGRAM_MIN_SCALE, Math.min(scale, DIAGRAM_MAX_SCALE));
+  }
+
+  function applyDiagramCamera() {
+    if (!diagramModeEnabled) { return; }
+    var t = 'translate(' + diagramCamera.x + 'px, ' + diagramCamera.y + 'px) scale(' + diagramCamera.scale + ')';
+    if (contentEl) { contentEl.style.transform = t; }
+    if (diagramCanvasEl) { diagramCanvasEl.style.transform = t; }
+  }
+
+  window.__cmuxDiagramCamera = function() {
+    return { x: diagramCamera.x, y: diagramCamera.y, scale: diagramCamera.scale };
+  };
+
+  window.__cmuxDiagramSetCamera = function(x, y, scale) {
+    var nx = Number(x), ny = Number(y);
+    diagramCamera.x = Number.isFinite(nx) ? nx : 0;
+    diagramCamera.y = Number.isFinite(ny) ? ny : 0;
+    diagramCamera.scale = clampDiagramScale(scale);
+    diagramCameraInitialized = true;
+    applyDiagramCamera();
+  };
+
+  function diagramSVG() {
+    return contentEl ? contentEl.querySelector('.cmux-mermaid svg') : null;
+  }
+
+  // Zoom about a viewport point: keep the diagram-space point under the
+  // cursor fixed while scale changes.
+  function diagramZoomAt(factor, clientX, clientY) {
+    var next = clampDiagramScale(diagramCamera.scale * factor);
+    if (next === diagramCamera.scale) { return; }
+    var ratio = next / diagramCamera.scale;
+    diagramCamera.x = clientX - (clientX - diagramCamera.x) * ratio;
+    diagramCamera.y = clientY - (clientY - diagramCamera.y) * ratio;
+    diagramCamera.scale = next;
+    applyDiagramCamera();
+  }
+
+  window.__cmuxDiagramFit = function() {
+    diagramCameraInitialized = true;
+    var svg = diagramSVG();
+    if (!svg) {
+      diagramCamera = { x: 0, y: 0, scale: 1 };
+      applyDiagramCamera();
+      return;
+    }
+    // Measure at identity so the reading is the diagram's intrinsic size.
+    var prev = contentEl.style.transform;
+    contentEl.style.transform = '';
+    var rect = svg.getBoundingClientRect();
+    contentEl.style.transform = prev;
+
+    var vw = window.innerWidth, vh = window.innerHeight;
+    if (!(rect.width > 0 && rect.height > 0 && vw > 0 && vh > 0)) {
+      diagramCamera = { x: 0, y: 0, scale: 1 };
+      applyDiagramCamera();
+      return;
+    }
+    var margin = 48;
+    var scale = clampDiagramScale(
+      Math.min((vw - margin) / rect.width, (vh - margin) / rect.height, 1)
+    );
+    diagramCamera.scale = scale;
+    diagramCamera.x = (vw - rect.width * scale) / 2;
+    diagramCamera.y = (vh - rect.height * scale) / 2;
+    applyDiagramCamera();
+  };
+
+  // ---- Input ------------------------------------------------------------
+  var diagramDrag = null;
+
+  document.addEventListener('mousedown', function(ev) {
+    if (!diagramModeEnabled || ev.button !== 0) { return; }
+    diagramDrag = { px: ev.clientX, py: ev.clientY };
+    ev.preventDefault();
+  });
+
+  document.addEventListener('mousemove', function(ev) {
+    if (!diagramModeEnabled || !diagramDrag) { return; }
+    diagramCamera.x += ev.clientX - diagramDrag.px;
+    diagramCamera.y += ev.clientY - diagramDrag.py;
+    diagramDrag.px = ev.clientX;
+    diagramDrag.py = ev.clientY;
+    applyDiagramCamera();
+  });
+
+  document.addEventListener('mouseup', function() { diagramDrag = null; });
+  document.addEventListener('mouseleave', function() { diagramDrag = null; });
+
+  document.addEventListener('wheel', function(ev) {
+    if (!diagramModeEnabled) { return; }
+    ev.preventDefault();
+    if (ev.ctrlKey) {
+      // WebKit synthesizes ctrl+wheel for trackpad pinch.
+      diagramZoomAt(Math.exp(-ev.deltaY * 0.01), ev.clientX, ev.clientY);
+      return;
+    }
+    diagramCamera.x -= ev.deltaX;
+    diagramCamera.y -= ev.deltaY;
+    applyDiagramCamera();
+  }, { passive: false });
+
+  document.addEventListener('dblclick', function(ev) {
+    if (!diagramModeEnabled) { return; }
+    ev.preventDefault();
+    window.__cmuxDiagramFit();
+  });
+
+  window.addEventListener('resize', function() {
+    if (diagramModeEnabled) { applyDiagramCamera(); }
+  });
 
   var diagramModeEnabled = false;
   var diagramCanvasEl = document.getElementById('cmux-diagram-canvas');
