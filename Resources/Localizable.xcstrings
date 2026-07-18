@@ -183132,6 +183132,23 @@
         }
       }
     },
+    "sidebar.fileExplorer.reload.tooltip": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reload file tree"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ファイルツリーを再読み込み"
+          }
+        }
+      }
+    },
     "sidebar.fileExplorer.title": {
       "extractionState": "manual",
       "localizations": {

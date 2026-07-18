@@ -12,6 +12,9 @@ struct SidebarFileExplorerPanel: View {
     @ObservedObject var state: FileExplorerState
     let onOpenFile: (String) -> Void
 
+    @State private var isHeaderHovering = false
+    @State private var isReloadHovering = false
+
     private var folderName: String {
         let trimmed = store.rootPath.trimmingCharacters(in: .whitespaces)
         guard !trimmed.isEmpty else {
@@ -22,29 +25,57 @@ struct SidebarFileExplorerPanel: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            Button {
-                state.isVisible.toggle()
-            } label: {
-                HStack(spacing: 4) {
-                    Image(systemName: state.isVisible ? "chevron.down" : "chevron.right")
-                        .font(.system(size: 9, weight: .semibold))
-                    Text(folderName)
-                        .font(.system(size: 11, weight: .semibold))
-                        .lineLimit(1)
-                        .truncationMode(.middle)
-                    Spacer(minLength: 0)
+            HStack(spacing: 4) {
+                Button {
+                    state.isVisible.toggle()
+                } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: state.isVisible ? "chevron.down" : "chevron.right")
+                            .font(.system(size: 9, weight: .semibold))
+                        Text(folderName)
+                            .font(.system(size: 11, weight: .semibold))
+                            .lineLimit(1)
+                            .truncationMode(.middle)
+                    }
+                    .foregroundColor(.secondary)
+                    .contentShape(Rectangle())
                 }
+                .buttonStyle(.plain)
+                .accessibilityLabel(
+                    state.isVisible
+                        ? String(localized: "sidebar.fileExplorer.collapse", defaultValue: "Collapse file explorer")
+                        : String(localized: "sidebar.fileExplorer.expand", defaultValue: "Expand file explorer")
+                )
+
+                Spacer(minLength: 0)
+
+                Button {
+                    store.reload()
+                    store.refreshGitStatus()
+                } label: {
+                    Image(systemName: "arrow.clockwise")
+                        .font(.system(size: 11, weight: .medium))
+                }
+                .buttonStyle(.plain)
+                .frame(width: 22, height: 22)
+                .background(
+                    RoundedRectangle(cornerRadius: 8)
+                        .fill(Color.primary.opacity(isReloadHovering ? 0.08 : 0))
+                )
                 .foregroundColor(.secondary)
-                .padding(.horizontal, 10)
-                .padding(.vertical, 6)
-                .contentShape(Rectangle())
+                .opacity(isHeaderHovering ? 1 : 0)
+                .help(String(localized: "sidebar.fileExplorer.reload.tooltip", defaultValue: "Reload file tree"))
+                .accessibilityLabel(String(localized: "sidebar.fileExplorer.reload.tooltip", defaultValue: "Reload file tree"))
+                .onHover { hovering in
+                    isReloadHovering = hovering
+                }
             }
-            .buttonStyle(.plain)
-            .accessibilityLabel(
-                state.isVisible
-                    ? String(localized: "sidebar.fileExplorer.collapse", defaultValue: "Collapse file explorer")
-                    : String(localized: "sidebar.fileExplorer.expand", defaultValue: "Expand file explorer")
-            )
+            .padding(.horizontal, 10)
+            .frame(height: 28)
+            .contentShape(Rectangle())
+            .onHover { hovering in
+                isHeaderHovering = hovering
+            }
 
             if state.isVisible {
                 if store.rootPath.trimmingCharacters(in: .whitespaces).isEmpty {
