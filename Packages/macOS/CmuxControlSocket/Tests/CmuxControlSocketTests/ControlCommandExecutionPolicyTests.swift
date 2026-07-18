@@ -34,6 +34,15 @@ struct ControlCommandExecutionPolicyTests {
         }
     }
 
+    @Test func workspaceSnapshotRunsOnTheSocketWorker() {
+        // `workspace.snapshot`'s only handler lives in the socket-worker
+        // switch (TerminalController.processCommand). If the policy routes it
+        // to the main actor the dispatcher never reaches that handler and
+        // answers method_not_found, which breaks `cmux open`'s smart
+        // placement — see the missing-entry regression this test pins.
+        #expect(ControlCommandExecutionPolicy(forMethod: "workspace.snapshot").runsOnSocketWorker)
+    }
+
     @Test func everythingElseRunsOnTheMainActor() {
         for method in [
             "surface.list", "workspace.create", "window.list", "browser.url.get",
