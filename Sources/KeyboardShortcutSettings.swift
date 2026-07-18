@@ -74,6 +74,8 @@ enum KeyboardShortcutSettings {
 
         // Titlebar / primary UI
         case toggleSidebar
+        case hideSidebar
+        case showSidebar
         case newTab
         case newBrowserWorkspace
         case openFolder
@@ -197,6 +199,8 @@ enum KeyboardShortcutSettings {
             case .toggleFullScreen: return String(localized: "command.toggleFullScreen.title", defaultValue: "Toggle Full Screen")
             case .quit: return String(localized: "menu.quitCmux", defaultValue: "Quit cmux")
             case .toggleSidebar: return String(localized: "shortcut.toggleLeftSidebar.label", defaultValue: "Toggle Left Sidebar")
+            case .hideSidebar: return String(localized: "shortcut.hideSidebar.label", defaultValue: "Hide Left Sidebar")
+            case .showSidebar: return String(localized: "shortcut.showSidebar.label", defaultValue: "Show Left Sidebar")
             case .newTab: return String(localized: "shortcut.newWorkspace.label", defaultValue: "New Workspace")
             case .newBrowserWorkspace: return String(localized: "shortcut.newBrowserWorkspace.label", defaultValue: "New Browser Workspace")
             case .openFolder: return String(localized: "shortcut.openFolder.label", defaultValue: "Open Folder")
@@ -340,6 +344,10 @@ enum KeyboardShortcutSettings {
                 return StoredShortcut(key: "q", command: true, shift: false, option: false, control: false)
             case .toggleSidebar:
                 return StoredShortcut(key: "b", command: true, shift: false, option: false, control: false)
+            case .hideSidebar:
+                return StoredShortcut(key: "[", command: true, shift: false, option: false, control: false)
+            case .showSidebar:
+                return StoredShortcut(key: "]", command: true, shift: false, option: false, control: false)
             case .newTab:
                 return StoredShortcut(key: "n", command: true, shift: false, option: false, control: false)
             case .newBrowserWorkspace:
@@ -388,9 +396,9 @@ enum KeyboardShortcutSettings {
             case .prevSidebarTab:
                 return StoredShortcut(key: "[", command: true, shift: false, option: false, control: true)
             case .focusHistoryBack:
-                return StoredShortcut(key: "[", command: true, shift: false, option: false, control: false)
+                return StoredShortcut(key: "[", command: true, shift: false, option: true, control: false)
             case .focusHistoryForward:
-                return StoredShortcut(key: "]", command: true, shift: false, option: false, control: false)
+                return StoredShortcut(key: "]", command: true, shift: false, option: true, control: false)
             case .renameTab:
                 return StoredShortcut(key: "r", command: true, shift: false, option: false, control: false)
             case .renameWorkspace:

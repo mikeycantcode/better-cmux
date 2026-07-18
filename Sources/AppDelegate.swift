@@ -6638,42 +6638,71 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
 #endif
     }
 
+    /// Sidebar visibility change shared by the toggle/hide/show shortcut and
+    /// UI entrypoints. All three end up calling ``SidebarState`` under a
+    /// spring animation so the sidebar slides in/out consistently regardless
+    /// of which entrypoint triggered the change.
+    private enum SidebarVisibilityChange {
+        case toggle
+        case show
+        case hide
+    }
+
     @discardableResult
-    func toggleSidebarInActiveMainWindow(preferredWindow: NSWindow? = nil) -> Bool {
-        func toggle(_ context: MainWindowContext) -> Bool {
+    private func applySidebarVisibilityChange(
+        _ change: SidebarVisibilityChange,
+        preferredWindow: NSWindow? = nil
+    ) -> Bool {
+        func apply(_ context: MainWindowContext) -> Bool {
             guard let window = resolvedWindow(for: context) else {
                 discardOrphanedMainWindowContext(context)
                 return false
             }
             setActiveMainWindow(window)
-            context.sidebarState.toggle()
+            withAnimation(.spring(duration: 0.25)) {
+                switch change {
+                case .toggle: context.sidebarState.toggle()
+                case .show: context.sidebarState.show()
+                case .hide: context.sidebarState.hide()
+                }
+            }
             return true
         }
 
         if let preferredWindow,
            let preferredContext = contextForMainTerminalWindow(preferredWindow),
-           toggle(preferredContext) {
+           apply(preferredContext) {
             return true
         }
         if let keyWindow = shortcutRoutingKeyWindow,
            let keyContext = contextForMainTerminalWindow(keyWindow),
-           toggle(keyContext) {
+           apply(keyContext) {
             return true
         }
         if let mainWindow = NSApp.mainWindow,
            let mainContext = contextForMainTerminalWindow(mainWindow),
-           toggle(mainContext) {
+           apply(mainContext) {
             return true
         }
         if let activeManager = tabManager,
            let activeContext = mainWindowContexts.values.first(where: { $0.tabManager === activeManager }),
-           toggle(activeContext) {
+           apply(activeContext) {
             return true
         }
-        for fallbackContext in Array(mainWindowContexts.values) where toggle(fallbackContext) {
+        for fallbackContext in Array(mainWindowContexts.values) where apply(fallbackContext) {
             return true
         }
         return false
+    }
+
+    @discardableResult
+    func toggleSidebarInActiveMainWindow(preferredWindow: NSWindow? = nil) -> Bool {
+        applySidebarVisibilityChange(.toggle, preferredWindow: preferredWindow)
+    }
+
+    @discardableResult
+    func setSidebarVisibilityInActiveMainWindow(_ visible: Bool, preferredWindow: NSWindow? = nil) -> Bool {
+        applySidebarVisibilityChange(visible ? .show : .hide, preferredWindow: preferredWindow)
     }
 
     @discardableResult
@@ -13784,6 +13813,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
                 return false
             }
             focusedBrowserPanel.goForward()
+            return true
+        }
+
+        // Global sidebar hide/show. Evaluated after browserBack/browserForward
+        // above so a focused browser pane still gets Cmd+[/Cmd+] as back/forward
+        // (both default to the same keystrokes as hideSidebar/showSidebar).
+        if matchConfiguredShortcut(event: event, action: .hideSidebar) {
+            _ = setSidebarVisibilityInActiveMainWindow(false, preferredWindow: mainWindowForShortcutEvent(event))
+            return true
+        }
+        if matchConfiguredShortcut(event: event, action: .showSidebar) {
+            _ = setSidebarVisibilityInActiveMainWindow(true, preferredWindow: mainWindowForShortcutEvent(event))
             return true
         }
 

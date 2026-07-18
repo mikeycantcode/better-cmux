@@ -80,6 +80,8 @@ export const shortcutCategories: ShortcutCategory[] = [
     blurbKey: "workspacesBlurb",
     shortcuts: [
       { id: "toggleSidebar", combos: [["⌘", "B"]], description: { en: "Toggle left sidebar", ja: "左サイドバーを切り替え" } },
+      { id: "hideSidebar", combos: [["⌘", "["]], description: { en: "Hide left sidebar", ja: "左サイドバーを隠す" } },
+      { id: "showSidebar", combos: [["⌘", "]"]], description: { en: "Show left sidebar", ja: "左サイドバーを表示" } },
       { id: "toggleFileExplorer", combos: [["⌘", "⌥", "B"]], description: { en: "Toggle right sidebar", ja: "右サイドバーを切り替え" } },
       { id: "newTab", combos: [["⌘", "N"]], description: { en: "New workspace", ja: "新規ワークスペース" } },
       {
@@ -102,20 +104,20 @@ export const shortcutCategories: ShortcutCategory[] = [
       { id: "prevSidebarTab", combos: [["⌃", "⌘", "["]], description: { en: "Previous workspace", ja: "前のワークスペース" } },
       {
         id: "focusHistoryBack",
-        combos: [["⌘", "["]],
+        combos: [["⌘", "⌥", "["]],
         description: { en: "Focus back", ja: "フォーカスを戻す" },
         note: {
-          en: "cmux uses Cmd+[ and Cmd+] for focus history by default. Unbind Focus Back/Forward in Settings to let browser or terminal shortcuts handle those keys.",
-          ja: "cmux は標準で Cmd+[ と Cmd+] をフォーカス履歴に使います。ブラウザまたはターミナル側で使うには、設定で Focus Back/Forward の割り当てを解除します。",
+          en: "cmux uses Cmd+Opt+[ and Cmd+Opt+] for focus history by default, so Cmd+[ / Cmd+] stay free for Hide/Show Left Sidebar (and browser back/forward while a browser pane is focused).",
+          ja: "cmux は標準で Cmd+Opt+[ と Cmd+Opt+] をフォーカス履歴に使うため、Cmd+[ / Cmd+] は左サイドバーの表示/非表示（およびブラウザペインにフォーカス中の戻る/進む）用に空けてあります。",
         },
       },
       {
         id: "focusHistoryForward",
-        combos: [["⌘", "]"]],
+        combos: [["⌘", "⌥", "]"]],
         description: { en: "Focus forward", ja: "フォーカスを進める" },
         note: {
-          en: "cmux uses Cmd+[ and Cmd+] for focus history by default. Unbind Focus Back/Forward in Settings to let browser or terminal shortcuts handle those keys.",
-          ja: "cmux は標準で Cmd+[ と Cmd+] をフォーカス履歴に使います。ブラウザまたはターミナル側で使うには、設定で Focus Back/Forward の割り当てを解除します。",
+          en: "cmux uses Cmd+Opt+[ and Cmd+Opt+] for focus history by default, so Cmd+[ / Cmd+] stay free for Hide/Show Left Sidebar (and browser back/forward while a browser pane is focused).",
+          ja: "cmux は標準で Cmd+Opt+[ と Cmd+Opt+] をフォーカス履歴に使うため、Cmd+[ / Cmd+] は左サイドバーの表示/非表示（およびブラウザペインにフォーカス中の戻る/進む）用に空けてあります。",
         },
       },
       { id: "selectWorkspaceByNumber", combos: [["⌘", "1…9"]], description: { en: "Select workspace 1…9", ja: "ワークスペース1…9を選択" } },

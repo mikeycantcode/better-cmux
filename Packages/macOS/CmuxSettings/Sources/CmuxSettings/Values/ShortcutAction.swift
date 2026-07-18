@@ -23,6 +23,8 @@ public enum ShortcutAction: String, CaseIterable, Sendable, Hashable, SettingCod
 
     // MARK: Workspace
     case toggleSidebar
+    case hideSidebar
+    case showSidebar
     case newTab
     case newBrowserWorkspace
     case openFolder
@@ -171,7 +173,7 @@ extension ShortcutAction {
         case .openSettings, .reloadConfiguration, .showHideAllWindows, .globalSearch,
              .newWindow, .closeWindow, .toggleFullScreen, .quit:
             return .app
-        case .toggleSidebar, .newTab, .newBrowserWorkspace, .openFolder, .reopenPreviousSession, .goToWorkspace,
+        case .toggleSidebar, .hideSidebar, .showSidebar, .newTab, .newBrowserWorkspace, .openFolder, .reopenPreviousSession, .goToWorkspace,
              .commandPalette, .commandPaletteNext, .commandPalettePrevious, .sendFeedback,
              .showNotifications, .jumpToUnread, .toggleUnread, .markOldestUnreadAndJumpNext,
              .focusRightSidebar, .switchRightSidebarToFiles, .switchRightSidebarToFind,
@@ -316,6 +318,8 @@ extension ShortcutAction {
         case .toggleFullScreen: return "Toggle Full Screen"
         case .quit: return "Quit cmux"
         case .toggleSidebar: return "Toggle Left Sidebar"
+        case .hideSidebar: return String(localized: "shortcut.hideSidebar.label", defaultValue: "Hide Left Sidebar")
+        case .showSidebar: return String(localized: "shortcut.showSidebar.label", defaultValue: "Show Left Sidebar")
         case .newTab: return "New Workspace"
         case .newBrowserWorkspace:
             return String(localized: "shortcut.newBrowserWorkspace.label", defaultValue: "New Browser Workspace")

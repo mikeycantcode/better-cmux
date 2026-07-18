@@ -1267,6 +1267,8 @@
               "toggleFullScreen",
               "quit",
               "toggleSidebar",
+              "hideSidebar",
+              "showSidebar",
               "newTab",
               "newBrowserWorkspace",
               "openFolder",

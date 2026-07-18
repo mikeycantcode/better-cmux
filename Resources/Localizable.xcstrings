@@ -179435,6 +179435,38 @@
         }
       }
     },
+    "shortcut.hideSidebar.label": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hide Left Sidebar"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "左サイドバーを隠す"
+          }
+        }
+      }
+    },
+    "shortcut.showSidebar.label": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Show Left Sidebar"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "左サイドバーを表示"
+          }
+        }
+      }
+    },
     "shortcut.toggleLeftSidebar.label": {
       "localizations": {
         "ar": {
