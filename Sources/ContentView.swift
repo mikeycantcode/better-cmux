@@ -2590,8 +2590,17 @@ struct ContentView: View {
                             .padding(.leading, sidebarState.isVisible ? sidebarWidth : 0)
                     }
                     if sidebarState.isVisible {
-                        sidebarPanelWithBackdrop(appearance: appearance)
-                            .transition(.move(edge: .leading).combined(with: .opacity))
+                        sidebarPanelWithBackdrop(
+                            appearance: appearance,
+                            cornerRadiusOverride: SidebarFloatingPanelMetrics.cornerRadius
+                        )
+                        // Report the panel's exact frame (before the inset
+                        // padding) to the terminal portal so pointer events over
+                        // the glass panel are routed to SwiftUI, not the terminal.
+                        .background(FloatingSidebarPanelFrameReporter())
+                        .padding(.leading, SidebarFloatingPanelMetrics.inset)
+                        .padding(.vertical, SidebarFloatingPanelMetrics.inset)
+                        .transition(.move(edge: .leading).combined(with: .opacity))
                     }
                 }
             )
