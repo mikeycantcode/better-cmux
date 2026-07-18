@@ -19,6 +19,7 @@ struct MarkdownWebRenderer: NSViewRepresentable {
     let fontFamily: String
     /// Maximum content column width, in CSS pixels.
     let maxContentWidth: Double
+    let displayMode: MarkdownPanelDisplayMode
     let session: MarkdownRendererSession
     let onRequestPanelFocus: () -> Void
 
@@ -45,6 +46,7 @@ struct MarkdownWebRenderer: NSViewRepresentable {
             context.coordinator.setFontSize(fontSize)
             context.coordinator.setFontFamily(fontFamily)
             context.coordinator.setMaxContentWidth(maxContentWidth)
+            context.coordinator.setDiagramMode(displayMode == .diagram)
             return webView
         }
 
@@ -89,6 +91,7 @@ struct MarkdownWebRenderer: NSViewRepresentable {
         context.coordinator.setFontSize(fontSize)
         context.coordinator.setFontFamily(fontFamily)
         context.coordinator.setMaxContentWidth(maxContentWidth)
+        context.coordinator.setDiagramMode(displayMode == .diagram)
         context.coordinator.loadShell(theme: theme, initialMarkdown: markdown)
         return webView
     }
@@ -103,6 +106,7 @@ struct MarkdownWebRenderer: NSViewRepresentable {
         context.coordinator.setFontSize(fontSize)
         context.coordinator.setFontFamily(fontFamily)
         context.coordinator.setMaxContentWidth(maxContentWidth)
+        context.coordinator.setDiagramMode(displayMode == .diagram)
         context.coordinator.update(markdown: markdown, theme: theme)
     }
 
@@ -250,6 +254,18 @@ struct MarkdownWebRenderer: NSViewRepresentable {
             })(\(width));
             """
             webView.evaluateJavaScript(js, completionHandler: nil)
+        }
+
+        private var lastDiagramMode: Bool?
+
+        func setDiagramMode(_ enabled: Bool) {
+            guard lastDiagramMode != enabled else { return }
+            lastDiagramMode = enabled
+            guard isLoaded, let webView else { return }
+            webView.evaluateJavaScript(
+                "window.__cmuxSetDiagramMode && window.__cmuxSetDiagramMode(\(enabled));",
+                completionHandler: nil
+            )
         }
 
         func close() {
@@ -697,6 +713,12 @@ struct MarkdownWebRenderer: NSViewRepresentable {
 #endif
             isShellLoading = false
             isLoaded = true
+            if let lastDiagramMode {
+                webView.evaluateJavaScript(
+                    "window.__cmuxSetDiagramMode && window.__cmuxSetDiagramMode(\(lastDiagramMode));",
+                    completionHandler: nil
+                )
+            }
             // pageZoom is a WKWebView-level property that survives loadHTMLString,
             // but re-apply defensively after a shell reload so a crash-recovery
             // path can never drop the configured zoom.

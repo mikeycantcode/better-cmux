@@ -89,6 +89,7 @@ struct MarkdownPanelView: View {
                 fontSize: panel.fontSize,
                 fontFamily: panel.fontFamily,
                 maxContentWidth: panel.maxContentWidth,
+                displayMode: panel.displayMode,
                 session: panel.rendererSession,
                 onRequestPanelFocus: onRequestPanelFocus
             )

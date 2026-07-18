@@ -149,6 +149,68 @@ body {
   height: auto;
 }
 .cmux-mermaid .cmux-source, .cmux-vega .cmux-source { display: none; }
+
+/* ---- Diagram mode -------------------------------------------------------
+   Standalone .mmd files render as a single diagram on an infinite dotted
+   canvas. Document flow is suppressed entirely: no padding, no scrolling,
+   no reading column. The camera (translate+scale) lives on
+   #cmux-diagram-canvas so the dot grid transforms with the diagram, which
+   is what makes panning read as moving a surface rather than scrolling a
+   page. ------------------------------------------------------------------ */
+html[data-cmux-diagram="1"],
+html[data-cmux-diagram="1"] body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+html[data-cmux-diagram="1"] body {
+  padding: 0;
+  /* The canvas is the drag surface; text selection would fight the pan. */
+  -webkit-user-select: none;
+  user-select: none;
+}
+html[data-cmux-diagram="1"] .markdown-body {
+  max-width: none;
+  margin: 0;
+  font-size: inherit;
+}
+#cmux-diagram-canvas {
+  display: none;
+}
+html[data-cmux-diagram="1"] #cmux-diagram-canvas {
+  display: block;
+  position: fixed;
+  /* Oversized so the grid still covers the viewport at any pan offset. */
+  left: -200vw;
+  top: -200vh;
+  width: 500vw;
+  height: 500vh;
+  z-index: 0;
+  background-color: transparent;
+  background-image: radial-gradient(
+    circle at center,
+    var(--cmux-diagram-dot, rgba(140, 140, 150, 0.28)) 1px,
+    transparent 1px
+  );
+  background-size: var(--cmux-diagram-dot-spacing, 22px) var(--cmux-diagram-dot-spacing, 22px);
+  transform-origin: 0 0;
+  pointer-events: none;
+}
+html[data-cmux-diagram="1"] #content {
+  position: fixed;
+  left: 0;
+  top: 0;
+  z-index: 1;
+  transform-origin: 0 0;
+  will-change: transform;
+}
+html[data-cmux-diagram="1"] .cmux-mermaid {
+  margin: 0;
+}
+html[data-cmux-diagram="1"] .cmux-mermaid svg {
+  max-width: none;
+}
+
 .markdown-body code[data-cmux-file] {
   cursor: default;
   border-bottom: 1px dotted var(--fgColor-muted);
@@ -238,6 +300,7 @@ html { scroll-behavior: smooth; }
 </style>
 </head>
 <body>
+<div id="cmux-diagram-canvas"></div>
 <article id="content" class="markdown-body"></article>
 <script>
 {{markedJS}}
@@ -1695,6 +1758,31 @@ html { scroll-behavior: smooth; }
       wrapper.remove();
     }
   };
+
+  // ---- Diagram mode (placeholders; Task 5 implements the real camera) ---
+  var diagramCameraInitialized = false;
+  function applyDiagramCamera() {}
+  window.__cmuxDiagramFit = function() { diagramCameraInitialized = true; };
+
+  var diagramModeEnabled = false;
+  var diagramCanvasEl = document.getElementById('cmux-diagram-canvas');
+
+  window.__cmuxSetDiagramMode = function(enabled) {
+    var next = !!enabled;
+    if (next === diagramModeEnabled) { return; }
+    diagramModeEnabled = next;
+    if (next) {
+      document.documentElement.setAttribute('data-cmux-diagram', '1');
+      if (!diagramCameraInitialized) { window.__cmuxDiagramFit(); }
+      else { applyDiagramCamera(); }
+    } else {
+      document.documentElement.removeAttribute('data-cmux-diagram');
+      if (contentEl) { contentEl.style.transform = ''; }
+      if (diagramCanvasEl) { diagramCanvasEl.style.transform = ''; }
+    }
+  };
+
+  window.__cmuxDiagramModeEnabled = function() { return diagramModeEnabled; };
 
   var darkMql = window.matchMedia('(prefers-color-scheme: dark)');
   window.__cmuxApplyTheme = function() {
