@@ -2051,7 +2051,7 @@ struct ContentView: View {
     }
 
     @AppStorage("sidebarBlendMode") private var sidebarBlendMode = SidebarBlendModeOption.withinWindow.rawValue
-    @AppStorage("sidebarMatchTerminalBackground") private var sidebarMatchTerminalBackground = false
+    @AppStorage("sidebarMatchTerminalBackground") private var sidebarMatchTerminalBackground = true
     @AppStorage("sidebarTintOpacity") private var sidebarTintOpacity = SidebarTintDefaults().opacity
     @AppStorage("sidebarTintHex") private var sidebarTintHex = SidebarTintDefaults().hex
     @AppStorage("sidebarTintHexLight") private var sidebarTintHexLight: String?
@@ -2581,24 +2581,17 @@ struct ContentView: View {
                     VStack(spacing: 0) {
                         HStack(spacing: 0) {
                             terminalContentWithSidebarDropOverlay(appearance: appearance)
+                                .padding(.leading, sidebarState.isVisible ? sidebarWidth : 0)
                                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                                 .layoutPriority(1)
                             rightSidebarPanelWithBackdrop(appearance: appearance)
                         }
                         bottomBarView()
+                            .padding(.leading, sidebarState.isVisible ? sidebarWidth : 0)
                     }
                     if sidebarState.isVisible {
-                        sidebarPanelWithBackdrop(
-                            appearance: appearance,
-                            cornerRadiusOverride: SidebarFloatingPanelMetrics.cornerRadius
-                        )
-                        // Report the panel's exact frame (before the inset
-                        // padding) to the terminal portal so pointer events over
-                        // the glass panel are routed to SwiftUI, not the terminal.
-                        .background(FloatingSidebarPanelFrameReporter())
-                        .padding(.leading, SidebarFloatingPanelMetrics.inset)
-                        .padding(.vertical, SidebarFloatingPanelMetrics.inset)
-                        .transition(.move(edge: .leading).combined(with: .opacity))
+                        sidebarPanelWithBackdrop(appearance: appearance)
+                            .transition(.move(edge: .leading).combined(with: .opacity))
                     }
                 }
             )
@@ -10452,7 +10445,7 @@ struct VerticalTabsSidebar: View {
         return surfaces
     }
     @AppStorage("sidebarMatchTerminalBackground")
-    private var sidebarMatchTerminalBackground = false
+    private var sidebarMatchTerminalBackground = true
     @AppStorage(MinimalModeTitlebarDebugSettings.leftControlsLeadingInsetKey)
     private var titlebarLeftControlsLeadingInset = MinimalModeTitlebarDebugSettings.defaultLeftControlsLeadingInset
     @AppStorage(MinimalModeTitlebarDebugSettings.leftControlsTopInsetKey)

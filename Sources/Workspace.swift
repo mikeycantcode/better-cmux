@@ -2717,7 +2717,7 @@ final class Workspace: Identifiable, ObservableObject {
     }
 
     nonisolated static func usesSharedSurfaceBackdrop(defaults: UserDefaults = .standard) -> Bool {
-        defaults.bool(forKey: "sidebarMatchTerminalBackground")
+        defaults.object(forKey: "sidebarMatchTerminalBackground") as? Bool ?? true
     }
 
     nonisolated static func usesWindowRootTerminalBackdrop() -> Bool {

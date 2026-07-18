@@ -402,6 +402,7 @@ struct cmuxApp: App {
             v2Writes = [
                 "sidebarMaterial": SidebarMaterialOption.liquidGlass.rawValue,
                 "sidebarBlendMode": SidebarBlendModeOption.withinWindow.rawValue,
+                "sidebarMatchTerminalBackground": "true",
             ]
         }
 
@@ -429,6 +430,8 @@ struct cmuxApp: App {
                 switch key {
                 case "sidebarTintOpacity", "sidebarBlurOpacity", "sidebarCornerRadius":
                     defaults.set(Double(value) ?? 0, forKey: key)
+                case "sidebarMatchTerminalBackground":
+                    defaults.set(Bool(value) ?? true, forKey: key)
                 default:
                     defaults.set(value, forKey: key)
                 }
@@ -2592,7 +2595,7 @@ private struct AboutPanelView: View {
 }
 
 private struct SidebarDebugView: View {
-    @AppStorage("sidebarMatchTerminalBackground") private var matchTerminalBackground = false
+    @AppStorage("sidebarMatchTerminalBackground") private var matchTerminalBackground = true
     @AppStorage("sidebarPreset") private var sidebarPreset = SidebarPresetOption.nativeSidebar.rawValue
     @AppStorage("sidebarTintOpacity") private var sidebarTintOpacity = SidebarTintDefaults().opacity
     @AppStorage("sidebarTintHex") private var sidebarTintHex = SidebarTintDefaults().hex

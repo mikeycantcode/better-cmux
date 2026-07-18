@@ -37,6 +37,7 @@ final class SidebarAppearanceMigrationTests: XCTestCase {
 
         XCTAssertEqual(plan.v2Writes["sidebarMaterial"], "liquidGlass")
         XCTAssertEqual(plan.v2Writes["sidebarBlendMode"], "withinWindow")
+        XCTAssertEqual(plan.v2Writes["sidebarMatchTerminalBackground"], "true")
         XCTAssertEqual(plan.finalVersion, 2)
     }
 
