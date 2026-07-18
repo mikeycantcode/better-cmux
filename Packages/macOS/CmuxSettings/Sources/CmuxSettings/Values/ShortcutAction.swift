@@ -301,6 +301,13 @@ extension ShortcutAction {
         case .switchRightSidebarToFiles, .switchRightSidebarToFind,
              .switchRightSidebarToSessions, .switchRightSidebarToFeed, .switchRightSidebarToDock:
             return true
+        case .browserBack, .browserForward:
+            // Browser back/forward win Cmd+[ / Cmd+] while a browser pane is
+            // focused; `hideSidebar`/`showSidebar` (application-wide, same
+            // default keystrokes) own every other context. Mirrors
+            // `handleCustomShortcut`'s runtime ordering, which checks
+            // browserBack/browserForward before hideSidebar/showSidebar.
+            return true
         default:
             return false
         }

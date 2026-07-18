@@ -112,6 +112,12 @@ extension KeyboardShortcutSettings.Action {
         case .switchRightSidebarToFiles, .switchRightSidebarToFind,
              .switchRightSidebarToSessions, .switchRightSidebarToFeed, .switchRightSidebarToDock:
             return true
+        case .browserBack, .browserForward:
+            // Mirrors `handleCustomShortcut`, which checks browserBack/browserForward
+            // before hideSidebar/showSidebar so a focused browser pane keeps
+            // Cmd+[ / Cmd+] as back/forward. Mirrors
+            // `ShortcutAction.hasPriorityShortcutRouting` in CmuxSettings.
+            return true
         default:
             return false
         }
