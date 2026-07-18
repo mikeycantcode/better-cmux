@@ -309,11 +309,16 @@ func sidebarWorkspaceRowBackgroundStyle(
         )
     }
 
-    // Minimal selection style: a subtle neutral fill instead of a saturated
-    // accent/custom color, regardless of indicator style. `selectedBackground`
-    // is retained only for computing readable foreground colors elsewhere.
-    _ = selectedBackground
-    let neutralSelectedBackground = NSColor.labelColor
+    // Minimal selection style: a subtle fill instead of a saturated
+    // accent/custom color, regardless of indicator style. When the user has
+    // explicitly customized the selection color (sidebarSelectionColorHex is
+    // set), that color is used as the fill hue at the same subtle opacity so
+    // the "Selection Color" picker in Settings isn't a silent no-op. When
+    // unset (default / "Reset to Default"), fall back to a neutral
+    // labelColor fill.
+    let neutralSelectedBackground: NSColor = sidebarSelectionColorHex != nil
+        ? selectedBackground
+        : NSColor.labelColor
 
     switch activeTabIndicatorStyle {
     case .leftRail:
