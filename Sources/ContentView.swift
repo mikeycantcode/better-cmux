@@ -12733,6 +12733,7 @@ private struct SidebarFooter: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
+            Divider().opacity(0.35)
             SidebarFooterButtons(updateViewModel: updateViewModel, fileExplorerState: fileExplorerState, onSendFeedback: onSendFeedback)
             SidebarVersionFooter()
         }
