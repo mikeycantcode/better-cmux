@@ -309,12 +309,18 @@ func sidebarWorkspaceRowBackgroundStyle(
         )
     }
 
+    // Minimal selection style: a subtle neutral fill instead of a saturated
+    // accent/custom color, regardless of indicator style. `selectedBackground`
+    // is retained only for computing readable foreground colors elsewhere.
+    _ = selectedBackground
+    let neutralSelectedBackground = NSColor.labelColor
+
     switch activeTabIndicatorStyle {
     case .leftRail:
         if isActive {
             return SidebarWorkspaceRowBackgroundStyle(
-                color: selectedBackground,
-                opacity: 1
+                color: neutralSelectedBackground,
+                opacity: 0.10
             )
         }
         if isMultiSelected {
@@ -325,8 +331,8 @@ func sidebarWorkspaceRowBackgroundStyle(
     case .solidFill:
         if isActive {
             return SidebarWorkspaceRowBackgroundStyle(
-                color: selectedBackground,
-                opacity: 1
+                color: neutralSelectedBackground,
+                opacity: 0.10
             )
         }
         if let customBackground {

@@ -73,7 +73,7 @@ enum SidebarWorkspaceListMetrics {
     }
 
     static var scrollTopInset: CGFloat {
-        max(0, firstRowTopOffset - rowVerticalPadding)
+        max(0, firstRowTopOffset - rowVerticalPadding) + 5
     }
 }
 

@@ -9,6 +9,7 @@ struct BottomBarWorkspaceBridge: View {
     let appVersion: String
     let editorDisplayName: String
     let contextProvider: any ContextUsageProviding
+    var backgroundColor: Color? = nil
 
     var body: some View {
         let agentActive: Bool = {
@@ -27,6 +28,6 @@ struct BottomBarWorkspaceBridge: View {
                 agentActive: agentActive
             )
         )
-        CmuxBottomBar(snapshot: snapshot)
+        CmuxBottomBar(snapshot: snapshot, backgroundColor: backgroundColor)
     }
 }

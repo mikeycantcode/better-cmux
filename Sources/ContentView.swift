@@ -1869,31 +1869,36 @@ struct ContentView: View {
                 terminalContentWithSidebarDropOverlay(appearance: appearance)
                 rightSidebarPanelWithBackdrop(appearance: appearance)
             }
-            bottomBarView()
+            bottomBarView(appearance: appearance)
         }
     }
 
     @ViewBuilder
-    private func bottomBarView() -> some View {
+    private func bottomBarView(appearance: WindowAppearanceSnapshot) -> some View {
         let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? ""
+        let backgroundColor = Color(nsColor: appearance.terminalBackgroundColor)
         if let ws = tabManager.selectedWorkspace {
             BottomBarWorkspaceBridge(
                 workspace: ws,
                 stagedDiffStore: bottomBarStagedDiffStore,
                 appVersion: version,
                 editorDisplayName: bottomBarEditorName,
-                contextProvider: bottomBarContextProvider
+                contextProvider: bottomBarContextProvider,
+                backgroundColor: backgroundColor
             )
         } else {
-            CmuxBottomBar(snapshot: BottomBarSnapshot(
-                appVersion: version,
-                branch: nil,
-                isDirty: false,
-                staged: .empty,
-                editorDisplayName: bottomBarEditorName,
-                agentActive: false,
-                contextUsage: nil
-            ))
+            CmuxBottomBar(
+                snapshot: BottomBarSnapshot(
+                    appVersion: version,
+                    branch: nil,
+                    isDirty: false,
+                    staged: .empty,
+                    editorDisplayName: bottomBarEditorName,
+                    agentActive: false,
+                    contextUsage: nil
+                ),
+                backgroundColor: backgroundColor
+            )
         }
     }
 
@@ -2586,7 +2591,7 @@ struct ContentView: View {
                                 .layoutPriority(1)
                             rightSidebarPanelWithBackdrop(appearance: appearance)
                         }
-                        bottomBarView()
+                        bottomBarView(appearance: appearance)
                             .padding(.leading, sidebarState.isVisible ? sidebarWidth : 0)
                     }
                     if sidebarState.isVisible {
@@ -13468,7 +13473,11 @@ struct TabItemView: View, Equatable {
     }
 
     private var usesInvertedActiveForeground: Bool {
-        isActive
+        // Minimal selection style: the selected row's fill is now a subtle
+        // neutral tint (see sidebarWorkspaceRowBackgroundStyle), not a
+        // saturated accent color, so text stays primary-colored instead of
+        // inverting to a light-on-accent foreground.
+        false
     }
 
     private var activePrimaryTextColor: Color {
@@ -14165,7 +14174,7 @@ struct TabItemView: View, Equatable {
         // refresh rate (#5764 / #5845). Lazy rows must be height-stable after
         // they appear; content changes now apply in one discrete layout pass.
         .padding(.horizontal, SidebarWorkspaceListMetrics.rowContentHorizontalPadding)
-        .padding(.vertical, 8)
+        .padding(.vertical, 6)
         .background(
             RoundedRectangle(cornerRadius: 6)
                 .fill(backgroundColor)

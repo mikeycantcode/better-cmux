@@ -6,6 +6,7 @@ import SwiftUI
 /// carries ``ContextUsage`` (deferred today).
 struct CmuxBottomBar: View {
     let snapshot: BottomBarSnapshot
+    var backgroundColor: Color? = nil
 
     static let height: CGFloat = 24
 
@@ -64,9 +65,15 @@ struct CmuxBottomBar: View {
         .padding(.horizontal, 10)
         .frame(height: Self.height)
         .frame(maxWidth: .infinity)
-        .background(.bar)
+        .background {
+            if let backgroundColor {
+                backgroundColor
+            } else {
+                Rectangle().fill(.bar)
+            }
+        }
         .overlay(alignment: .top) {
-            Rectangle().fill(Color.primary.opacity(0.08)).frame(height: 1)
+            Divider().opacity(0.35)
         }
     }
 }
