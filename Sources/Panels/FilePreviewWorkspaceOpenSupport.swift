@@ -24,7 +24,10 @@ extension Workspace {
                     focus: shouldFocusNewTabs,
                     targetIndex: nextIndex
                 )
-            } else if MarkdownPanelFileLinkResolver.isMarkdownPathLike(filePath) {
+            } else if MarkdownPanelFileLinkResolver.isMarkdownPathLike(filePath)
+                        || MermaidDiagramFileResolver.isDiagramPathLike(filePath) {
+                // Both land on MarkdownPanel; the panel picks preview vs the
+                // diagram canvas from its own path (see MarkdownPanel.init).
                 if reuseExisting {
                     panel = openOrFocusMarkdownSurface(
                         inPane: paneId,
