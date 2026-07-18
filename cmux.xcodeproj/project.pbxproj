@@ -452,6 +452,7 @@
 		FE002102 /* FileExplorerStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE002002 /* FileExplorerStoreTests.swift */; };
 		FE001104 /* FileExplorerTerminalPathInsertion.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE001004 /* FileExplorerTerminalPathInsertion.swift */; };
 		FE001102 /* FileExplorerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE001002 /* FileExplorerView.swift */; };
+		FE5996100000000000000002 /* FileExplorerVSCodeIcons.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE5996100000000000000001 /* FileExplorerVSCodeIcons.swift */; };
 		A5001441A5001441A5001441 /* FileOpenSocketSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5001440A5001440A5001440 /* FileOpenSocketSupport.swift */; };
 		A5001432A5001432A5001432 /* FilePreviewFocusCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5001431A5001431A5001431 /* FilePreviewFocusCoordinator.swift */; };
 		01EE5DC99896BA30240EF1B5 /* FilePreviewImageSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7D1450569A797AA7937677D9 /* FilePreviewImageSession.swift */; };
@@ -872,6 +873,7 @@
 		C0DE35010000000000000001 /* SidebarScrim.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0DE35010000000000000002 /* SidebarScrim.swift */; };
 		C9A57513C9A57513C9A57513 /* SidebarScrollViewConfiguratorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C9A57514C9A57514C9A57514 /* SidebarScrollViewConfiguratorTests.swift */; };
 		E62155868BB29FEB5DAAAF25 /* SidebarSelectionState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9AD52285508B1D6A9875E7B3 /* SidebarSelectionState.swift */; };
+		CFD5DD2B74E345E995C1642E /* SidebarShortcutDefaultsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F009FF9106D24F12BC71E7D3 /* SidebarShortcutDefaultsTests.swift */; };
 		F57072635F25EBCA741E125D /* SidebarState.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1614EAD3CCF70A177A51BD1 /* SidebarState.swift */; };
 		75F60E61082C422B8B0B49B2 /* SidebarStateTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E977DA255C0747409A85F2BF /* SidebarStateTests.swift */; };
 		D7AB34300000000000000105 /* SidebarTabDropIndicatorPredicateTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D7AB34300000000000000106 /* SidebarTabDropIndicatorPredicateTests.swift */; };
@@ -932,7 +934,6 @@
 		C06552030000000000000001 /* TabManagerTitleUpdateStalenessTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C06552030000000000000002 /* TabManagerTitleUpdateStalenessTests.swift */; };
 		C06552020000000000000001 /* TabManagerTitleUpdateTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C06552020000000000000002 /* TabManagerTitleUpdateTests.swift */; };
 		B6BF3DC98DB1495E57900199 /* TabManagerUnitTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 42092CDB2109E250F7F2A76E /* TabManagerUnitTests.swift */; };
-		CFD5DD2B74E345E995C1642E /* SidebarShortcutDefaultsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F009FF9106D24F12BC71E7D3 /* SidebarShortcutDefaultsTests.swift */; };
 		C7A507000000000000000002 /* TaskManagerResourcesTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C7A507000000000000000001 /* TaskManagerResourcesTests.swift */; };
 		C7A503000000000000000002 /* TaskManagerSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = C7A503000000000000000001 /* TaskManagerSnapshot.swift */; };
 		C7A504000000000000000002 /* TaskManagerTypes.swift in Sources */ = {isa = PBXBuildFile; fileRef = C7A504000000000000000001 /* TaskManagerTypes.swift */; };
@@ -1585,6 +1586,7 @@
 		FE002002 /* FileExplorerStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileExplorerStoreTests.swift; sourceTree = "<group>"; };
 		FE001004 /* FileExplorerTerminalPathInsertion.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileExplorerTerminalPathInsertion.swift; sourceTree = "<group>"; };
 		FE001002 /* FileExplorerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileExplorerView.swift; sourceTree = "<group>"; };
+		FE5996100000000000000001 /* FileExplorerVSCodeIcons.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileExplorerVSCodeIcons.swift; sourceTree = "<group>"; };
 		A5001440A5001440A5001440 /* FileOpenSocketSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileOpenSocketSupport.swift; sourceTree = "<group>"; };
 		A5001431A5001431A5001431 /* FilePreviewFocusCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Panels/FilePreviewFocusCoordinator.swift; sourceTree = "<group>"; };
 		7D1450569A797AA7937677D9 /* FilePreviewImageSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Panels/FilePreviewImageSession.swift; sourceTree = "<group>"; };
@@ -1997,6 +1999,7 @@
 		C0DE35010000000000000002 /* SidebarScrim.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SidebarScrim.swift; sourceTree = "<group>"; };
 		C9A57514C9A57514C9A57514 /* SidebarScrollViewConfiguratorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SidebarScrollViewConfiguratorTests.swift; sourceTree = "<group>"; };
 		9AD52285508B1D6A9875E7B3 /* SidebarSelectionState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SidebarSelectionState.swift; sourceTree = "<group>"; };
+		F009FF9106D24F12BC71E7D3 /* SidebarShortcutDefaultsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SidebarShortcutDefaultsTests.swift; sourceTree = "<group>"; };
 		D1614EAD3CCF70A177A51BD1 /* SidebarState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sidebar/SidebarState.swift; sourceTree = "<group>"; };
 		E977DA255C0747409A85F2BF /* SidebarStateTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SidebarStateTests.swift; sourceTree = "<group>"; };
 		D7AB34300000000000000106 /* SidebarTabDropIndicatorPredicateTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SidebarTabDropIndicatorPredicateTests.swift; sourceTree = "<group>"; };
@@ -2051,7 +2054,6 @@
 		C06552030000000000000002 /* TabManagerTitleUpdateStalenessTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TabManagerTitleUpdateStalenessTests.swift; sourceTree = "<group>"; };
 		C06552020000000000000002 /* TabManagerTitleUpdateTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TabManagerTitleUpdateTests.swift; sourceTree = "<group>"; };
 		42092CDB2109E250F7F2A76E /* TabManagerUnitTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TabManagerUnitTests.swift; sourceTree = "<group>"; };
-		F009FF9106D24F12BC71E7D3 /* SidebarShortcutDefaultsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SidebarShortcutDefaultsTests.swift; sourceTree = "<group>"; };
 		C7A507000000000000000001 /* TaskManagerResourcesTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskManagerResourcesTests.swift; sourceTree = "<group>"; };
 		C7A503000000000000000001 /* TaskManagerSnapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskManagerSnapshot.swift; sourceTree = "<group>"; };
 		C7A504000000000000000001 /* TaskManagerTypes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskManagerTypes.swift; sourceTree = "<group>"; };
@@ -3024,6 +3026,7 @@
 					FE5996010000000000000001 /* FileExplorerCellView.swift */,
 					FE5996080000000000000001 /* FileExplorerExternalOpenMenuItems.swift */,
 					FE5996090000000000000001 /* FileExplorerExternalOpenRequest.swift */,
+				FE5996100000000000000001 /* FileExplorerVSCodeIcons.swift */,
 					FE5996020000000000000001 /* FileExplorerHeaderView.swift */,
 				FE001005 /* FileExplorerKeyboardShortcuts.swift */,
 				FE5996030000000000000001 /* FileExplorerNSOutlineView.swift */,
@@ -3851,7 +3854,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "set -euo pipefail\nDEST=\"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}\"\nGHOSTTY_DEST=\"${DEST}/ghostty\"\nTERMINFO_DEST=\"${DEST}/terminfo\"\nCMUX_SHELL_DEST=\"${DEST}/shell-integration\"\nBIN_DEST=\"${DEST}/bin\"\nSRC_SHARE=\"${SRCROOT}/ghostty/zig-out/share\"\nGHOSTTY_SRC=\"${SRC_SHARE}/ghostty\"\nTERMINFO_SRC=\"${SRC_SHARE}/terminfo\"\nFALLBACK_GHOSTTY=\"${SRCROOT}/Resources/ghostty\"\nFALLBACK_TERMINFO=\"${SRCROOT}/Resources/ghostty/terminfo\"\nTERMINFO_OVERLAY=\"${SRCROOT}/Resources/terminfo-overlay\"\nCMUX_SHELL_SRC=\"${SRCROOT}/Resources/shell-integration\"\nCMUX_GHOSTTY_ZSH_SRC=\"${SRCROOT}/ghostty/src/shell-integration/zsh/ghostty-integration\"\nBUILD_GHOSTTY_HELPER=\"${SRCROOT}/scripts/build-ghostty-cli-helper.sh\"\nGHOSTTY_HELPER_DEST=\"${BIN_DEST}/ghostty\"\nmkdir -p \"$BIN_DEST\"\nif [ -d \"$GHOSTTY_SRC\" ]; then\n  mkdir -p \"$GHOSTTY_DEST\"\n  rsync -a --delete \"$GHOSTTY_SRC/\" \"$GHOSTTY_DEST/\"\nelif [ -d \"$FALLBACK_GHOSTTY\" ]; then\n  mkdir -p \"$GHOSTTY_DEST\"\n  rsync -a --delete \"$FALLBACK_GHOSTTY/\" \"$GHOSTTY_DEST/\"\nfi\nif [ -d \"$TERMINFO_SRC\" ]; then\n  mkdir -p \"$TERMINFO_DEST\"\n  rsync -a --delete \"$TERMINFO_SRC/\" \"$TERMINFO_DEST/\"\nelif [ -d \"$FALLBACK_TERMINFO\" ]; then\n  mkdir -p \"$TERMINFO_DEST\"\n  rsync -a --delete \"$FALLBACK_TERMINFO/\" \"$TERMINFO_DEST/\"\nfi\n# Overlay any cmux-specific terminfo adjustments.\n# This intentionally does not use --delete so we only patch specific entries.\nif [ -d \"$TERMINFO_OVERLAY\" ]; then\n  mkdir -p \"$TERMINFO_DEST\"\n  rsync -a \"$TERMINFO_OVERLAY/\" \"$TERMINFO_DEST/\"\nfi\nif [ -d \"$CMUX_SHELL_SRC\" ]; then\n  mkdir -p \"$CMUX_SHELL_DEST\"\n  # Use '/.' so dotfiles like .zshenv/.zprofile are copied too.\n  rsync -a \"$CMUX_SHELL_SRC/.\" \"$CMUX_SHELL_DEST/\"\nfi\nif [ -f \"$CMUX_GHOSTTY_ZSH_SRC\" ]; then\n  mkdir -p \"$CMUX_SHELL_DEST\"\n  rsync -a \"$CMUX_GHOSTTY_ZSH_SRC\" \"$CMUX_SHELL_DEST/ghostty-integration.zsh\"\nfi\nif [ ! -x \"$BUILD_GHOSTTY_HELPER\" ]; then\n  echo \"error: missing Ghostty CLI helper build script at $BUILD_GHOSTTY_HELPER\" >&2\n  exit 1\nfi\nARCHS_LIST=\" ${ARCHS:-} \"\nHAS_ARM64=0\nHAS_X86_64=0\nGHOSTTY_HELPER_TARGET=\"\"\ncase \"$ARCHS_LIST\" in\n  *\" arm64 \"*) HAS_ARM64=1 ;;\nesac\ncase \"$ARCHS_LIST\" in\n  *\" x86_64 \"*) HAS_X86_64=1 ;;\nesac\nif [ \"$HAS_ARM64\" -eq 1 ] && [ \"$HAS_X86_64\" -eq 1 ]; then\n  \"$BUILD_GHOSTTY_HELPER\" --universal --output \"$GHOSTTY_HELPER_DEST\"\nelif [ \"$HAS_ARM64\" -eq 1 ]; then\n  GHOSTTY_HELPER_TARGET=\"aarch64-macos\"\nelif [ \"$HAS_X86_64\" -eq 1 ]; then\n  GHOSTTY_HELPER_TARGET=\"x86_64-macos\"\nfi\nif [ -n \"$GHOSTTY_HELPER_TARGET\" ]; then\n  \"$BUILD_GHOSTTY_HELPER\" --target \"$GHOSTTY_HELPER_TARGET\" --output \"$GHOSTTY_HELPER_DEST\"\nelif [ \"$HAS_ARM64\" -eq 0 ] || [ \"$HAS_X86_64\" -eq 0 ]; then\n  \"$BUILD_GHOSTTY_HELPER\" --output \"$GHOSTTY_HELPER_DEST\"\nfi\nif [ ! -x \"$GHOSTTY_HELPER_DEST\" ]; then\n  echo \"error: Ghostty CLI helper was not created at $GHOSTTY_HELPER_DEST\" >&2\n  exit 1\nfi\nINFO_PLIST=\"${TARGET_BUILD_DIR}/${INFOPLIST_PATH}\"\nCOMMIT=\"$(git -C \"${SRCROOT}\" rev-parse --short=9 HEAD 2>/dev/null || true)\"\nif [ -n \"$COMMIT\" ] && [ -f \"$INFO_PLIST\" ]; then\n  /usr/libexec/PlistBuddy -c \"Set :CMUXCommit $COMMIT\" \"$INFO_PLIST\" >/dev/null 2>&1 || /usr/libexec/PlistBuddy -c \"Add :CMUXCommit string $COMMIT\" \"$INFO_PLIST\" >/dev/null 2>&1 || true\nfi\n";
+			shellScript = "set -euo pipefail\nDEST=\"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}\"\nGHOSTTY_DEST=\"${DEST}/ghostty\"\nTERMINFO_DEST=\"${DEST}/terminfo\"\nCMUX_SHELL_DEST=\"${DEST}/shell-integration\"\nBIN_DEST=\"${DEST}/bin\"\nSRC_SHARE=\"${SRCROOT}/ghostty/zig-out/share\"\nGHOSTTY_SRC=\"${SRC_SHARE}/ghostty\"\nTERMINFO_SRC=\"${SRC_SHARE}/terminfo\"\nFALLBACK_GHOSTTY=\"${SRCROOT}/Resources/ghostty\"\nFALLBACK_TERMINFO=\"${SRCROOT}/Resources/ghostty/terminfo\"\nTERMINFO_OVERLAY=\"${SRCROOT}/Resources/terminfo-overlay\"\nCMUX_SHELL_SRC=\"${SRCROOT}/Resources/shell-integration\"\nCMUX_GHOSTTY_ZSH_SRC=\"${SRCROOT}/ghostty/src/shell-integration/zsh/ghostty-integration\"\nBUILD_GHOSTTY_HELPER=\"${SRCROOT}/scripts/build-ghostty-cli-helper.sh\"\nGHOSTTY_HELPER_DEST=\"${BIN_DEST}/ghostty\"\nmkdir -p \"$BIN_DEST\"\n# Copy VS Code-style file type icons\nFILE_TYPE_ICONS_SRC=\"${SRCROOT}/Resources/FileTypeIcons\"\nFILE_TYPE_ICONS_DEST=\"${DEST}/FileTypeIcons\"\nmkdir -p \"$FILE_TYPE_ICONS_DEST\"\nif [ -d \"$FILE_TYPE_ICONS_SRC\" ]; then\n  rsync -a --delete \"$FILE_TYPE_ICONS_SRC/\" \"$FILE_TYPE_ICONS_DEST/\"\nfi\nif [ -d \"$GHOSTTY_SRC\" ]; then\n  mkdir -p \"$GHOSTTY_DEST\"\n  rsync -a --delete \"$GHOSTTY_SRC/\" \"$GHOSTTY_DEST/\"\nelif [ -d \"$FALLBACK_GHOSTTY\" ]; then\n  mkdir -p \"$GHOSTTY_DEST\"\n  rsync -a --delete \"$FALLBACK_GHOSTTY/\" \"$GHOSTTY_DEST/\"\nfi\nif [ -d \"$TERMINFO_SRC\" ]; then\n  mkdir -p \"$TERMINFO_DEST\"\n  rsync -a --delete \"$TERMINFO_SRC/\" \"$TERMINFO_DEST/\"\nelif [ -d \"$FALLBACK_TERMINFO\" ]; then\n  mkdir -p \"$TERMINFO_DEST\"\n  rsync -a --delete \"$FALLBACK_TERMINFO/\" \"$TERMINFO_DEST/\"\nfi\n# Overlay any cmux-specific terminfo adjustments.\n# This intentionally does not use --delete so we only patch specific entries.\nif [ -d \"$TERMINFO_OVERLAY\" ]; then\n  mkdir -p \"$TERMINFO_DEST\"\n  rsync -a \"$TERMINFO_OVERLAY/\" \"$TERMINFO_DEST/\"\nfi\nif [ -d \"$CMUX_SHELL_SRC\" ]; then\n  mkdir -p \"$CMUX_SHELL_DEST\"\n  # Use '/.' so dotfiles like .zshenv/.zprofile are copied too.\n  rsync -a \"$CMUX_SHELL_SRC/.\" \"$CMUX_SHELL_DEST/\"\nfi\nif [ -f \"$CMUX_GHOSTTY_ZSH_SRC\" ]; then\n  mkdir -p \"$CMUX_SHELL_DEST\"\n  rsync -a \"$CMUX_GHOSTTY_ZSH_SRC\" \"$CMUX_SHELL_DEST/ghostty-integration.zsh\"\nfi\nif [ ! -x \"$BUILD_GHOSTTY_HELPER\" ]; then\n  echo \"error: missing Ghostty CLI helper build script at $BUILD_GHOSTTY_HELPER\" >&2\n  exit 1\nfi\nARCHS_LIST=\" ${ARCHS:-} \"\nHAS_ARM64=0\nHAS_X86_64=0\nGHOSTTY_HELPER_TARGET=\"\"\ncase \"$ARCHS_LIST\" in\n  *\" arm64 \"*) HAS_ARM64=1 ;;\nesac\ncase \"$ARCHS_LIST\" in\n  *\" x86_64 \"*) HAS_X86_64=1 ;;\nesac\nif [ \"$HAS_ARM64\" -eq 1 ] && [ \"$HAS_X86_64\" -eq 1 ]; then\n  \"$BUILD_GHOSTTY_HELPER\" --universal --output \"$GHOSTTY_HELPER_DEST\"\nelif [ \"$HAS_ARM64\" -eq 1 ]; then\n  GHOSTTY_HELPER_TARGET=\"aarch64-macos\"\nelif [ \"$HAS_X86_64\" -eq 1 ]; then\n  GHOSTTY_HELPER_TARGET=\"x86_64-macos\"\nfi\nif [ -n \"$GHOSTTY_HELPER_TARGET\" ]; then\n  \"$BUILD_GHOSTTY_HELPER\" --target \"$GHOSTTY_HELPER_TARGET\" --output \"$GHOSTTY_HELPER_DEST\"\nelif [ \"$HAS_ARM64\" -eq 0 ] || [ \"$HAS_X86_64\" -eq 0 ]; then\n  \"$BUILD_GHOSTTY_HELPER\" --output \"$GHOSTTY_HELPER_DEST\"\nfi\nif [ ! -x \"$GHOSTTY_HELPER_DEST\" ]; then\n  echo \"error: Ghostty CLI helper was not created at $GHOSTTY_HELPER_DEST\" >&2\n  exit 1\nfi\nINFO_PLIST=\"${TARGET_BUILD_DIR}/${INFOPLIST_PATH}\"\nCOMMIT=\"$(git -C \"${SRCROOT}\" rev-parse --short=9 HEAD 2>/dev/null || true)\"\nif [ -n \"$COMMIT\" ] && [ -f \"$INFO_PLIST\" ]; then\n  /usr/libexec/PlistBuddy -c \"Set :CMUXCommit $COMMIT\" \"$INFO_PLIST\" >/dev/null 2>&1 || /usr/libexec/PlistBuddy -c \"Add :CMUXCommit string $COMMIT\" \"$INFO_PLIST\" >/dev/null 2>&1 || true\nfi\n";
 		};
 		C0DEFF100000000000000003 /* Build Command Palette Nucleo FFI */ = {
 			isa = PBXShellScriptBuildPhase;
@@ -4140,6 +4143,7 @@
 				FE001101 /* FileExplorerStore.swift in Sources */,
 				FE001104 /* FileExplorerTerminalPathInsertion.swift in Sources */,
 				FE001102 /* FileExplorerView.swift in Sources */,
+				FE5996100000000000000002 /* FileExplorerVSCodeIcons.swift in Sources */,
 				A5001441A5001441A5001441 /* FileOpenSocketSupport.swift in Sources */,
 				A5001432A5001432A5001432 /* FilePreviewFocusCoordinator.swift in Sources */,
 				01EE5DC99896BA30240EF1B5 /* FilePreviewImageSession.swift in Sources */,
@@ -4913,6 +4917,7 @@
 				CB23911D7E131E8FBC9B82B6 /* SidebarOrderingTests.swift in Sources */,
 				C0DE48000000000000000001 /* SidebarProviderMenuRegressionTests.swift in Sources */,
 				C9A57513C9A57513C9A57513 /* SidebarScrollViewConfiguratorTests.swift in Sources */,
+				CFD5DD2B74E345E995C1642E /* SidebarShortcutDefaultsTests.swift in Sources */,
 				75F60E61082C422B8B0B49B2 /* SidebarStateTests.swift in Sources */,
 				D7AB34300000000000000105 /* SidebarTabDropIndicatorPredicateTests.swift in Sources */,
 				CA39C0304FE351A21C372429 /* SidebarWidthPolicyTests.swift in Sources */,
@@ -4936,7 +4941,6 @@
 				C06552030000000000000001 /* TabManagerTitleUpdateStalenessTests.swift in Sources */,
 				C06552020000000000000001 /* TabManagerTitleUpdateTests.swift in Sources */,
 				B6BF3DC98DB1495E57900199 /* TabManagerUnitTests.swift in Sources */,
-				CFD5DD2B74E345E995C1642E /* SidebarShortcutDefaultsTests.swift in Sources */,
 				C7A507000000000000000002 /* TaskManagerResourcesTests.swift in Sources */,
 				C7A507000000000000004529 /* TaskManagerViewSnapshotBoundaryTests.swift in Sources */,
 				46F6AC15863EC84DCD3770A2 /* TerminalAndGhosttyTests.swift in Sources */,

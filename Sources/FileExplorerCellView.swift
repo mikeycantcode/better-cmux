@@ -88,7 +88,25 @@ final class FileExplorerCellView: NSTableCellView {
         iconHeightConstraint.constant = style.iconSize
         iconToTextConstraint.constant = style.iconToTextSpacing
 
-        if style == .finder {
+        if style == .vscodeIcons {
+            let iconSize = style.iconSize
+            if node.isDirectory {
+                let image = VSCodeFileIcon.folderIcon(size: iconSize)
+                    ?? NSWorkspace.shared.icon(for: .folder)
+                image.size = NSSize(width: iconSize, height: iconSize)
+                iconView.image = image
+                iconView.contentTintColor = nil
+            } else {
+                let pathExtension = (node.name as NSString).pathExtension
+                let iconName = pathExtension.isEmpty ? node.name : pathExtension
+                let image = VSCodeFileIcon.icon(forExtension: iconName, size: iconSize)
+                    ?? VSCodeFileIcon.icon(forFileName: node.name, size: iconSize)
+                    ?? NSImage(systemSymbolName: "doc", accessibilityDescription: nil)?
+                        .withSymbolConfiguration(NSImage.SymbolConfiguration(pointSize: iconSize, weight: style.iconWeight))
+                iconView.image = image
+                iconView.contentTintColor = nil
+            }
+        } else if style == .finder {
             if node.isDirectory {
                 let folderIcon = NSWorkspace.shared.icon(for: .folder)
                 folderIcon.size = NSSize(width: style.iconSize, height: style.iconSize)

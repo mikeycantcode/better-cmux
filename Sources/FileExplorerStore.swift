@@ -13,6 +13,7 @@ enum FileExplorerStyle: Int, CaseIterable {
     case terminalStealth = 2
     case proStudio = 3
     case finder = 4
+    case vscodeIcons = 5
 
     var label: String {
         switch self {
@@ -21,6 +22,7 @@ enum FileExplorerStyle: Int, CaseIterable {
         case .terminalStealth: return "Terminal Stealth"
         case .proStudio: return "Pro Studio"
         case .finder: return "Finder"
+        case .vscodeIcons: return "VS Code Icons"
         }
     }
 
@@ -32,6 +34,7 @@ enum FileExplorerStyle: Int, CaseIterable {
         case .terminalStealth: baseHeight = 24
         case .proStudio: baseHeight = 32
         case .finder: baseHeight = 26
+        case .vscodeIcons: baseHeight = 24
         }
         return GlobalFontMagnification.scaledSize(baseHeight)
     }
@@ -43,6 +46,7 @@ enum FileExplorerStyle: Int, CaseIterable {
         case .terminalStealth: return 14
         case .proStudio: return 20
         case .finder: return 18
+        case .vscodeIcons: return 16
         }
     }
 
@@ -53,6 +57,7 @@ enum FileExplorerStyle: Int, CaseIterable {
         case .terminalStealth: return 12
         case .proStudio: return 18
         case .finder: return 18
+        case .vscodeIcons: return 16
         }
     }
 
@@ -63,6 +68,7 @@ enum FileExplorerStyle: Int, CaseIterable {
         case .terminalStealth: return .light
         case .proStudio: return .regular
         case .finder: return .medium
+        case .vscodeIcons: return .regular
         }
     }
 
@@ -73,6 +79,7 @@ enum FileExplorerStyle: Int, CaseIterable {
         case .terminalStealth: return GlobalFontMagnification.monospacedSystemFont(ofSize: 12, weight: .regular)
         case .proStudio: return GlobalFontMagnification.systemFont(ofSize: 14, weight: .semibold)
         case .finder: return GlobalFontMagnification.systemFont(ofSize: 13, weight: .regular)
+        case .vscodeIcons: return GlobalFontMagnification.systemFont(ofSize: 12, weight: .regular)
         }
     }
 
@@ -83,6 +90,7 @@ enum FileExplorerStyle: Int, CaseIterable {
         case .terminalStealth: return 6
         case .proStudio: return 12
         case .finder: return 6
+        case .vscodeIcons: return 6
         }
     }
 
@@ -93,6 +101,7 @@ enum FileExplorerStyle: Int, CaseIterable {
         case .terminalStealth: return 0
         case .proStudio: return 4
         case .finder: return 4
+        case .vscodeIcons: return 4
         }
     }
 
@@ -103,6 +112,7 @@ enum FileExplorerStyle: Int, CaseIterable {
         case .terminalStealth: return 0
         case .proStudio: return 8
         case .finder: return 5
+        case .vscodeIcons: return 5
         }
     }
 
@@ -113,6 +123,7 @@ enum FileExplorerStyle: Int, CaseIterable {
         case .terminalStealth: return .controlAccentColor
         case .proStudio: return .controlAccentColor
         case .finder: return .controlAccentColor.withAlphaComponent(0.15)
+        case .vscodeIcons: return .controlAccentColor.withAlphaComponent(0.15)
         }
     }
 
@@ -123,11 +134,12 @@ enum FileExplorerStyle: Int, CaseIterable {
         case .terminalStealth: return .white.withAlphaComponent(0.03)
         case .proStudio: return .white.withAlphaComponent(0.1)
         case .finder: return .labelColor.withAlphaComponent(0.04)
+        case .vscodeIcons: return .labelColor.withAlphaComponent(0.05)
         }
     }
 
     var usesBorderSelection: Bool {
-        self == .terminalStealth
+        self == .terminalStealth || self == .vscodeIcons
     }
 
     var fileIconTint: NSColor {
@@ -137,6 +149,7 @@ enum FileExplorerStyle: Int, CaseIterable {
         case .terminalStealth: return .tertiaryLabelColor
         case .proStudio: return .secondaryLabelColor
         case .finder: return NSColor(white: 0.55, alpha: 1.0)
+        case .vscodeIcons: return .secondaryLabelColor
         }
     }
 
@@ -147,6 +160,7 @@ enum FileExplorerStyle: Int, CaseIterable {
         case .terminalStealth: return .tertiaryLabelColor
         case .proStudio: return .systemBlue
         case .finder: return .systemBlue
+        case .vscodeIcons: return .white
         }
     }
 
@@ -192,15 +206,23 @@ enum FileExplorerStyle: Int, CaseIterable {
             case .renamed: return .systemBlue
             case .untracked: return .tertiaryLabelColor
             }
+        case .vscodeIcons:
+            switch status {
+            case .modified: return .systemYellow
+            case .added: return .systemGreen
+            case .deleted: return .systemRed
+            case .renamed: return .systemBlue
+            case .untracked: return .tertiaryLabelColor
+            }
         }
     }
 
     static var current: FileExplorerStyle {
         let defaults = UserDefaults.standard
         if defaults.object(forKey: "fileExplorer.style") == nil {
-            return .highDensity
+            return .vscodeIcons
         }
-        return FileExplorerStyle(rawValue: defaults.integer(forKey: "fileExplorer.style")) ?? .highDensity
+        return FileExplorerStyle(rawValue: defaults.integer(forKey: "fileExplorer.style")) ?? .vscodeIcons
     }
 }
 

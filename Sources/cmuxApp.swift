@@ -2415,6 +2415,7 @@ private struct FileExplorerStyleDebugView: View {
         case .terminalStealth: return "Monospace, border selection, desaturated"
         case .proStudio: return "Logic Pro, chunky rows, pill selection"
         case .finder: return "Finder sidebar, filled icons, hover tint"
+        case .vscodeIcons: return "Material icons, per-extension file type icons"
         }
     }
 }
