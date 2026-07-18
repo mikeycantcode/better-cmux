@@ -12,7 +12,7 @@ import WebKit
 @Suite
 final class MermaidDiagramModeTests {
     @Test
-    func diagramModeSuppressesDocumentPaddingAndShowsDotGrid() async throws {
+    func diagramModeSuppressesDocumentFlow() async throws {
         let harness = try await DiagramShellHarness.make()
         defer { harness.tearDown() }
 
@@ -32,11 +32,19 @@ final class MermaidDiagramModeTests {
         let overflow = try await harness.evalString("getComputedStyle(document.body).overflow")
         #expect(overflow == "hidden")
 
-        // The dot grid is a repeating radial-gradient on the canvas layer.
+        // The canvas is a plain surface — no dot grid by preference.
         let bgImage = try await harness.evalString(
             "getComputedStyle(document.getElementById('cmux-diagram-canvas')).backgroundImage"
         )
-        #expect(bgImage.contains("radial-gradient"))
+        #expect(bgImage == "none")
+
+        // The content layer must NOT be a composited layer: promoting it
+        // makes WebKit rasterize the SVG once and GPU-scale the bitmap, so
+        // zooming in goes blurry instead of re-rendering the vector.
+        let willChange = try await harness.evalString(
+            "getComputedStyle(document.getElementById('content')).willChange"
+        )
+        #expect(willChange == "auto")
     }
 
     @Test
@@ -101,7 +109,7 @@ final class MermaidDiagramModeTests {
     }
 
     @Test
-    func dotGridTransformsWithTheCamera() async throws {
+    func canvasAndContentShareTheCamera() async throws {
         let harness = try await DiagramShellHarness.make()
         defer { harness.tearDown() }
         try await harness.render("```mermaid\nflowchart LR\n  a --> b\n```")
