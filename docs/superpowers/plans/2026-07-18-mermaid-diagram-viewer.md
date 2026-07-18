@@ -10,9 +10,10 @@
 
 ## Global Constraints
 
-- **Build command:** always `./scripts/reload.sh --tag mermaid-viewer`. Never bare `xcodebuild`, never `open` an untagged `cmux DEV.app`.
+- **Build command:** always `CMUX_SKIP_ZIG_BUILD=1 ./scripts/reload.sh --tag mermaid-viewer`. Never bare `xcodebuild`, never `open` an untagged `cmux DEV.app`. The `CMUX_SKIP_ZIG_BUILD=1` prefix is **required** on this machine — the build pins zig 0.15.2 but the installed zig is 0.16.0, and without it the build fails with `error: zig 0.15.2 is required to build the Ghostty CLI helper`. A prebuilt GhosttyKit xcframework is already present, so skipping is safe.
+- **Test scheme is `cmux-unit`, not `cmux`.** The `cmux` scheme cannot run `cmuxTests` at all — it reports "Executed 0 tests" regardless of wiring, which is indistinguishable from a missing-pbxproj failure. Use `cmux-unit` for every `xcodebuild test` invocation. Keep using `cmux` for compile-only `build` checks.
 - **Compile-only check:** `xcodebuild -project cmux.xcodeproj -scheme cmux -configuration Debug -destination 'platform=macOS' -derivedDataPath /tmp/cmux-mermaid-viewer build`
-- **Test command:** `xcodebuild test -project cmux.xcodeproj -scheme cmux -destination 'platform=macOS' -derivedDataPath /tmp/cmux-mermaid-viewer -only-testing:cmuxTests/<TestClass>`
+- **Test command:** `xcodebuild test -project cmux.xcodeproj -scheme cmux-unit -destination 'platform=macOS' -derivedDataPath /tmp/cmux-mermaid-viewer -only-testing:cmuxTests/<TestClass>`
 - **New test files MUST be wired into `cmux.xcodeproj/project.pbxproj`** with all four entries (PBXBuildFile, PBXFileReference, group child, PBXSourcesBuildPhase). An unwired test silently reports "Executed 0 tests". See Task 1 Step 5 for the exact pattern.
 - **All user-facing strings** use `String(localized:defaultValue:)` and require entries in `Resources/Localizable.xcstrings` for **English and Japanese**. No bare English literals in UI code.
 - **Regression test policy:** where a task fixes a bug, commit the failing test first, then the fix (two commits).
@@ -114,7 +115,7 @@ struct MermaidDiagramFileResolverTests {
 
 First wire the test file into the project (Step 5 pattern applies now — do it before running), then:
 
-Run: `xcodebuild test -project cmux.xcodeproj -scheme cmux -destination 'platform=macOS' -derivedDataPath /tmp/cmux-mermaid-viewer -only-testing:cmuxTests/MermaidDiagramFileResolverTests`
+Run: `xcodebuild test -project cmux.xcodeproj -scheme cmux-unit -destination 'platform=macOS' -derivedDataPath /tmp/cmux-mermaid-viewer -only-testing:cmuxTests/MermaidDiagramFileResolverTests`
 
 Expected: FAIL — `cannot find 'MermaidDiagramFileResolver' in scope`.
 
@@ -159,7 +160,7 @@ enum MermaidDiagramFileResolver {
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `xcodebuild test -project cmux.xcodeproj -scheme cmux -destination 'platform=macOS' -derivedDataPath /tmp/cmux-mermaid-viewer -only-testing:cmuxTests/MermaidDiagramFileResolverTests`
+Run: `xcodebuild test -project cmux.xcodeproj -scheme cmux-unit -destination 'platform=macOS' -derivedDataPath /tmp/cmux-mermaid-viewer -only-testing:cmuxTests/MermaidDiagramFileResolverTests`
 
 Expected: PASS, 5 tests executed. **If it says "Executed 0 tests", the pbxproj wiring in Step 5 is wrong — fix it before continuing.**
 
@@ -272,7 +273,7 @@ struct MermaidDiagramRoutingTests {
 
 Wire `MermaidDiagramRoutingTests.swift` into pbxproj (Task 1 Step 5 pattern), then:
 
-Run: `xcodebuild test -project cmux.xcodeproj -scheme cmux -destination 'platform=macOS' -derivedDataPath /tmp/cmux-mermaid-viewer -only-testing:cmuxTests/MermaidDiagramRoutingTests`
+Run: `xcodebuild test -project cmux.xcodeproj -scheme cmux-unit -destination 'platform=macOS' -derivedDataPath /tmp/cmux-mermaid-viewer -only-testing:cmuxTests/MermaidDiagramRoutingTests`
 
 Expected: FAIL — `value of type 'MarkdownPanel' has no member 'isDiagramFile'`.
 
@@ -397,7 +398,7 @@ Expected: `markdown.mode.showDiagramSource ['en', 'ja']` and `markdown.mode.show
 
 - [ ] **Step 8: Run tests to verify they pass**
 
-Run: `xcodebuild test -project cmux.xcodeproj -scheme cmux -destination 'platform=macOS' -derivedDataPath /tmp/cmux-mermaid-viewer -only-testing:cmuxTests/MermaidDiagramRoutingTests -only-testing:cmuxTests/MarkdownPanelTests`
+Run: `xcodebuild test -project cmux.xcodeproj -scheme cmux-unit -destination 'platform=macOS' -derivedDataPath /tmp/cmux-mermaid-viewer -only-testing:cmuxTests/MermaidDiagramRoutingTests -only-testing:cmuxTests/MarkdownPanelTests`
 
 Expected: PASS. `MarkdownPanelTests` must still pass — it asserts `displayMode` behavior at `:233`, `:236`, `:290`.
 
@@ -448,7 +449,7 @@ Note: if `Workspace(name:)` is not the available initializer in this codebase, c
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `xcodebuild test -project cmux.xcodeproj -scheme cmux -destination 'platform=macOS' -derivedDataPath /tmp/cmux-mermaid-viewer -only-testing:cmuxTests/MermaidDiagramRoutingTests/openFileSurfacesRoutesDiagramFilesToMarkdownPanel`
+Run: `xcodebuild test -project cmux.xcodeproj -scheme cmux-unit -destination 'platform=macOS' -derivedDataPath /tmp/cmux-mermaid-viewer -only-testing:cmuxTests/MermaidDiagramRoutingTests/openFileSurfacesRoutesDiagramFilesToMarkdownPanel`
 
 Expected: FAIL — the panel comes back as a `FilePreviewPanel`, so `try #require(opened.first as? MarkdownPanel)` fails.
 
@@ -465,7 +466,7 @@ Both branches construct a `MarkdownPanel`; the panel itself decides diagram-vs-p
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `xcodebuild test -project cmux.xcodeproj -scheme cmux -destination 'platform=macOS' -derivedDataPath /tmp/cmux-mermaid-viewer -only-testing:cmuxTests/MermaidDiagramRoutingTests`
+Run: `xcodebuild test -project cmux.xcodeproj -scheme cmux-unit -destination 'platform=macOS' -derivedDataPath /tmp/cmux-mermaid-viewer -only-testing:cmuxTests/MermaidDiagramRoutingTests`
 
 Expected: PASS, all 5 tests.
 
@@ -565,7 +566,7 @@ Implement `DiagramShellHarness` in the same file as a small `@MainActor` helper 
 
 Wire the file into pbxproj (Task 1 Step 5), then:
 
-Run: `xcodebuild test -project cmux.xcodeproj -scheme cmux -destination 'platform=macOS' -derivedDataPath /tmp/cmux-mermaid-viewer -only-testing:cmuxTests/MermaidDiagramModeTests`
+Run: `xcodebuild test -project cmux.xcodeproj -scheme cmux-unit -destination 'platform=macOS' -derivedDataPath /tmp/cmux-mermaid-viewer -only-testing:cmuxTests/MermaidDiagramModeTests`
 
 Expected: FAIL — `window.__cmuxSetDiagramMode` is undefined, so the attribute read returns `null`.
 
@@ -730,7 +731,7 @@ In `Sources/Panels/MarkdownPanelView.swift`, find the `MarkdownWebRenderer(...)`
 
 - [ ] **Step 7: Run tests to verify they pass**
 
-Run: `xcodebuild test -project cmux.xcodeproj -scheme cmux -destination 'platform=macOS' -derivedDataPath /tmp/cmux-mermaid-viewer -only-testing:cmuxTests/MermaidDiagramModeTests -only-testing:cmuxTests/MarkdownMermaidZoomTests`
+Run: `xcodebuild test -project cmux.xcodeproj -scheme cmux-unit -destination 'platform=macOS' -derivedDataPath /tmp/cmux-mermaid-viewer -only-testing:cmuxTests/MermaidDiagramModeTests -only-testing:cmuxTests/MarkdownMermaidZoomTests`
 
 Expected: PASS. The existing zoom test must stay green — diagram CSS is scoped entirely under `html[data-cmux-diagram="1"]`, so markdown rendering is untouched.
 
@@ -833,7 +834,7 @@ Append to `MermaidDiagramModeTests`:
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `xcodebuild test -project cmux.xcodeproj -scheme cmux -destination 'platform=macOS' -derivedDataPath /tmp/cmux-mermaid-viewer -only-testing:cmuxTests/MermaidDiagramModeTests`
+Run: `xcodebuild test -project cmux.xcodeproj -scheme cmux-unit -destination 'platform=macOS' -derivedDataPath /tmp/cmux-mermaid-viewer -only-testing:cmuxTests/MermaidDiagramModeTests`
 
 Expected: FAIL — `__cmuxDiagramCamera` is not a function (Task 4 only stubbed `__cmuxDiagramFit`).
 
@@ -978,7 +979,7 @@ with:
 
 - [ ] **Step 4: Run tests to verify they pass**
 
-Run: `xcodebuild test -project cmux.xcodeproj -scheme cmux -destination 'platform=macOS' -derivedDataPath /tmp/cmux-mermaid-viewer -only-testing:cmuxTests/MermaidDiagramModeTests`
+Run: `xcodebuild test -project cmux.xcodeproj -scheme cmux-unit -destination 'platform=macOS' -derivedDataPath /tmp/cmux-mermaid-viewer -only-testing:cmuxTests/MermaidDiagramModeTests`
 
 Expected: PASS, all 5 tests.
 
@@ -1059,7 +1060,7 @@ Add `waitForMermaidRender()` to `DiagramShellHarness` — poll `document.querySe
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `xcodebuild test -project cmux.xcodeproj -scheme cmux -destination 'platform=macOS' -derivedDataPath /tmp/cmux-mermaid-viewer -only-testing:cmuxTests/MermaidDiagramModeTests/rerenderPreservesCameraPosition`
+Run: `xcodebuild test -project cmux.xcodeproj -scheme cmux-unit -destination 'platform=macOS' -derivedDataPath /tmp/cmux-mermaid-viewer -only-testing:cmuxTests/MermaidDiagramModeTests/rerenderPreservesCameraPosition`
 
 Expected: FAIL — the camera resets because `__cmuxRenderMarkdown` replaces `contentEl.innerHTML`, dropping the inline transform.
 
@@ -1127,7 +1128,7 @@ Then add `diagramAfterRender` immediately above `window.__cmuxRenderMarkdown` �
 
 - [ ] **Step 4: Run tests to verify they pass**
 
-Run: `xcodebuild test -project cmux.xcodeproj -scheme cmux -destination 'platform=macOS' -derivedDataPath /tmp/cmux-mermaid-viewer -only-testing:cmuxTests/MermaidDiagramModeTests`
+Run: `xcodebuild test -project cmux.xcodeproj -scheme cmux-unit -destination 'platform=macOS' -derivedDataPath /tmp/cmux-mermaid-viewer -only-testing:cmuxTests/MermaidDiagramModeTests`
 
 Expected: PASS, all 7 tests.
 
@@ -1192,7 +1193,7 @@ Append to `MermaidDiagramModeTests`:
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `xcodebuild test -project cmux.xcodeproj -scheme cmux -destination 'platform=macOS' -derivedDataPath /tmp/cmux-mermaid-viewer -only-testing:cmuxTests/MermaidDiagramModeTests/mermaidUsesCmuxThemeVariables`
+Run: `xcodebuild test -project cmux.xcodeproj -scheme cmux-unit -destination 'platform=macOS' -derivedDataPath /tmp/cmux-mermaid-viewer -only-testing:cmuxTests/MermaidDiagramModeTests/mermaidUsesCmuxThemeVariables`
 
 Expected: FAIL — `__cmuxDiagramThemeVariables` is not a function.
 
@@ -1340,7 +1341,7 @@ Finally, add a dot color derived from the border color. In `shell.html`, the CSS
 
 - [ ] **Step 6: Run tests to verify they pass**
 
-Run: `xcodebuild test -project cmux.xcodeproj -scheme cmux -destination 'platform=macOS' -derivedDataPath /tmp/cmux-mermaid-viewer -only-testing:cmuxTests/MermaidDiagramModeTests -only-testing:cmuxTests/MarkdownMermaidZoomTests`
+Run: `xcodebuild test -project cmux.xcodeproj -scheme cmux-unit -destination 'platform=macOS' -derivedDataPath /tmp/cmux-mermaid-viewer -only-testing:cmuxTests/MermaidDiagramModeTests -only-testing:cmuxTests/MarkdownMermaidZoomTests`
 
 Expected: PASS.
 
@@ -1452,7 +1453,7 @@ struct MermaidDiagramParseReportingTests {
 
 Wire the file into pbxproj (Task 1 Step 5), then:
 
-Run: `xcodebuild test -project cmux.xcodeproj -scheme cmux -destination 'platform=macOS' -derivedDataPath /tmp/cmux-mermaid-viewer -only-testing:cmuxTests/MermaidDiagramParseReportingTests`
+Run: `xcodebuild test -project cmux.xcodeproj -scheme cmux-unit -destination 'platform=macOS' -derivedDataPath /tmp/cmux-mermaid-viewer -only-testing:cmuxTests/MermaidDiagramParseReportingTests`
 
 Expected: FAIL — `cannot find 'MarkdownDiagramParseResult' in scope`.
 
@@ -1683,7 +1684,7 @@ In `Sources/Panels/MarkdownPanelView.swift`, pass it at the `MarkdownWebRenderer
 
 - [ ] **Step 7: Run tests to verify they pass**
 
-Run: `xcodebuild test -project cmux.xcodeproj -scheme cmux -destination 'platform=macOS' -derivedDataPath /tmp/cmux-mermaid-viewer -only-testing:cmuxTests/MermaidDiagramParseReportingTests`
+Run: `xcodebuild test -project cmux.xcodeproj -scheme cmux-unit -destination 'platform=macOS' -derivedDataPath /tmp/cmux-mermaid-viewer -only-testing:cmuxTests/MermaidDiagramParseReportingTests`
 
 Expected: PASS, 4 tests.
 
@@ -1768,7 +1769,7 @@ If `TerminalController.shared` is not the accessor used by existing socket tests
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `xcodebuild test -project cmux.xcodeproj -scheme cmux -destination 'platform=macOS' -derivedDataPath /tmp/cmux-mermaid-viewer -only-testing:cmuxTests/MermaidDiagramParseReportingTests/fileOpenReportsAnInvalidDiagramAsAnError`
+Run: `xcodebuild test -project cmux.xcodeproj -scheme cmux-unit -destination 'platform=macOS' -derivedDataPath /tmp/cmux-mermaid-viewer -only-testing:cmuxTests/MermaidDiagramParseReportingTests/fileOpenReportsAnInvalidDiagramAsAnError`
 
 Expected: FAIL — `v2FileOpen` returns `.ok` because it never waits for a render.
 
@@ -1802,7 +1803,7 @@ Note the `guard` at line 142 already returned early on an empty `openedPanels`, 
 
 - [ ] **Step 4: Run tests to verify they pass**
 
-Run: `xcodebuild test -project cmux.xcodeproj -scheme cmux -destination 'platform=macOS' -derivedDataPath /tmp/cmux-mermaid-viewer -only-testing:cmuxTests/MermaidDiagramParseReportingTests`
+Run: `xcodebuild test -project cmux.xcodeproj -scheme cmux-unit -destination 'platform=macOS' -derivedDataPath /tmp/cmux-mermaid-viewer -only-testing:cmuxTests/MermaidDiagramParseReportingTests`
 
 Expected: PASS, 6 tests.
 
@@ -1934,7 +1935,7 @@ Expected: `no bare strings`.
 - [ ] **Step 4: Run the full affected test suite**
 
 ```bash
-xcodebuild test -project cmux.xcodeproj -scheme cmux -destination 'platform=macOS' -derivedDataPath /tmp/cmux-mermaid-viewer \
+xcodebuild test -project cmux.xcodeproj -scheme cmux-unit -destination 'platform=macOS' -derivedDataPath /tmp/cmux-mermaid-viewer \
   -only-testing:cmuxTests/MermaidDiagramFileResolverTests \
   -only-testing:cmuxTests/MermaidDiagramRoutingTests \
   -only-testing:cmuxTests/MermaidDiagramModeTests \
