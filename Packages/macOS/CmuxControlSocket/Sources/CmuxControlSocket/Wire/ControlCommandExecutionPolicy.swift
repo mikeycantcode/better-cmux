@@ -69,6 +69,12 @@ public enum ControlCommandExecutionPolicy: Sendable, Equatable {
         // env dictionary behind a `v2MainSync` hop, so it runs on the worker
         // lane like the other workspace reads below.
         "workspace.env",
+        // `workspace.snapshot` is likewise a `v2MainSync`-hopping read, and
+        // its handler exists ONLY in the socket-worker switch. Omitting it
+        // here routes it to the main actor, where no handler exists, so the
+        // dispatcher answers method_not_found and `cmux open`'s smart
+        // placement fails outright.
+        "workspace.snapshot",
         "workspace.remote.pty_sessions",
         "workspace.remote.pty_close",
         "workspace.remote.pty_detach",

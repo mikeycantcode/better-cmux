@@ -909,7 +909,19 @@ extension CMUXCLI {
             var snapshotParams: [String: Any] = ["surface_id": anchorSurfaceId]
             if let windowHandle { snapshotParams["window_id"] = windowHandle }
             if let workspaceHandle { snapshotParams["workspace_id"] = workspaceHandle }
-            let snapshotResult = try client.sendV2(method: "workspace.snapshot", params: snapshotParams)
+            // Smart placement is an enhancement, not a prerequisite: if the
+            // running app can't answer workspace.snapshot (older build, or the
+            // method unrouted), fall back to the plain file.open path rather
+            // than failing the whole open. Losing ideal pane choice beats
+            // losing the command.
+            let snapshotResult: [String: Any]
+            do {
+                snapshotResult = try client.sendV2(method: "workspace.snapshot", params: snapshotParams)
+            } catch let error as CLIError where error.message.contains("method_not_found") {
+                pendingFiles.append(path)
+                try flushPendingFiles()
+                return
+            }
 
             guard let snapshot = decodeLayoutSnapshot(snapshotResult) else {
                 pendingFiles.append(path)

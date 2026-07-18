@@ -2011,6 +2011,7 @@ class TerminalController {
             "workspace.list",
             "workspace.create",
             "workspace.env",
+            "workspace.snapshot",
             "workspace.select",
             "workspace.current",
             "workspace.close",
