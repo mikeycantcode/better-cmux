@@ -119,6 +119,39 @@ final class MermaidDiagramModeTests {
         #expect(contentTransform.contains("scale(2)"))
         #expect(contentTransform.contains("translate(100px, 50px)"))
     }
+
+    @Test
+    func rerenderPreservesCameraPosition() async throws {
+        let harness = try await DiagramShellHarness.make()
+        defer { harness.tearDown() }
+
+        try await harness.render("```mermaid\nflowchart LR\n  a --> b\n```")
+        _ = try await harness.eval("window.__cmuxSetDiagramMode(true)")
+        _ = try await harness.eval("window.__cmuxDiagramSetCamera(137, 42, 1.75)")
+
+        // Simulate the FileWatcher pushing an edited diagram.
+        try await harness.render("```mermaid\nflowchart LR\n  a --> b\n  b --> c\n```")
+        try await harness.waitForMermaidRender()
+
+        let camera = try await harness.evalString("JSON.stringify(window.__cmuxDiagramCamera())")
+        #expect(camera.contains("\"x\":137"))
+        #expect(camera.contains("\"y\":42"))
+        #expect(camera.contains("\"scale\":1.75"))
+    }
+
+    @Test
+    func firstRenderFitsInsteadOfPreserving() async throws {
+        let harness = try await DiagramShellHarness.make()
+        defer { harness.tearDown() }
+
+        _ = try await harness.eval("window.__cmuxSetDiagramMode(true)")
+        try await harness.render("```mermaid\nflowchart LR\n  a --> b\n```")
+        try await harness.waitForMermaidRender()
+
+        // Fit centers the diagram, so the camera must have moved off origin.
+        let camera = try await harness.evalString("JSON.stringify(window.__cmuxDiagramCamera())")
+        #expect(camera != "{\"x\":0,\"y\":0,\"scale\":1}")
+    }
 }
 
 @MainActor
@@ -194,6 +227,17 @@ private final class DiagramShellHarness {
     func evalString(_ script: String) async throws -> String {
         let result = try await webView.evaluateJavaScript(script)
         return (result as? String) ?? ""
+    }
+
+    func waitForMermaidRender() async throws {
+        let deadline = Date().addingTimeInterval(5)
+        while Date() < deadline {
+            let hasSVG = try await webView.evaluateJavaScript(
+                "document.querySelector('.cmux-mermaid svg') !== null"
+            ) as? Bool
+            if hasSVG == true { return }
+            try await Task.sleep(nanoseconds: 100_000_000)
+        }
     }
 }
 

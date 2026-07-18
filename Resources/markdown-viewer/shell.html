@@ -1376,9 +1376,11 @@ html { scroll-behavior: smooth; }
           el.innerHTML = res.svg;
           applyMermaidZoom(el);
           if (res.bindFunctions) { try { res.bindFunctions(el); } catch (e) {} }
+          if (typeof flushDiagramRenderWaiters === 'function') { flushDiagramRenderWaiters(); }
         }).catch(function(err) {
           el.innerHTML = '<div class="cmux-render-error">Mermaid: '
             + escapeHtml(String((err && err.message) || err)) + '</div>';
+          if (typeof flushDiagramRenderWaiters === 'function') { flushDiagramRenderWaiters(); }
         });
       } catch (err) {
         el.innerHTML = '<div class="cmux-render-error">Mermaid: '
@@ -1655,6 +1657,37 @@ html { scroll-behavior: smooth; }
     openMarkdownCandidate(rawPath);
   }, true);
 
+  // mermaid.render() is async, so camera work (fit/restore) has to happen
+  // after the SVG actually lands in the DOM. renderMermaidBlocks() flushes
+  // diagramRenderWaiters the instant its render promise resolves — that is
+  // the primary, deterministic path. The bounded setTimeout poll below is
+  // only a fallback for a render that never resolves (e.g. mermaid throws
+  // outside the promise, or no mermaid block exists at all), capped so a
+  // failed render can't spin forever.
+  var diagramRenderWaiters = [];
+  function flushDiagramRenderWaiters() {
+    var waiters = diagramRenderWaiters;
+    diagramRenderWaiters = [];
+    waiters.forEach(function(cb) { cb(); });
+  }
+  function diagramAfterRender(cb) {
+    var called = false;
+    function done() {
+      if (called) { return; }
+      called = true;
+      cb();
+    }
+    if (diagramSVG()) { done(); return; }
+    diagramRenderWaiters.push(done);
+    var attempts = 0;
+    (function poll() {
+      if (called) { return; }
+      if (diagramSVG() || attempts >= 60) { done(); return; }
+      attempts += 1;
+      setTimeout(poll, 16);
+    })();
+  }
+
   window.__cmuxRenderMarkdown = function(md) {
     try {
       headingSlugCounts = Object.create(null);
@@ -1663,6 +1696,15 @@ html { scroll-behavior: smooth; }
         + sanitizeRenderedHTML(marked.parse(documentParts.body || ''));
       var didReplaceContent = contentEl.innerHTML !== html;
       var scrollState = didReplaceContent ? captureMarkdownScrollState() : null;
+      // In diagram mode the camera is the reading position. Replacing
+      // innerHTML wipes the inline transform, so capture it here and
+      // restore after the async mermaid render resolves — otherwise every
+      // keystroke-triggered file write would yank the view back to fit.
+      // A previously rendered SVG (not just diagramCameraInitialized, which
+      // can be set by an empty fit when diagram mode is enabled before any
+      // content exists) is what distinguishes "re-render" from "first render".
+      var hadCamera = diagramModeEnabled && diagramCameraInitialized && diagramSVG() !== null;
+      var savedCamera = hadCamera ? window.__cmuxDiagramCamera() : null;
       if (didReplaceContent) {
         contentEl.innerHTML = html;
       }
@@ -1671,6 +1713,16 @@ html { scroll-behavior: smooth; }
       postProcessSpecialBlocks();
       if (didReplaceContent) {
         restoreMarkdownScrollState(scrollState);
+      }
+      if (diagramModeEnabled) {
+        if (savedCamera) {
+          window.__cmuxDiagramSetCamera(savedCamera.x, savedCamera.y, savedCamera.scale);
+          diagramAfterRender(function() {
+            window.__cmuxDiagramSetCamera(savedCamera.x, savedCamera.y, savedCamera.scale);
+          });
+        } else {
+          diagramAfterRender(function() { window.__cmuxDiagramFit(); });
+        }
       }
     } catch (e) {
       contentEl.innerHTML =
