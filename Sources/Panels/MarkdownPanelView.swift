@@ -93,9 +93,9 @@ struct MarkdownPanelView: View {
                 onRequestPanelFocus: onRequestPanelFocus
             )
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .opacity(panel.displayMode == .preview ? 1 : 0)
-            .allowsHitTesting(panel.displayMode == .preview)
-            .accessibilityHidden(panel.displayMode != .preview)
+            .opacity(panel.displayMode != .text ? 1 : 0)
+            .allowsHitTesting(panel.displayMode != .text)
+            .accessibilityHidden(panel.displayMode == .text)
 
             if panel.displayMode == .text {
                 FilePreviewTextEditor(
@@ -156,11 +156,19 @@ struct MarkdownPanelView: View {
                 label: String(localized: "markdown.mode.showTextEdit", defaultValue: "Show TextEdit"),
                 action: { panel.setDisplayMode(.text) }
             )
+        case .diagram:
+            PanelHeaderIconButton(
+                systemName: "doc.plaintext",
+                label: String(localized: "markdown.mode.showDiagramSource", defaultValue: "Show Source"),
+                action: { panel.setDisplayMode(.text) }
+            )
         case .text:
             PanelHeaderIconButton(
-                systemName: "eye",
-                label: String(localized: "markdown.mode.showPreview", defaultValue: "Show Preview"),
-                action: { panel.setDisplayMode(.preview) }
+                systemName: panel.isDiagramFile ? "point.topleft.down.curvedto.point.bottomright.up" : "eye",
+                label: panel.isDiagramFile
+                    ? String(localized: "markdown.mode.showDiagram", defaultValue: "Show Diagram")
+                    : String(localized: "markdown.mode.showPreview", defaultValue: "Show Preview"),
+                action: { panel.setDisplayMode(panel.isDiagramFile ? .diagram : .preview) }
             )
         }
     }

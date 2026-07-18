@@ -97678,6 +97678,40 @@
         }
       }
     },
+    "markdown.mode.showDiagram": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Show Diagram"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "図を表示"
+          }
+        }
+      }
+    },
+    "markdown.mode.showDiagramSource": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Show Source"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ソースを表示"
+          }
+        }
+      }
+    },
     "markdown.mode.showPreview": {
       "extractionState": "manual",
       "localizations": {

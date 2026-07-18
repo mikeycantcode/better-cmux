@@ -6,6 +6,10 @@ import Foundation
 enum MarkdownPanelDisplayMode: String, CaseIterable, Identifiable {
     case preview
     case text
+    /// Single-diagram canvas for standalone `.mmd`/`.mermaid` files. Renders
+    /// through the same WebView shell as `.preview`, but with document flow
+    /// suppressed and a pan/zoom camera installed.
+    case diagram
 
     var id: String { rawValue }
 }
@@ -35,8 +39,14 @@ final class MarkdownPanel: Panel, ObservableObject, FilePreviewTextEditingPanel 
     /// Whether TextEdit mode is saving to disk.
     @Published private(set) var isSaving: Bool = false
 
-    /// The current view mode for this markdown panel. New panels default to preview.
+    /// The current view mode for this markdown panel. Markdown files default to
+    /// preview; standalone diagram files default to the diagram canvas.
     @Published private(set) var displayMode: MarkdownPanelDisplayMode = .preview
+
+    /// True when this panel was opened on a standalone mermaid source file.
+    /// Diagram files never enter `.preview` — their two modes are `.diagram`
+    /// and `.text`.
+    let isDiagramFile: Bool
 
     /// Title shown in the tab bar (filename).
     @Published private(set) var displayTitle: String = ""
@@ -105,6 +115,7 @@ final class MarkdownPanel: Panel, ObservableObject, FilePreviewTextEditingPanel 
         self.id = UUID()
         self.workspaceId = workspaceId
         self.filePath = filePath
+        self.isDiagramFile = MermaidDiagramFileResolver.isDiagramPathLike(filePath)
         self.fontSize = MarkdownFontSizeSettings.clamp(fontSize ?? defaultSize)
         self.fontFamily = defaultFamily
         self.maxContentWidth = defaultMaxWidth
@@ -112,6 +123,10 @@ final class MarkdownPanel: Panel, ObservableObject, FilePreviewTextEditingPanel 
         self.followedFontFamily = defaultFamily
         self.followedMaxContentWidth = defaultMaxWidth
         self.displayTitle = (filePath as NSString).lastPathComponent
+
+        if self.isDiagramFile {
+            self.displayMode = .diagram
+        }
 
         loadFileContent()
         startWatching()
@@ -373,7 +388,9 @@ final class MarkdownPanel: Panel, ObservableObject, FilePreviewTextEditingPanel 
             return
         }
 
-        content = newContent
+        content = isDiagramFile
+            ? MermaidDiagramFileResolver.wrapAsMermaidFence(newContent)
+            : newContent
         textContent = newContent
         originalTextContent = newContent
         textEncoding = encoding
