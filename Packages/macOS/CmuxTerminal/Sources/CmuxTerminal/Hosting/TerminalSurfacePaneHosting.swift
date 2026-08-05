@@ -26,11 +26,4 @@ public protocol TerminalSurfacePaneHosting: NSView {
     /// indicator text.
     func syncKeyStateIndicator(text: String?)
 
-    /// Draws or clears the mobile-viewport cap border.
-    ///
-    /// - Parameters:
-    ///   - size: The capped content size in points, or nil to clear.
-    ///   - drawRight: Whether the cap shrinks the width (right border).
-    ///   - drawBottom: Whether the cap shrinks the height (bottom border).
-    func setMobileViewportBorder(size: CGSize?, drawRight: Bool, drawBottom: Bool)
 }

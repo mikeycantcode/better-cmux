@@ -11,7 +11,7 @@ final class CmuxSSHURLRequestTests: XCTestCase {
     deinit {}
 
     private var supportedScheme: String {
-        AuthEnvironment.callbackScheme
+        CmuxURLScheme.callbackScheme
     }
 
     func testParsesSSHURLWithExplicitHostUserPortAndTitle() throws {

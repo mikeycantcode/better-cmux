@@ -61,35 +61,6 @@ extension TerminalController {
         return .openedExternally(windowID: windowId, url: url.absoluteString)
     }
 
-    /// Pre-mutation validation for terminal create/split requests aimed at a
-    /// remote tmux mirror workspace. The routed tmux command (`split-window` /
-    /// `new-window`) cannot honor these options, and reporting "accepted" while
-    /// silently dropping them would lie to the caller — so reject BEFORE
-    /// routing, while the remote session is still unmutated (an error after the
-    /// mutation invites retries that duplicate remote panes). `focus` is
-    /// deliberately NOT validated: the socket default is `focus=false` and tmux
-    /// always focuses the new remote pane, so it stays best-effort. Shared by
-    /// the surface-split/create and pane-create context witnesses.
-    func mirrorRoutedUnsupportedOptions(
-        insertFirst: Bool = false,
-        workingDirectory: String?,
-        initialCommand: String?,
-        tmuxStartCommand: String?,
-        startupEnvironment: [String: String],
-        initialDividerPosition: Double? = nil,
-        remotePTYSessionID: String? = nil
-    ) -> [String] {
-        var unsupported: [String] = []
-        if insertFirst { unsupported.append("direction=left/up") }
-        if workingDirectory != nil { unsupported.append("working_directory") }
-        if initialCommand != nil { unsupported.append("initial_command") }
-        if tmuxStartCommand != nil { unsupported.append("tmux_start_command") }
-        if !startupEnvironment.isEmpty { unsupported.append("startup_environment") }
-        if initialDividerPosition != nil { unsupported.append("initial_divider_position") }
-        if remotePTYSessionID != nil { unsupported.append("remote_pty_session_id") }
-        return unsupported
-    }
-
     // MARK: - split
 
     func controlSurfaceSplit(
@@ -133,22 +104,6 @@ extension TerminalController {
             return .noFocusedSurface
         }
 
-        if ws.isRemoteTmuxMirror, panelType == .terminal {
-            let unsupported = mirrorRoutedUnsupportedOptions(
-                insertFirst: direction.insertFirst,
-                workingDirectory: inputs.workingDirectory,
-                initialCommand: inputs.initialCommand,
-                tmuxStartCommand: inputs.tmuxStartCommand,
-                startupEnvironment: inputs.startupEnvironment,
-                initialDividerPosition: inputs.initialDividerPosition,
-                remotePTYSessionID: inputs.remotePTYSessionID
-            )
-                + inputs.clientUnsupportedRemoteTmuxOptions
-            if !unsupported.isEmpty {
-                return .mirrorUnsupportedOptions(unsupported)
-            }
-        }
-
         v2MaybeFocusWindow(for: tabManager)
         v2MaybeSelectWorkspace(tabManager, workspace: ws)
 
@@ -177,17 +132,10 @@ extension TerminalController {
                 initialCommand: inputs.initialCommand,
                 tmuxStartCommand: inputs.tmuxStartCommand,
                 startupEnvironment: inputs.startupEnvironment,
-                initialDividerPosition: dividerPosition,
-                remotePTYSessionID: inputs.remotePTYSessionID
+                initialDividerPosition: dividerPosition
             ) {
             case .created(let panel):
                 newId = panel.id
-            case .routedToRemote:
-                return .routedToRemote(
-                    windowID: v2ResolveWindowId(tabManager: tabManager),
-                    workspaceID: ws.id,
-                    typeRawValue: panelType.rawValue
-                )
             case .failed:
                 newId = nil
             }
@@ -327,19 +275,6 @@ extension TerminalController {
             return .paneNotFound
         }
 
-        if ws.isRemoteTmuxMirror, panelType == .terminal {
-            let unsupported = mirrorRoutedUnsupportedOptions(
-                workingDirectory: inputs.workingDirectory,
-                initialCommand: inputs.initialCommand,
-                tmuxStartCommand: inputs.tmuxStartCommand,
-                startupEnvironment: inputs.startupEnvironment,
-                remotePTYSessionID: inputs.remotePTYSessionID
-            )
-            if !unsupported.isEmpty {
-                return .mirrorUnsupportedOptions(unsupported)
-            }
-        }
-
         let focus = v2FocusAllowed(requested: inputs.requestedFocus)
         let newPanelId: UUID?
         if panelType == .browser {
@@ -365,17 +300,10 @@ extension TerminalController {
                 initialCommand: inputs.initialCommand,
                 tmuxStartCommand: inputs.tmuxStartCommand,
                 startupEnvironment: inputs.startupEnvironment,
-                remotePTYSessionID: inputs.remotePTYSessionID,
                 inheritWorkingDirectoryFallback: true
             ) {
             case .created(let panel):
                 newPanelId = panel.id
-            case .routedToRemote:
-                return .routedToRemote(
-                    windowID: v2ResolveWindowId(tabManager: tabManager),
-                    workspaceID: ws.id,
-                    typeRawValue: panelType.rawValue
-                )
             case .failed:
                 newPanelId = nil
             }

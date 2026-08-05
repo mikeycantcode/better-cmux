@@ -1,5 +1,4 @@
 import CMUXAgentLaunch
-import CmuxCore
 import CmuxFoundation
 import CmuxWorkspaces
 import Darwin

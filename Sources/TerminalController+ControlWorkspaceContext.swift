@@ -1,5 +1,4 @@
 import CmuxControlSocket
-import CmuxCore
 import CmuxPanes
 import CmuxWorkspaces
 import Foundation
@@ -12,11 +11,11 @@ import Foundation
 /// resolution goes through the shared `resolveTabManager(routing:)` and the
 /// workspace-owner-first resolutions the legacy bodies used; app structs are
 /// converted to the package's Sendable snapshots, and app-typed payloads (the
-/// `remoteStatusPayload()` object) are bridged to ``JSONValue``.
+/// payload objects are bridged to ``JSONValue``.
 ///
 /// `workspace.group.*` lives in `TerminalController+ControlWorkspaceGroupContext`;
 /// `workspace.action` / `extension.sidebar.snapshot` and the worker-lane
-/// `workspace.remote.pty_*` (sessions/close/detach/bridge/resize) methods stay on
+/// legacy v1 methods stay on
 /// the app-side dispatcher.
 extension TerminalController: ControlWorkspaceContext {
     func controlWorkspaceStrings() -> ControlWorkspaceStrings {
@@ -56,14 +55,14 @@ extension TerminalController: ControlWorkspaceContext {
 
     /// Builds the Sendable summary of one workspace (the legacy
     /// `v2WorkspaceSummaryPayload` data, minus the index/selected/ref minting the
-    /// coordinator now owns), bridging the app-typed `remoteStatusPayload()`.
+    /// coordinator now owns).
     private func controlWorkspaceSummary(_ workspace: Workspace) -> ControlWorkspaceSummary {
         ControlWorkspaceSummary(
             id: workspace.id, title: workspace.title, customTitle: workspace.customTitle,
             customDescription: workspace.customDescription,
             isPinned: workspace.isPinned,
             listeningPorts: workspace.listeningPorts,
-            remoteStatus: JSONValue(foundationObject: workspace.remoteStatusPayload()) ?? .object([:]),
+            remoteStatus: .object([:]),
             currentDirectory: workspace.currentDirectory,
             customColor: workspace.customColor,
             latestConversationMessage: workspace.latestConversationMessage,
@@ -113,7 +112,7 @@ extension TerminalController: ControlWorkspaceContext {
     // MARK: - Create
 
     /// `workspace.create` forwards to the single shared `v2WorkspaceCreate` body
-    /// (also driven by `v2MobileWorkspaceCreate`), bridging its Foundation result
+    /// bridging its Foundation result
     /// — one source of truth for the create logic, byte-identical wire output.
     func controlWorkspaceCreate(params: [String: JSONValue]) -> ControlCallResult {
         switch v2WorkspaceCreate(params: params.mapValues(\.foundationObject)) {
@@ -411,324 +410,6 @@ extension TerminalController: ControlWorkspaceContext {
         }
         guard let workspaceId = tabManager.selectedTabId else { return nil }
         return tabManager.tabs.first(where: { $0.id == workspaceId })
-    }
-
-    // MARK: - Remote
-
-    func controlResolveRemoteWorkspaceID(
-        routing: ControlRoutingSelectors,
-        requestedWorkspaceID: UUID?
-    ) -> UUID? {
-        let fallbackTabManager = resolveTabManager(routing: routing)
-        return requestedWorkspaceID ?? fallbackTabManager?.selectedTabId
-    }
-
-    func controlDisconnectWorkspaceRemote(
-        workspaceID: UUID,
-        clearConfiguration: Bool
-    ) -> ControlWorkspaceRemoteResolution {
-        guard let owner = AppDelegate.shared?.tabManagerFor(tabId: workspaceID),
-              let workspace = owner.tabs.first(where: { $0.id == workspaceID }) else {
-            return .notFound(workspaceID: workspaceID)
-        }
-        workspace.disconnectRemoteConnection(clearConfiguration: clearConfiguration)
-        let windowId = AppDelegate.shared?.windowId(for: owner)
-        return .resolved(
-            windowID: windowId,
-            workspaceID: workspace.id,
-            remoteStatus: JSONValue(foundationObject: workspace.remoteStatusPayload()) ?? .object([:])
-        )
-    }
-
-    func controlReconnectWorkspaceRemote(
-        workspaceID: UUID,
-        surfaceID: UUID?
-    ) -> ControlWorkspaceRemoteResolution {
-        guard let owner = AppDelegate.shared?.tabManagerFor(tabId: workspaceID),
-              let workspace = owner.tabs.first(where: { $0.id == workspaceID }) else {
-            return .notFound(workspaceID: workspaceID)
-        }
-        guard workspace.remoteConfiguration != nil else {
-            return .notConfigured(workspaceID: workspaceID)
-        }
-        workspace.reconnectRemoteConnection(surfaceId: surfaceID)
-        notifyRemotePTYControllerAvailabilityChanged()
-        let windowId = AppDelegate.shared?.windowId(for: owner)
-        return .resolved(
-            windowID: windowId,
-            workspaceID: workspace.id,
-            remoteStatus: JSONValue(foundationObject: workspace.remoteStatusPayload()) ?? .object([:])
-        )
-    }
-
-    func controlWorkspaceRemoteForegroundAuthReady(
-        workspaceID: UUID,
-        foregroundAuthToken: String?
-    ) -> ControlWorkspaceRemoteResolution {
-        guard let owner = AppDelegate.shared?.tabManagerFor(tabId: workspaceID),
-              let workspace = owner.tabs.first(where: { $0.id == workspaceID }) else {
-            return .notFound(workspaceID: workspaceID)
-        }
-        workspace.notifyRemoteForegroundAuthenticationReady(token: foregroundAuthToken)
-        notifyRemotePTYControllerAvailabilityChanged()
-        let windowId = AppDelegate.shared?.windowId(for: owner)
-        return .resolved(
-            windowID: windowId,
-            workspaceID: workspace.id,
-            remoteStatus: JSONValue(foundationObject: workspace.remoteStatusPayload()) ?? .object([:])
-        )
-    }
-
-    func controlWorkspaceRemoteStatus(workspaceID: UUID) -> ControlWorkspaceRemoteResolution {
-        guard let owner = AppDelegate.shared?.tabManagerFor(tabId: workspaceID),
-              let workspace = owner.tabs.first(where: { $0.id == workspaceID }) else {
-            return .notFound(workspaceID: workspaceID)
-        }
-        let windowId = AppDelegate.shared?.windowId(for: owner)
-        return .resolved(
-            windowID: windowId,
-            workspaceID: workspace.id,
-            remoteStatus: JSONValue(foundationObject: workspace.remoteStatusPayload()) ?? .object([:])
-        )
-    }
-
-    func controlConfigureWorkspaceRemote(
-        params typedParams: [String: JSONValue],
-        workspaceID workspaceId: UUID
-    ) -> ControlCallResult {
-        // The configure body validates ~40 params against the app's
-        // `WorkspaceRemote*` types, so it stays app-side. Bridge the typed params
-        // back to the `[String: Any]` shape the legacy `v2*` param helpers expect
-        // so the acceptance is byte-identical.
-        let params: [String: Any] = typedParams.mapValues(\.foundationObject)
-
-        guard let destination = v2String(params, "destination") else {
-            return .err(code: "invalid_params", message: "Missing destination", data: nil)
-        }
-
-        var sshPort: Int?
-        if v2HasNonNullParam(params, "port") {
-            guard let parsedPort = v2StrictInt(params, "port"),
-                  parsedPort > 0,
-                  parsedPort <= 65535 else {
-                return .err(code: "invalid_params", message: "port must be 1-65535", data: nil)
-            }
-            sshPort = parsedPort
-        }
-
-        var localProxyPort: Int?
-        if v2HasNonNullParam(params, "local_proxy_port") {
-            guard let parsedLocalProxyPort = v2StrictInt(params, "local_proxy_port"),
-                  parsedLocalProxyPort > 0,
-                  parsedLocalProxyPort <= 65535 else {
-                return .err(code: "invalid_params", message: "local_proxy_port must be 1-65535", data: nil)
-            }
-            localProxyPort = parsedLocalProxyPort
-        }
-
-        let identityFile = v2RawString(params, "identity_file")?.trimmingCharacters(in: .whitespacesAndNewlines)
-        let sshOptions = v2StringArray(params, "ssh_options") ?? []
-        let transportRaw = v2RawString(params, "transport")?
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-            .lowercased()
-        let transport = WorkspaceRemoteTransport(rawValue: transportRaw ?? "") ?? .ssh
-        let autoConnect = v2Bool(params, "auto_connect") ?? true
-        var relayPort: Int?
-        if v2HasNonNullParam(params, "relay_port") {
-            guard let parsedRelayPort = v2StrictInt(params, "relay_port"),
-                  parsedRelayPort > 0,
-                  parsedRelayPort <= 65535 else {
-                return .err(code: "invalid_params", message: "relay_port must be 1-65535", data: nil)
-            }
-            relayPort = parsedRelayPort
-        }
-        let relayID = v2RawString(params, "relay_id")?.trimmingCharacters(in: .whitespacesAndNewlines)
-        let relayToken = v2RawString(params, "relay_token")?.trimmingCharacters(in: .whitespacesAndNewlines)
-        let foregroundAuthToken = v2RawString(params, "foreground_auth_token")?
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-        let localSocketPath = v2RawString(params, "local_socket_path")
-        let hasExplicitAgentSocketPath = v2HasNonNullParam(params, "ssh_auth_sock")
-        let agentSocketPath = v2RawString(params, "ssh_auth_sock")?
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-        let terminalStartupCommand = v2RawString(params, "terminal_startup_command")?
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-        var persistentDaemonSlot = v2RawString(params, "persistent_daemon_slot")?
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-        if v2HasNonNullParam(params, "persistent_daemon_slot") {
-            guard let persistentDaemonSlot,
-                  !persistentDaemonSlot.isEmpty,
-                  persistentDaemonSlot.range(of: "^[A-Za-z0-9._-]{1,128}$", options: .regularExpression) != nil,
-                  persistentDaemonSlot != ".",
-                  persistentDaemonSlot != ".." else {
-                return .err(
-                    code: "invalid_params",
-                    message: "persistent_daemon_slot must contain only letters, numbers, '.', '_' or '-'",
-                    data: nil
-                )
-            }
-        }
-        let daemonWebSocketURL = v2RawString(params, "daemon_websocket_url")?
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-        let daemonWebSocketToken = v2RawString(params, "daemon_websocket_token")?
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-        let daemonWebSocketSessionID = v2RawString(params, "daemon_websocket_session_id")?
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-        let daemonWebSocketExpiresAtUnix = (params["daemon_websocket_expires_at_unix"] as? Int64)
-            ?? Int64((params["daemon_websocket_expires_at_unix"] as? Double) ?? 0)
-        let rawDaemonHeaders = params["daemon_websocket_headers"] as? [String: Any] ?? [:]
-        let daemonWebSocketHeaders = rawDaemonHeaders.reduce(into: [String: String]()) { result, pair in
-            if let value = pair.value as? String {
-                result[pair.key] = value
-            }
-        }
-        let daemonWebSocketEndpoint: WorkspaceRemoteWebSocketDaemonEndpoint?
-        if let daemonWebSocketURL,
-           !daemonWebSocketURL.isEmpty,
-           let daemonWebSocketToken,
-           !daemonWebSocketToken.isEmpty,
-           let daemonWebSocketSessionID,
-           !daemonWebSocketSessionID.isEmpty {
-            daemonWebSocketEndpoint = WorkspaceRemoteWebSocketDaemonEndpoint(
-                url: daemonWebSocketURL,
-                headers: daemonWebSocketHeaders,
-                token: daemonWebSocketToken,
-                sessionId: daemonWebSocketSessionID,
-                expiresAtUnix: daemonWebSocketExpiresAtUnix
-            )
-        } else {
-            daemonWebSocketEndpoint = nil
-        }
-        let preserveAfterTerminalExit = v2Bool(params, "preserve_after_terminal_exit") ?? false
-        if v2HasNonNullParam(params, "preserve_after_terminal_exit"),
-           v2Bool(params, "preserve_after_terminal_exit") == nil {
-            return .err(
-                code: "invalid_params",
-                message: "preserve_after_terminal_exit must be a boolean",
-                data: nil
-            )
-        }
-        let skipDaemonBootstrap = v2Bool(params, "skip_daemon_bootstrap") ?? false
-        if persistentDaemonSlot != nil, !preserveAfterTerminalExit {
-            return .err(
-                code: "invalid_params",
-                message: "preserve_after_terminal_exit is required when persistent_daemon_slot is set",
-                data: nil
-            )
-        }
-        if preserveAfterTerminalExit,
-           transport == .ssh,
-           !skipDaemonBootstrap,
-           daemonWebSocketEndpoint == nil,
-           persistentDaemonSlot == nil {
-            persistentDaemonSlot = "ssh-\(workspaceId.uuidString.lowercased())"
-        }
-        if relayPort != nil {
-            guard let relayID, !relayID.isEmpty else {
-                return .err(code: "invalid_params", message: "relay_id is required when relay_port is set", data: nil)
-            }
-            guard let relayToken,
-                  relayToken.range(of: "^[0-9a-f]{64}$", options: .regularExpression) != nil else {
-                return .err(code: "invalid_params", message: "relay_token must be 64 lowercase hex characters when relay_port is set", data: nil)
-            }
-        }
-
-#if DEBUG
-        cmuxDebugLog(
-            "workspace.remote.configure.request workspace=\(workspaceId.uuidString.prefix(8)) " +
-            "target=\(destination) transport=\(transport.rawValue) port=\(sshPort.map(String.init) ?? "nil") " +
-            "autoConnect=\(autoConnect ? 1 : 0) relayPort=\(relayPort.map(String.init) ?? "nil") " +
-            "localSocket=\(localSocketPath?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false ? localSocketPath! : "nil") " +
-            "sshAuthSock=\(agentSocketPath?.isEmpty == false ? 1 : 0) " +
-            "sshOptions=\(sshOptions.joined(separator: "|"))"
-        )
-#endif
-
-        guard let owner = AppDelegate.shared?.tabManagerFor(tabId: workspaceId),
-              let workspace = owner.tabs.first(where: { $0.id == workspaceId }) else {
-            return .err(code: "not_found", message: "Workspace not found", data: .object([
-                "workspace_id": .string(workspaceId.uuidString),
-                "workspace_ref": controlWorkspaceRefValue(workspaceId),
-            ]))
-        }
-
-        let config = WorkspaceRemoteConfiguration(
-            transport: transport,
-            destination: destination,
-            port: sshPort,
-            identityFile: identityFile?.isEmpty == true ? nil : identityFile,
-            sshOptions: sshOptions,
-            localProxyPort: localProxyPort,
-            relayPort: relayPort,
-            relayID: relayID?.isEmpty == true ? nil : relayID,
-            relayToken: relayToken?.isEmpty == true ? nil : relayToken,
-            localSocketPath: localSocketPath,
-            terminalStartupCommand: terminalStartupCommand?.isEmpty == true ? nil : terminalStartupCommand,
-            foregroundAuthToken: foregroundAuthToken?.isEmpty == true ? nil : foregroundAuthToken,
-            agentSocketPath: WorkspaceRemoteConfiguration.resolvedAgentSocketPath(
-                sshOptions: sshOptions,
-                explicitAgentSocketPath: agentSocketPath,
-                explicitAgentSocketPathIsSet: hasExplicitAgentSocketPath
-            ),
-            daemonWebSocketEndpoint: daemonWebSocketEndpoint,
-            preserveAfterTerminalExit: preserveAfterTerminalExit,
-            persistentDaemonSlot: persistentDaemonSlot?.isEmpty == true ? nil : persistentDaemonSlot,
-            skipDaemonBootstrap: skipDaemonBootstrap
-        )
-        workspace.configureRemoteConnection(config, autoConnect: autoConnect)
-        notifyRemotePTYControllerAvailabilityChanged()
-
-        let windowId = AppDelegate.shared?.windowId(for: owner)
-        return .ok(.object([
-            "window_id": controlWindowOrNull(windowId),
-            "window_ref": controlWindowRefValue(windowId),
-            "workspace_id": .string(workspace.id.uuidString),
-            "workspace_ref": controlWorkspaceRefValue(workspace.id),
-            "remote": JSONValue(foundationObject: workspace.remoteStatusPayload()) ?? .object([:]),
-        ]))
-    }
-
-    func controlWorkspaceRemotePTYAttachEnd(
-        workspaceID workspaceId: UUID,
-        surfaceID surfaceId: UUID,
-        sessionID: String
-    ) -> ControlWorkspaceRemotePTYAttachEndResolution {
-        let located = AppDelegate.shared?.workspaceContainingPanel(
-            panelId: surfaceId,
-            preferredWorkspaceId: workspaceId
-        )
-        let fallbackOwner = AppDelegate.shared?.tabManagerFor(tabId: workspaceId)
-        let fallbackWorkspace = fallbackOwner?.tabs.first(where: { $0.id == workspaceId })
-        guard let owner = located?.tabManager ?? fallbackOwner,
-              let workspace = located?.workspace ?? fallbackWorkspace else {
-            return .notFound
-        }
-        let outcome = workspace.markRemotePTYAttachEnded(surfaceId: surfaceId, sessionID: sessionID)
-        let windowId = AppDelegate.shared?.windowId(for: owner)
-        return .resolved(
-            windowID: windowId,
-            workspaceID: workspace.id,
-            clearedRemotePTYSession: outcome.clearedRemotePTYSession,
-            untrackedRemoteTerminal: outcome.untrackedRemoteTerminal,
-            remoteStatus: JSONValue(foundationObject: workspace.remoteStatusPayload()) ?? .object([:])
-        )
-    }
-
-    func controlWorkspaceRemoteTerminalSessionEnd(
-        workspaceID workspaceId: UUID,
-        surfaceID surfaceId: UUID,
-        relayPort: Int
-    ) -> ControlWorkspaceRemoteTerminalSessionEndResolution {
-        guard let owner = AppDelegate.shared?.tabManagerFor(tabId: workspaceId),
-              let workspace = owner.tabs.first(where: { $0.id == workspaceId }) else {
-            return .notFound
-        }
-        workspace.markRemoteTerminalSessionEnded(surfaceId: surfaceId, relayPort: relayPort)
-        let windowId = AppDelegate.shared?.windowId(for: owner)
-        return .resolved(
-            windowID: windowId,
-            workspaceID: workspace.id,
-            remoteStatus: JSONValue(foundationObject: workspace.remoteStatusPayload()) ?? .object([:])
-        )
     }
 
     // MARK: - Ref helpers (mint through the shared registry the coordinator owns)

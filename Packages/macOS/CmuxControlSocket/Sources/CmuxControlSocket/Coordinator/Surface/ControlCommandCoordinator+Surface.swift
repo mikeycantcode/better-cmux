@@ -246,9 +246,7 @@ extension ControlCommandCoordinator {
             workingDirectory: optionalTrimmedRawString(params, "working_directory"),
             initialCommand: optionalTrimmedRawString(params, "initial_command"),
             tmuxStartCommand: optionalTrimmedRawString(params, "tmux_start_command"),
-            remotePTYSessionID: optionalTrimmedRawString(params, "remote_pty_session_id"),
             startupEnvironment: trimmedStringMap(params, keys: ["startup_environment", "initial_env"]),
-            clientUnsupportedRemoteTmuxOptions: stringArray(params, "remote_tmux_unsupported_options") ?? [],
             requestedFocus: bool(params, "focus") ?? false,
             initialDividerPosition: parsedDivider.value
         )
@@ -287,14 +285,6 @@ extension ControlCommandCoordinator {
             return .err(code: "not_found", message: "No focused surface", data: nil)
         case .createFailed:
             return .err(code: "internal_error", message: "Failed to create split", data: nil)
-        case .mirrorUnsupportedOptions(let unsupported):
-            return mirrorUnsupportedOptionsResult(unsupported)
-        case .routedToRemote(let windowID, let workspaceID, let typeRawValue):
-            return remoteRoutedCreationResult(
-                windowID: windowID,
-                workspaceID: workspaceID,
-                typeRawValue: typeRawValue
-            )
         case .created(let windowID, let workspaceID, let paneID, let surfaceID, let typeRawValue):
             return .ok(.object([
                 "window_id": orNull(windowID?.uuidString),
@@ -400,7 +390,6 @@ extension ControlCommandCoordinator {
             workingDirectory: optionalTrimmedRawString(params, "working_directory"),
             initialCommand: optionalTrimmedRawString(params, "initial_command"),
             tmuxStartCommand: optionalTrimmedRawString(params, "tmux_start_command"),
-            remotePTYSessionID: optionalTrimmedRawString(params, "remote_pty_session_id"),
             startupEnvironment: trimmedStringMap(params, keys: ["startup_environment", "initial_env"]),
             requestedPaneID: uuid(params, "pane_id"),
             requestedFocus: bool(params, "focus") ?? false
@@ -431,14 +420,6 @@ extension ControlCommandCoordinator {
             return .err(code: "not_found", message: "Pane not found", data: nil)
         case .createFailed:
             return .err(code: "internal_error", message: "Failed to create surface", data: nil)
-        case .mirrorUnsupportedOptions(let unsupported):
-            return mirrorUnsupportedOptionsResult(unsupported)
-        case .routedToRemote(let windowID, let workspaceID, let typeRawValue):
-            return remoteRoutedCreationResult(
-                windowID: windowID,
-                workspaceID: workspaceID,
-                typeRawValue: typeRawValue
-            )
         case .created(let windowID, let workspaceID, let paneID, let surfaceID, let typeRawValue):
             return .ok(.object([
                 "window_id": orNull(windowID?.uuidString),

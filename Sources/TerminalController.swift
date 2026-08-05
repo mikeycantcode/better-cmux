@@ -1,19 +1,12 @@
 import AppKit
-import CmuxRemoteSession
-import CmuxCore
-import CmuxAuthRuntime
-import CmuxFeedback
 import CmuxBrowser
 import CmuxControlSocket
 import CmuxFoundation
 import CmuxPanes
-import CmuxRemoteDaemon
-import CmuxRemoteWorkspace
 import CmuxTerminal
 import CmuxSettings
 import CmuxSwiftRenderUI
 import Carbon.HIToolbox
-import CMUXMobileCore
 import CMUXAgentLaunch
 import Foundation
 import Bonsplit
@@ -35,85 +28,15 @@ nonisolated private struct SocketLineProcessingResult: Sendable {
     let authenticated: Bool
 }
 
-nonisolated private struct RemotePTYSocketTarget {
-    let controller: RemoteSessionCoordinator?
-    let windowId: UUID?
-    let windowRef: Any
-    let workspaceId: UUID
-    let workspaceRef: Any
-    let workspaceTitle: String
-}
-
-nonisolated func remotePTYSessionListErrorIsUnsupportedDaemon(_ error: Error) -> Bool {
-    let nsError = error as NSError
-    guard nsError.domain == "cmux.remote.daemon.rpc", nsError.code == 14 else {
-        return false
-    }
-    return error.localizedDescription
-        .range(of: "pty.list failed (method_not_found)", options: [.caseInsensitive]) != nil
-}
-
-nonisolated private func v2RemotePTYUserFacingErrorMessage(_ error: Error) -> String {
-    v2RemotePTYUserFacingErrorMessage(error.localizedDescription)
-}
-
-nonisolated private func v2RemotePTYUserFacingErrorMessage(_ message: String) -> String {
-    let trimmed = message.trimmingCharacters(in: .whitespacesAndNewlines)
-    guard !trimmed.isEmpty else { return "remote PTY operation failed" }
-    let lowered = trimmed.lowercased()
-    if lowered.contains("missing required capability") ||
-        lowered.contains("pty.session") ||
-        lowered.contains("method_not_found") {
-        return "remote daemon does not support persistent SSH PTY sessions; reconnect the remote workspace to update cmux"
-    }
-    if lowered.contains("pty_session_not_found") ||
-        (lowered.contains("persistent ssh pty session") && lowered.contains("not running")) ||
-        (lowered.contains("persistent pty session") && lowered.contains("not running")) {
-        return "persistent SSH PTY session is no longer running"
-    }
-    if lowered.contains("pty_input_queue_full") || lowered.contains("pty input queue is full") {
-        return "remote PTY input is temporarily backed up"
-    }
-    if lowered.contains("remote connection is not active") {
-        return "remote connection is not active"
-    }
-    if lowered.contains("remote daemon is not ready") || lowered.contains("remote daemon tunnel is not ready") {
-        return "remote daemon is not ready"
-    }
-    if lowered.contains("missing workspace_id in ssh pty session list response") {
-        return "missing workspace_id in SSH PTY session list response"
-    }
-    if lowered.contains("missing session_id in ssh pty session list response") {
-        return "missing session_id in SSH PTY session list response"
-    }
-    if lowered.contains("timed out") || lowered.contains("timeout") {
-        return "remote daemon did not respond in time"
-    }
-    return "remote PTY operation failed"
-}
-
 /// Unix socket-based controller for programmatic terminal control
 /// Allows automated testing and external control of terminal tabs
 @MainActor
 class TerminalController {
     static let shared = TerminalController()
 
-    private nonisolated let remotePTYControllerAvailabilityCondition = NSCondition()
-    private nonisolated(unsafe) var remotePTYControllerAvailabilityGeneration: UInt64 = 0
     var tabManager: TabManager?
-    /// The shared auth coordinator + browser sign-in flow, injected once via
-    /// `attachAuth` at app startup (AppDelegate `configure`) before the socket
-    /// listener starts. Socket auth commands read these on the main actor.
-    @MainActor private(set) var authCoordinator: AuthCoordinator?
-    @MainActor private(set) var browserSignInFlow: HostBrowserSignInFlow?
-    @MainActor var agentChatTranscriptService: AgentChatTranscriptService?
     // Sendable value type; injected at construction so socket auth never reaches a global.
     private nonisolated let passwordStore: SocketControlPasswordStore
-    /// Process-wide proxy-tunnel broker (one shared tunnel per remote transport across all
-    /// windows), constructed at this app-hub composition point and injected into each
-    /// `WorkspaceRemoteSessionController`; ownership moves to the composition root with the
-    /// planned `RemoteSessionCoordinator` wiring.
-    nonisolated let remoteProxyBroker: any RemoteProxyBrokering
     // Stateless Sendable structs from CmuxControlSocket; injected at construction.
     // `transport` is internal so sibling-file extensions (CmuxEventStream) can write through it.
     nonisolated let transport: SocketTransport
@@ -139,21 +62,6 @@ class TerminalController {
     private nonisolated static let v2BrowserDownloadWaitMaxTimeoutMs = 120_000
     private nonisolated static let socketListenerFailureCaptureLock = NSLock()
     private nonisolated(unsafe) static var socketListenerFailureLastCapturedAt: [String: Date] = [:]
-    private struct MobileViewportReport {
-        var columns: Int
-        var rows: Int
-        var updatedAt: Date
-        /// Sticky reports come from the dedicated `mobile.terminal.viewport`
-        /// RPC and live for the client's connection lifetime (cleared on
-        /// disconnect or surface detach), so an idle paired device keeps its
-        /// viewport border. Non-sticky reports piggyback on `terminal.input`
-        /// and expire on the TTL so a client that only ever typed once does
-        /// not pin the grid forever.
-        var sticky: Bool = false
-    }
-    private static let mobileViewportReportTTL: TimeInterval = 5
-    private var mobileViewportReportsBySurfaceID: [UUID: [String: MobileViewportReport]] = [:]
-    private var mobileViewportReportCleanupTimersBySurfaceID: [UUID: DispatchSourceTimer] = [:]
 #if DEBUG
     private nonisolated static let socketCommandDebugLogEnvironmentKey = "CMUX_DEBUG_SOCKET_COMMAND_LOG"
     private nonisolated static let socketCommandSlowThresholdMs: Double = 500
@@ -298,14 +206,10 @@ class TerminalController {
     private init(
         passwordStore: SocketControlPasswordStore = SocketControlPasswordStore(),
         transport: SocketTransport = SocketTransport(),
-        listenerPolicy: SocketListenerPolicy = SocketListenerPolicy(),
-        remoteProxyBroker: any RemoteProxyBrokering = RemoteProxyBroker(
-            tunnelProvider: RemoteDaemonProxyTunnelProvider(strings: .appLocalized, ptyBridgeStrings: AppRemotePTYBridgeStrings())
-        )
+        listenerPolicy: SocketListenerPolicy = SocketListenerPolicy()
     ) {
         self.passwordStore = passwordStore
         self.transport = transport
-        self.remoteProxyBroker = remoteProxyBroker
         let serverEventTarget = ServerEventTarget()
         let socketServer = SocketControlServer(
             transport: transport,
@@ -343,10 +247,6 @@ class TerminalController {
             }
         }
     }
-    nonisolated func currentSocketPathForRemoteRestore() -> String? {
-        socketServer.currentSocketPathForRemoteRestore()
-    }
-
     @discardableResult
     func reserveStartupSocketPath(_ path: String) -> String {
         socketServer.reserveStartupSocketPath(path)
@@ -632,14 +532,14 @@ class TerminalController {
         }
     }
 
-    nonisolated static func parseRemotePortScanKickReason(
+    nonisolated static func parsePortScanKickReason(
         _ rawReason: String
-    ) -> PortScanKickReason? {
+    ) -> String? {
         switch rawReason.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() {
         case "command", "running", "foreground", "start":
-            return .command
+            return "command"
         case "refresh", "prompt", "idle":
-            return .refresh
+            return "refresh"
         default:
             return nil
         }
@@ -648,9 +548,6 @@ class TerminalController {
     /// Update which window's TabManager receives socket commands.
     /// This is used when the user switches between multiple terminal windows.
     func setActiveTabManager(_ tabManager: TabManager?) {
-        if let tabManager {
-            AppDelegate.shared?.ensureMobileWorkspaceListObserver(for: tabManager)
-        }
         self.tabManager = tabManager
     }
 
@@ -687,21 +584,8 @@ class TerminalController {
         target: ServerEventTarget
     ) -> SocketControlServerEvents {
         SocketControlServerEvents(
-            breadcrumb: { message, data in
-                sentryBreadcrumb(message, category: "socket", data: data)
-            },
-            failure: { message, stage, errnoCode, data in
-                sentryBreadcrumb(message, category: "socket", data: data)
-                guard shouldCaptureSocketListenerFailure(
-                    message: message,
-                    stage: stage,
-                    path: data["path"] as? String ?? "",
-                    errnoCode: errnoCode
-                ) else {
-                    return
-                }
-                sentryCaptureError(message, category: "socket", data: data, contextKey: "socket_listener")
-            },
+            breadcrumb: { _, _ in },
+            failure: { _, _, _, _ in },
             listenerDidStart: { path, _ in
                 // @MainActor closure, invoked synchronously inside start().
                 target.controller?.socketListenerDidStart(path: path)
@@ -723,14 +607,6 @@ class TerminalController {
                 )
             }
         )
-    }
-
-    /// Inject the auth graph. Call once at the composition root, before the
-    /// socket listener accepts auth commands.
-    @MainActor
-    func attachAuth(coordinator: AuthCoordinator, browserSignIn: HostBrowserSignInFlow) {
-        self.authCoordinator = coordinator
-        self.browserSignInFlow = browserSignIn
     }
 
 
@@ -800,16 +676,6 @@ class TerminalController {
         let restartMode = socketServer.accessMode
         guard socketServer.shouldRestartForMissingPath(path: path, generation: generation) else { return }
 
-        sentryBreadcrumb(
-            "socket.listener.restart",
-            category: "socket",
-            data: [
-                "mode": restartMode.rawValue,
-                "path": path,
-                "source": "path_monitor",
-                "generation": generation
-            ]
-        )
         stop()
         start(tabManager: tabManager, socketPath: path, accessMode: restartMode)
     }
@@ -994,48 +860,6 @@ class TerminalController {
 
     private nonisolated func socketWorkerV2Response(_ request: V2SocketRequest) -> String {
         switch request.method {
-        case "auth.status":
-            let semaphore = DispatchSemaphore(value: 0)
-            Task { @MainActor [weak self] in
-                await self?.authCoordinator?.awaitBootstrapped()
-                semaphore.signal()
-            }
-            semaphore.wait()
-            return v2Ok(id: request.id, result: v2AuthStatusPayload(timedOut: false))
-        case "auth.sign_in_url":
-            var signInURL: String?
-            v2MainSync {
-                MainActor.assumeIsolated {
-                    signInURL = self.browserSignInFlow?.manualSignInURL.absoluteString
-                }
-            }
-            var result: [String: Any] = [:]
-            if let signInURL {
-                result["url"] = signInURL
-            }
-            return v2Ok(id: request.id, result: result)
-        case "auth.begin_sign_in":
-            let timeoutSeconds = (request.params["timeout_seconds"] as? Double) ?? 300
-            let semaphore = DispatchSemaphore(value: 0)
-            nonisolated(unsafe) var signedIn = false
-            Task { @MainActor [weak self] in
-                signedIn = await self?.browserSignInFlow?.signIn(
-                    timeout: timeoutSeconds
-                ) ?? false
-                semaphore.signal()
-            }
-            semaphore.wait()
-            return v2Ok(id: request.id, result: v2AuthStatusPayload(timedOut: !signedIn))
-        case "auth.sign_out":
-            let semaphore = DispatchSemaphore(value: 0)
-            Task { @MainActor [weak self] in
-                await self?.browserSignInFlow?.signOut(timeout: 5)
-                semaphore.signal()
-            }
-            semaphore.wait()
-            return v2Ok(id: request.id, result: v2AuthStatusPayload(timedOut: false))
-        case "feedback.submit":
-            return v2Result(id: request.id, v2FeedbackSubmit(params: request.params))
         case "workspace.snapshot":
             return v2Result(id: request.id, v2WorkspaceSnapshot(params: request.params))
         case "feed.push":
@@ -1089,10 +913,6 @@ class TerminalController {
                 let outcome = try await BrowserImportAutomation.importCookies(params: request.params)
                 return outcome.socketPayload
             }
-        case "mobile.attach_ticket.create":
-            return v2AsyncResultCall(id: request.id, timeoutSeconds: 30) {
-                await self.v2MobileAttachTicketCreate(params: request.params)
-            }
         case "system.ping":
             return v2Ok(id: request.id, result: ["pong": true])
         case "system.capabilities":
@@ -1103,28 +923,6 @@ class TerminalController {
             return v2Result(id: request.id, v2SystemMemory(params: request.params))
         case "workspace.env":
             return v2Result(id: request.id, v2WorkspaceEnv(params: request.params))
-        case "workspace.remote.pty_sessions":
-            return v2Result(id: request.id, v2WorkspaceRemotePTYSessions(params: request.params))
-        case "workspace.remote.pty_close":
-            return v2Result(id: request.id, v2WorkspaceRemotePTYClose(params: request.params))
-        case "workspace.remote.pty_detach":
-            return v2Result(id: request.id, v2WorkspaceRemotePTYDetach(params: request.params))
-        case "workspace.remote.pty_bridge":
-            return v2Result(id: request.id, v2WorkspaceRemotePTYBridge(params: request.params))
-        case "workspace.remote.pty_resize":
-            return v2Result(id: request.id, v2WorkspaceRemotePTYResize(params: request.params))
-        case "remote.tmux.sessions":
-            return v2RemoteTmuxSessions(id: request.id, params: request.params)
-        case "remote.tmux.attach":
-            return v2RemoteTmuxAttach(id: request.id, params: request.params)
-        case "remote.tmux.detach":
-            return v2RemoteTmuxDetach(id: request.id, params: request.params)
-        case "remote.tmux.state":
-            return v2RemoteTmuxState(id: request.id, params: request.params)
-        case "remote.tmux.mirror":
-            return v2RemoteTmuxMirror(id: request.id, params: request.params)
-        case "remote.tmux.window":
-            return v2RemoteTmuxWindow(id: request.id, params: request.params)
         case "sidebar.custom.validate":
             return v2Result(id: request.id, v2CustomSidebarValidate(params: request.params))
         case "sidebar.custom.reload":
@@ -1137,10 +935,6 @@ class TerminalController {
         case "debug.sidebar.simulate_drag":
             return v2Result(id: request.id, v2DebugSidebarSimulateDrag(params: request.params))
 #endif
-        case let method where method.hasPrefix("vm."):
-            return socketWorkerCloudVMResponse(method: method, id: request.id, params: request.params)
-        case let method where method.hasPrefix("remotes."):
-            return socketWorkerRemotesResponse(method: method, id: request.id, params: request.params)
         default:
             return v2Error(id: request.id, code: "method_not_found", message: "Unknown method")
         }
@@ -1794,14 +1588,8 @@ class TerminalController {
             return v2Ok(id: id, result: ["pong": true])
         case "system.capabilities":
             return v2Ok(id: id, result: v2Capabilities())
-        // mobile.host.status/mobile.workspace.list/mobile.terminal.* (+terminal.*
-        // aliases), mobile.terminal.paste/terminal.paste, and chat.sessions.dump
-        // handled by ControlCommandCoordinator (bodies stay; shared with
-        // mobileHostHandleRPC).
-
         // system.identify (forwards to the still-shared v2Identify), system.tree,
-        // auth.login, and the DEBUG-only mobile.dev_stack_auth.configure handled
-        // by ControlCommandCoordinator.
+        // and auth.login handled by ControlCommandCoordinator.
 
         // Windows (`window.*`) are handled above by ControlCommandCoordinator.
 
@@ -1810,10 +1598,8 @@ class TerminalController {
         // prompt_submit/rename) + workspace.group.* handled by ControlCommandCoordinator.
         // workspace.action (forwards to the still-shared v2WorkspaceAction) and
         // extension.sidebar.snapshot handled by ControlCommandCoordinator.
-        // workspace.next/previous/last/equalize_splits + workspace.remote.* (configure/
-        // foreground_auth_ready/reconnect/disconnect/status/pty_attach_end/
-        // terminal_session_end) handled by ControlCommandCoordinator. The worker-lane
-        // workspace.remote.pty_* methods stay on the app-side worker path.
+        // workspace.next/previous/last/equalize_splits handled by
+        // ControlCommandCoordinator.
         case "workspace.set_auto_title":
             return v2Result(id: id, self.v2WorkspaceSetAutoTitle(params: params))
 
@@ -1977,30 +1763,7 @@ class TerminalController {
             "sidebar.custom.open",
             "system.top",
             "system.memory",
-            "mobile.host.status",
-            "mobile.attach_ticket.create",
-            "mobile.workspace.list",
-            "mobile.terminal.create",
-            "mobile.terminal.input",
-            "mobile.terminal.paste",
-            "mobile.terminal.replay",
-            "mobile.terminal.viewport", "mobile.events.subscribe", "mobile.events.unsubscribe",
-            "terminal.create",
-            "terminal.input",
-            "terminal.paste",
-            "terminal.replay",
-            "terminal.viewport",
             "auth.login",
-            "auth.status",
-            "auth.sign_in_url",
-            "auth.begin_sign_in",
-            "auth.sign_out",
-            "vm.list",
-            "vm.create",
-            "vm.destroy",
-            "vm.exec",
-            "vm.attach_info",
-            "vm.ssh_info",
             "window.list",
             "window.current",
             "window.focus",
@@ -2044,22 +1807,8 @@ class TerminalController {
             "workspace.previous",
             "workspace.last",
             "workspace.equalize_splits",
-            "workspace.remote.configure",
-            "workspace.remote.foreground_auth_ready",
-            "workspace.remote.reconnect",
-            "workspace.remote.disconnect",
-            "workspace.remote.status",
-            "workspace.remote.pty_sessions",
-            "workspace.remote.pty_close",
-            "workspace.remote.pty_detach",
-            "workspace.remote.pty_bridge",
-            "workspace.remote.pty_resize",
-            "workspace.remote.pty_attach_end",
-            "workspace.remote.terminal_session_end", "remote.tmux.sessions", "remote.tmux.attach", "remote.tmux.detach", "remote.tmux.state", "remote.tmux.mirror", "remote.tmux.window",
             "session.restore_previous",
             "settings.open",
-            "feedback.open",
-            "feedback.submit",
             "feed.push",
             "feed.permission.reply",
             "feed.question.reply",
@@ -2868,51 +2617,6 @@ class TerminalController {
     // MARK: - V2 Helpers (encoding + result plumbing)
     // MARK: - V2 Helpers (encoding + result plumbing)
 
-    private nonisolated func v2AuthStatusPayload(timedOut: Bool) -> [String: Any] {
-        var result: [String: Any] = [:]
-        v2MainSync {
-            MainActor.assumeIsolated {
-                guard let coordinator = self.authCoordinator else {
-                    result = [
-                        "signed_in": false,
-                        "is_restoring_session": false,
-                        "is_loading": false,
-                        "timed_out": timedOut
-                    ]
-                    return
-                }
-                let isSigningIn = self.browserSignInFlow?.isSigningIn ?? false
-                var status: [String: Any] = [
-                    "signed_in": coordinator.isAuthenticated,
-                    "is_restoring_session": coordinator.isRestoringSession,
-                    "is_loading": coordinator.isLoading || isSigningIn,
-                    "timed_out": timedOut
-                ]
-                if let user = coordinator.currentUser {
-                    var userDict: [String: Any] = ["id": user.id]
-                    if let email = user.primaryEmail { userDict["email"] = email }
-                    if let name = user.displayName { userDict["display_name"] = name }
-                    status["user"] = userDict
-                }
-                if let teamID = coordinator.resolvedTeamID {
-                    status["selected_team_id"] = teamID
-                }
-                if !coordinator.availableTeams.isEmpty {
-                    status["teams"] = coordinator.availableTeams.map { team -> [String: Any] in
-                        var dict: [String: Any] = [
-                            "id": team.id,
-                            "display_name": team.displayName
-                        ]
-                        if let slug = team.slug { dict["slug"] = slug }
-                        return dict
-                    }
-                }
-                result = status
-            }
-        }
-        return result
-    }
-
     nonisolated func v2OrNull(_ value: Any?) -> Any {
         // Avoid relying on `?? NSNull()` inference (Swift toolchains can disagree).
         if let value { return value }
@@ -3366,662 +3070,6 @@ class TerminalController {
             "enabled": true
         ])
     }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    private nonisolated func v2RequestedRemotePTYWorkspaceID(params: [String: Any]) -> (
-        workspaceId: UUID?,
-        error: V2CallResult?
-    ) {
-        var workspaceId: UUID?
-        var invalidWorkspaceID = false
-        v2MainSync {
-            v2RefreshKnownRefs()
-            workspaceId = v2UUID(params, "workspace_id")
-            invalidWorkspaceID = v2HasNonNullParam(params, "workspace_id") && workspaceId == nil
-        }
-        if invalidWorkspaceID {
-            return (
-                nil,
-                .err(code: "invalid_params", message: "Missing or invalid workspace_id", data: nil)
-            )
-        }
-        return (workspaceId, nil)
-    }
-
-    private nonisolated func v2RequestedRemotePTYSurfaceID(params: [String: Any]) -> (
-        surfaceId: UUID?,
-        error: V2CallResult?
-    ) {
-        var surfaceId: UUID?
-        var invalidSurfaceID = false
-        v2MainSync {
-            v2RefreshKnownRefs()
-            surfaceId = v2UUID(params, "surface_id")
-            invalidSurfaceID = v2HasNonNullParam(params, "surface_id") && surfaceId == nil
-        }
-        if invalidSurfaceID {
-            return (
-                nil,
-                .err(code: "invalid_params", message: "Missing or invalid surface_id", data: nil)
-            )
-        }
-        return (surfaceId, nil)
-    }
-
-    private nonisolated func v2ResolveRemotePTYTarget(
-        params: [String: Any],
-        requestedWorkspaceId: UUID?,
-        preferredSurfaceId: UUID? = nil
-    ) -> (target: RemotePTYSocketTarget?, error: V2CallResult?) {
-        if v2HasNonNullParam(params, "allow_moved_surface"),
-           v2Bool(params, "allow_moved_surface") == nil {
-            return (
-                nil,
-                .err(code: "invalid_params", message: "Missing or invalid allow_moved_surface", data: nil)
-            )
-        }
-        let allowMovedSurface = v2Bool(params, "allow_moved_surface") ?? false
-        let requestedSessionID = v2RawString(params, "session_id").flatMap { raw -> String? in
-            let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
-            return trimmed.isEmpty ? nil : trimmed
-        }
-        var resolvedWorkspaceId: UUID?
-        var target: RemotePTYSocketTarget?
-        var workspaceMismatchData: [String: Any]?
-
-        v2MainSync {
-            v2RefreshKnownRefs()
-            let fallbackTabManager = v2ResolveTabManager(params: params)
-            let fallbackWorkspaceId = requestedWorkspaceId ?? fallbackTabManager?.selectedTabId
-            var owner: TabManager?
-            var workspace: Workspace?
-            if let preferredSurfaceId {
-                if let fallbackTabManager,
-                   let surfaceWorkspace = fallbackTabManager.tabs.first(where: {
-                       $0.panels[preferredSurfaceId] != nil
-                           && $0.surfaceIdFromPanelId(preferredSurfaceId) != nil
-                   }) {
-                    owner = fallbackTabManager
-                    workspace = surfaceWorkspace
-                } else if let located = AppDelegate.shared?.workspaceContainingPanel(
-                    panelId: preferredSurfaceId,
-                    preferredWorkspaceId: fallbackWorkspaceId
-                ) {
-                    owner = located.tabManager
-                    workspace = located.workspace
-                }
-            }
-            if workspace == nil,
-               let fallbackWorkspaceId,
-               let fallbackOwner = AppDelegate.shared?.tabManagerFor(tabId: fallbackWorkspaceId),
-               let fallbackWorkspace = fallbackOwner.tabs.first(where: { $0.id == fallbackWorkspaceId }) {
-                owner = fallbackOwner
-                workspace = fallbackWorkspace
-            }
-            resolvedWorkspaceId = workspace?.id ?? fallbackWorkspaceId
-            guard let owner, let workspace else {
-                return
-            }
-            if let requestedWorkspaceId,
-               workspace.id != requestedWorkspaceId {
-                let matchedMovedSurface = allowMovedSurface
-                    && preferredSurfaceId.map {
-                        workspace.remotePTYSessionIDMatches(panelId: $0, sessionID: requestedSessionID)
-                    } == true
-                guard matchedMovedSurface else {
-                    workspaceMismatchData = [
-                        "workspace_id": requestedWorkspaceId.uuidString,
-                        "workspace_ref": v2Ref(kind: .workspace, uuid: requestedWorkspaceId),
-                        "surface_id": v2OrNull(preferredSurfaceId?.uuidString),
-                        "surface_ref": v2Ref(kind: .surface, uuid: preferredSurfaceId),
-                        "resolved_workspace_id": workspace.id.uuidString,
-                        "resolved_workspace_ref": v2Ref(kind: .workspace, uuid: workspace.id),
-                    ]
-                    return
-                }
-            }
-
-            let windowId = v2ResolveWindowId(tabManager: owner)
-            target = RemotePTYSocketTarget(
-                controller: workspace.remotePTYSessionControllerForSocketCommand(),
-                windowId: windowId,
-                windowRef: v2Ref(kind: .window, uuid: windowId),
-                workspaceId: workspace.id,
-                workspaceRef: v2Ref(kind: .workspace, uuid: workspace.id),
-                workspaceTitle: workspace.title
-            )
-        }
-
-        if let workspaceMismatchData {
-            return (
-                nil,
-                .err(
-                    code: "invalid_params",
-                    message: "surface_id does not belong to workspace_id",
-                    data: workspaceMismatchData
-                )
-            )
-        }
-        guard let resolvedWorkspaceId else {
-            return (
-                nil,
-                .err(code: "invalid_params", message: "Missing workspace_id", data: nil)
-            )
-        }
-        guard let target else {
-            return (
-                nil,
-                .err(
-                    code: "not_found",
-                    message: "Workspace not found",
-                    data: v2RemotePTYWorkspaceData(workspaceId: resolvedWorkspaceId)
-                )
-            )
-        }
-        return (target, nil)
-    }
-
-    nonisolated func notifyRemotePTYControllerAvailabilityChanged() {
-        remotePTYControllerAvailabilityCondition.lock()
-        remotePTYControllerAvailabilityGeneration &+= 1
-        remotePTYControllerAvailabilityCondition.broadcast()
-        remotePTYControllerAvailabilityCondition.unlock()
-    }
-
-    private nonisolated func v2ResolveRemotePTYTargetWaitingForController(
-        params: [String: Any],
-        requestedWorkspaceId: UUID?,
-        preferredSurfaceId: UUID?,
-        deadline: Date
-    ) -> (target: RemotePTYSocketTarget?, error: V2CallResult?) {
-        var observedGeneration: UInt64?
-
-        while true {
-            let resolved = v2ResolveRemotePTYTarget(
-                params: params,
-                requestedWorkspaceId: requestedWorkspaceId,
-                preferredSurfaceId: preferredSurfaceId
-            )
-            if let error = resolved.error {
-                return (nil, error)
-            }
-            guard let target = resolved.target else {
-                return resolved
-            }
-            if target.controller != nil || Date() >= deadline {
-                return (target, nil)
-            }
-
-            remotePTYControllerAvailabilityCondition.lock()
-            let currentGeneration = remotePTYControllerAvailabilityGeneration
-            guard let previousGeneration = observedGeneration else {
-                observedGeneration = currentGeneration
-                remotePTYControllerAvailabilityCondition.unlock()
-                continue
-            }
-            if previousGeneration != currentGeneration {
-                observedGeneration = currentGeneration
-                remotePTYControllerAvailabilityCondition.unlock()
-                continue
-            }
-            _ = remotePTYControllerAvailabilityCondition.wait(until: deadline)
-            observedGeneration = remotePTYControllerAvailabilityGeneration
-            remotePTYControllerAvailabilityCondition.unlock()
-        }
-    }
-
-    private nonisolated func v2RemotePTYWorkspaceData(workspaceId: UUID) -> [String: Any] {
-        var workspaceRef: Any = NSNull()
-        v2MainSync {
-            workspaceRef = v2Ref(kind: .workspace, uuid: workspaceId)
-        }
-        return [
-            "workspace_id": workspaceId.uuidString,
-            "workspace_ref": workspaceRef,
-        ]
-    }
-
-    private nonisolated func v2RemotePTYTargetPayload(_ target: RemotePTYSocketTarget) -> [String: Any] {
-        [
-            "window_id": v2OrNull(target.windowId?.uuidString),
-            "window_ref": target.windowRef,
-            "workspace_id": target.workspaceId.uuidString,
-            "workspace_ref": target.workspaceRef,
-            "workspace_title": target.workspaceTitle,
-        ]
-    }
-
-    /// `workspace.env` — read a workspace's user-defined environment (issue #5995).
-    /// Resolves the workspace by `workspace_id` / surface / pane, falling back to the
-    /// selected workspace only when no explicit target is supplied, and returns the
-    /// raw configured set. An explicit-but-unresolvable target errors. Secret masking is a
-    /// CLI presentation concern (`cmux workspace env --mask`): the local control
-    /// socket already exposes the surrounding workspace state, so values are returned
-    /// verbatim and the env set is deliberately kept out of `workspace.list` so a
-    /// plain listing never echoes secrets.
-    private nonisolated func v2WorkspaceEnv(params: [String: Any]) -> V2CallResult {
-        // Validate any explicit target before resolving. This endpoint can print
-        // secrets, so a malformed or stale explicit target must error rather than
-        // silently fall back to the selected workspace (unlike the generic
-        // v2ResolveWorkspace, which falls through to the selection).
-        for key in ["workspace_id", "surface_id", "terminal_id", "tab_id", "pane_id"] {
-            if v2HasNonNullParam(params, key), v2UUID(params, key) == nil {
-                return .err(code: "invalid_params", message: "Missing or invalid \(key)", data: nil)
-            }
-        }
-        return v2MainSync { () -> V2CallResult in
-            v2RefreshKnownRefs()
-            guard let tabManager = v2ResolveTabManager(params: params) else {
-                return .err(code: "unavailable", message: "TabManager not available", data: nil)
-            }
-            // Resolve strictly for explicit targets; only fall back to the selected
-            // workspace when no explicit target was supplied.
-            let resolved: Workspace?
-            if let wsId = v2UUID(params, "workspace_id") {
-                resolved = tabManager.tabs.first(where: { $0.id == wsId })
-            } else if let surfaceId = v2UUID(params, "surface_id") ?? v2UUID(params, "terminal_id") ?? v2UUID(params, "tab_id") {
-                resolved = tabManager.tabs.first(where: { $0.panels[surfaceId] != nil })
-            } else if let paneId = v2UUID(params, "pane_id") {
-                if let located = v2LocatePane(paneId), located.tabManager === tabManager {
-                    resolved = located.workspace
-                } else {
-                    resolved = nil
-                }
-            } else if let selectedId = tabManager.selectedTabId {
-                resolved = tabManager.tabs.first(where: { $0.id == selectedId })
-            } else {
-                resolved = nil
-            }
-            guard let workspace = resolved else {
-                return .err(code: "not_found", message: "Workspace not found", data: nil)
-            }
-            let windowId = v2ResolveWindowId(tabManager: tabManager)
-            let env = workspace.workspaceEnvironment
-            return .ok([
-                "window_id": v2OrNull(windowId?.uuidString),
-                "window_ref": v2Ref(kind: .window, uuid: windowId),
-                "workspace_id": workspace.id.uuidString,
-                "workspace_ref": v2Ref(kind: .workspace, uuid: workspace.id),
-                "env": env,
-                "count": env.count,
-            ])
-        }
-    }
-
-    private nonisolated func v2WorkspaceRemotePTYSessions(params: [String: Any]) -> V2CallResult {
-        if v2HasNonNullParam(params, "all_workspaces"), v2Bool(params, "all_workspaces") == nil {
-            return .err(code: "invalid_params", message: "Missing or invalid all_workspaces", data: nil)
-        }
-        let allWorkspaces = v2Bool(params, "all_workspaces") ?? false
-        let workspaceSelection = v2RequestedRemotePTYWorkspaceID(params: params)
-        if let error = workspaceSelection.error { return error }
-        let surfaceSelection = v2RequestedRemotePTYSurfaceID(params: params)
-        if let error = surfaceSelection.error { return error }
-        let requestedWorkspaceId = workspaceSelection.workspaceId
-        if allWorkspaces, requestedWorkspaceId != nil {
-            return .err(code: "invalid_params", message: "all_workspaces cannot be combined with workspace_id", data: nil)
-        }
-        if allWorkspaces {
-            var targets: [RemotePTYSocketTarget] = []
-            v2MainSync {
-                v2RefreshKnownRefs()
-                guard let app = AppDelegate.shared else { return }
-                for summary in app.listMainWindowSummaries() {
-                    guard let owner = app.tabManagerFor(windowId: summary.windowId) else { continue }
-                    for workspace in owner.tabs where workspace.isRemoteWorkspace {
-                        targets.append(
-                            RemotePTYSocketTarget(
-                                controller: workspace.remotePTYSessionControllerForSocketCommand(),
-                                windowId: summary.windowId,
-                                windowRef: v2Ref(kind: .window, uuid: summary.windowId),
-                                workspaceId: workspace.id,
-                                workspaceRef: v2Ref(kind: .workspace, uuid: workspace.id),
-                                workspaceTitle: workspace.title
-                            )
-                        )
-                    }
-                }
-            }
-
-            var sessions: [[String: Any]] = []
-            var errors: [[String: Any]] = []
-            for target in targets {
-                guard let controller = target.controller else {
-                    var payload = v2RemotePTYTargetPayload(target)
-                    payload["error"] = "remote connection is not active"
-                    errors.append(payload)
-                    continue
-                }
-                do {
-                    let workspaceSessions = try controller.listPTYSessions()
-                    sessions.append(contentsOf: workspaceSessions.map {
-                        v2RemotePTYSessionPayload($0, target: target)
-                    })
-                } catch {
-                    var payload = v2RemotePTYTargetPayload(target)
-                    payload["error"] = v2RemotePTYUserFacingErrorMessage(error)
-                    errors.append(payload)
-                }
-            }
-
-            return .ok([
-                "all_workspaces": true,
-                "workspace_count": targets.count,
-                "sessions": sessions,
-                "errors": errors,
-            ])
-        }
-
-        let resolved = v2ResolveRemotePTYTarget(
-            params: params,
-            requestedWorkspaceId: requestedWorkspaceId,
-            preferredSurfaceId: surfaceSelection.surfaceId
-        )
-        if let error = resolved.error { return error }
-        guard let target = resolved.target else {
-            return .err(code: "not_found", message: "Workspace not found", data: nil)
-        }
-        guard let controller = target.controller else {
-            return .err(code: "remote_pty_error", message: "remote connection is not active", data: [
-                "workspace_id": target.workspaceId.uuidString,
-                "workspace_ref": target.workspaceRef,
-            ])
-        }
-
-        do {
-            let sessions = try controller.listPTYSessions()
-            var payload = v2RemotePTYTargetPayload(target)
-            payload["sessions"] = sessions.map { v2RemotePTYSessionPayload($0, target: target) }
-            return .ok(payload)
-        } catch {
-            return .err(code: "remote_pty_error", message: v2RemotePTYUserFacingErrorMessage(error), data: [
-                "workspace_id": target.workspaceId.uuidString,
-                "workspace_ref": target.workspaceRef,
-            ])
-        }
-    }
-
-    private nonisolated func v2RemotePTYSessionPayload(
-        _ session: [String: Any],
-        target: RemotePTYSocketTarget
-    ) -> [String: Any] {
-        var payload = session
-        payload["window_id"] = v2OrNull(target.windowId?.uuidString)
-        payload["window_ref"] = target.windowRef
-        payload["workspace_id"] = target.workspaceId.uuidString
-        payload["workspace_ref"] = target.workspaceRef
-        payload["workspace_title"] = target.workspaceTitle
-        return payload
-    }
-
-    private nonisolated func v2WorkspaceRemotePTYClose(params: [String: Any]) -> V2CallResult {
-        let workspaceSelection = v2RequestedRemotePTYWorkspaceID(params: params)
-        if let error = workspaceSelection.error { return error }
-        guard let sessionID = v2RawString(params, "session_id")?
-            .trimmingCharacters(in: .whitespacesAndNewlines),
-              !sessionID.isEmpty else {
-            return .err(code: "invalid_params", message: "Missing session_id", data: nil)
-        }
-        let surfaceSelection = v2RequestedRemotePTYSurfaceID(params: params)
-        if let error = surfaceSelection.error { return error }
-
-        let resolved = v2ResolveRemotePTYTarget(
-            params: params,
-            requestedWorkspaceId: workspaceSelection.workspaceId,
-            preferredSurfaceId: surfaceSelection.surfaceId
-        )
-        if let error = resolved.error { return error }
-        guard let target = resolved.target else {
-            return .err(code: "not_found", message: "Workspace not found", data: nil)
-        }
-        guard let controller = target.controller else {
-            return .err(code: "remote_pty_error", message: "remote connection is not active", data: [
-                "workspace_id": target.workspaceId.uuidString,
-                "workspace_ref": target.workspaceRef,
-                "session_id": sessionID,
-            ])
-        }
-
-        do {
-            try controller.closePTYSession(sessionID: sessionID)
-            var payload = v2RemotePTYTargetPayload(target)
-            payload["session_id"] = sessionID
-            payload["closed"] = true
-            return .ok(payload)
-        } catch {
-            return .err(code: "remote_pty_error", message: v2RemotePTYUserFacingErrorMessage(error), data: [
-                "workspace_id": target.workspaceId.uuidString,
-                "workspace_ref": target.workspaceRef,
-                "session_id": sessionID,
-            ])
-        }
-    }
-
-    private nonisolated func v2WorkspaceRemotePTYDetach(params: [String: Any]) -> V2CallResult {
-        let workspaceSelection = v2RequestedRemotePTYWorkspaceID(params: params)
-        if let error = workspaceSelection.error { return error }
-        guard let sessionID = v2RawString(params, "session_id")?
-            .trimmingCharacters(in: .whitespacesAndNewlines),
-              !sessionID.isEmpty else {
-            return .err(code: "invalid_params", message: "Missing session_id", data: nil)
-        }
-        guard let attachmentID = v2RawString(params, "attachment_id")?
-            .trimmingCharacters(in: .whitespacesAndNewlines),
-              !attachmentID.isEmpty else {
-            return .err(code: "invalid_params", message: "Missing attachment_id", data: nil)
-        }
-        guard let attachmentToken = v2RawString(params, "attachment_token")?
-            .trimmingCharacters(in: .whitespacesAndNewlines),
-              !attachmentToken.isEmpty else {
-            return .err(code: "invalid_params", message: "Missing attachment_token", data: nil)
-        }
-        let surfaceSelection = v2RequestedRemotePTYSurfaceID(params: params)
-        if let error = surfaceSelection.error { return error }
-
-        let resolved = v2ResolveRemotePTYTarget(
-            params: params,
-            requestedWorkspaceId: workspaceSelection.workspaceId,
-            preferredSurfaceId: surfaceSelection.surfaceId
-        )
-        if let error = resolved.error { return error }
-        guard let target = resolved.target else {
-            return .err(code: "not_found", message: "Workspace not found", data: nil)
-        }
-        guard let controller = target.controller else {
-            return .err(code: "remote_pty_error", message: "remote connection is not active", data: [
-                "workspace_id": target.workspaceId.uuidString,
-                "workspace_ref": target.workspaceRef,
-                "session_id": sessionID,
-                "attachment_id": attachmentID,
-            ])
-        }
-
-        do {
-            try controller.detachPTYSession(
-                sessionID: sessionID,
-                attachmentID: attachmentID,
-                attachmentToken: attachmentToken
-            )
-            var payload = v2RemotePTYTargetPayload(target)
-            payload["session_id"] = sessionID
-            payload["attachment_id"] = attachmentID
-            payload["detached"] = true
-            return .ok(payload)
-        } catch {
-            return .err(code: "remote_pty_error", message: v2RemotePTYUserFacingErrorMessage(error), data: [
-                "workspace_id": target.workspaceId.uuidString,
-                "workspace_ref": target.workspaceRef,
-                "session_id": sessionID,
-                "attachment_id": attachmentID,
-            ])
-        }
-    }
-
-    private nonisolated func v2WorkspaceRemotePTYBridge(params: [String: Any]) -> V2CallResult {
-        let workspaceSelection = v2RequestedRemotePTYWorkspaceID(params: params)
-        if let error = workspaceSelection.error { return error }
-        guard let sessionID = v2RawString(params, "session_id")?
-            .trimmingCharacters(in: .whitespacesAndNewlines),
-              !sessionID.isEmpty else {
-            return .err(code: "invalid_params", message: "Missing session_id", data: nil)
-        }
-        let attachmentID = (v2RawString(params, "attachment_id")?
-            .trimmingCharacters(in: .whitespacesAndNewlines))
-            .flatMap { $0.isEmpty ? nil : $0 }
-            ?? UUID().uuidString.lowercased()
-        let command = v2RawString(params, "command")?
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-        let requireExisting = v2Bool(params, "require_existing") ?? false
-        let waitForReady = v2Bool(params, "wait_for_ready") ?? false
-        let surfaceSelection = v2RequestedRemotePTYSurfaceID(params: params)
-        if let error = surfaceSelection.error { return error }
-        let preferredSurfaceId = surfaceSelection.surfaceId ?? UUID(uuidString: attachmentID)
-
-        let controllerDeadline = Date().addingTimeInterval(waitForReady ? 90.0 : 8.0)
-        let resolved = waitForReady
-            ? v2ResolveRemotePTYTargetWaitingForController(
-                params: params,
-                requestedWorkspaceId: workspaceSelection.workspaceId,
-                preferredSurfaceId: preferredSurfaceId,
-                deadline: controllerDeadline
-            )
-            : v2ResolveRemotePTYTarget(
-                params: params,
-                requestedWorkspaceId: workspaceSelection.workspaceId,
-                preferredSurfaceId: preferredSurfaceId
-            )
-        if let error = resolved.error { return error }
-        guard let target = resolved.target else {
-            return .err(code: "not_found", message: "Workspace not found", data: nil)
-        }
-        guard let controller = target.controller else {
-            return .err(code: "remote_pty_error", message: "remote connection is not active", data: [
-                "workspace_id": target.workspaceId.uuidString,
-                "workspace_ref": target.workspaceRef,
-                "session_id": sessionID,
-                "attachment_id": attachmentID,
-            ])
-        }
-
-        do {
-            let endpoint = try controller.startPTYBridge(
-                sessionID: sessionID,
-                attachmentID: attachmentID,
-                command: command?.isEmpty == true ? nil : command,
-                requireExisting: requireExisting,
-                waitForReady: waitForReady,
-                timeout: waitForReady ? 90.0 : max(0.1, controllerDeadline.timeIntervalSinceNow)
-            )
-            var payload = v2RemotePTYTargetPayload(target)
-            payload["host"] = endpoint.host
-            payload["port"] = endpoint.port
-            payload["token"] = endpoint.token
-            payload["session_id"] = endpoint.sessionID
-            payload["attachment_id"] = endpoint.attachmentID
-            return .ok(payload)
-        } catch {
-            return .err(code: "remote_pty_error", message: v2RemotePTYUserFacingErrorMessage(error), data: [
-                "workspace_id": target.workspaceId.uuidString,
-                "workspace_ref": target.workspaceRef,
-                "session_id": sessionID,
-                "attachment_id": attachmentID,
-            ])
-        }
-    }
-
-    private nonisolated func v2WorkspaceRemotePTYResize(params: [String: Any]) -> V2CallResult {
-        let workspaceSelection = v2RequestedRemotePTYWorkspaceID(params: params)
-        if let error = workspaceSelection.error { return error }
-        guard let sessionID = v2RawString(params, "session_id")?
-            .trimmingCharacters(in: .whitespacesAndNewlines),
-              !sessionID.isEmpty else {
-            return .err(code: "invalid_params", message: "Missing session_id", data: nil)
-        }
-        guard let attachmentID = v2RawString(params, "attachment_id")?
-            .trimmingCharacters(in: .whitespacesAndNewlines),
-              !attachmentID.isEmpty else {
-            return .err(code: "invalid_params", message: "Missing attachment_id", data: nil)
-        }
-        guard let attachmentToken = v2RawString(params, "attachment_token")?
-            .trimmingCharacters(in: .whitespacesAndNewlines),
-              !attachmentToken.isEmpty else {
-            return .err(code: "invalid_params", message: "Missing attachment_token", data: nil)
-        }
-        guard let cols = v2StrictInt(params, "cols"), cols > 0,
-              let rows = v2StrictInt(params, "rows"), rows > 0 else {
-            return .err(code: "invalid_params", message: "cols and rows must be positive integers", data: nil)
-        }
-        let surfaceSelection = v2RequestedRemotePTYSurfaceID(params: params)
-        if let error = surfaceSelection.error { return error }
-
-        let resolved = v2ResolveRemotePTYTarget(
-            params: params,
-            requestedWorkspaceId: workspaceSelection.workspaceId,
-            preferredSurfaceId: surfaceSelection.surfaceId
-        )
-        if let error = resolved.error { return error }
-        guard let target = resolved.target else {
-            return .err(code: "not_found", message: "Workspace not found", data: nil)
-        }
-        guard let controller = target.controller else {
-            return .err(code: "remote_pty_error", message: "remote connection is not active", data: [
-                "workspace_id": target.workspaceId.uuidString,
-                "workspace_ref": target.workspaceRef,
-                "session_id": sessionID,
-                "attachment_id": attachmentID,
-            ])
-        }
-
-        do {
-            try controller.resizePTY(
-                sessionID: sessionID,
-                attachmentID: attachmentID,
-                attachmentToken: attachmentToken,
-                cols: cols,
-                rows: rows
-            )
-            var payload = v2RemotePTYTargetPayload(target)
-            payload["session_id"] = sessionID
-            payload["attachment_id"] = attachmentID
-            payload["attachment_token"] = attachmentToken
-            payload["cols"] = cols
-            payload["rows"] = rows
-            payload["resized"] = true
-            return .ok(payload)
-        } catch {
-            return .err(code: "remote_pty_error", message: v2RemotePTYUserFacingErrorMessage(error), data: [
-                "workspace_id": target.workspaceId.uuidString,
-                "workspace_ref": target.workspaceRef,
-                "session_id": sessionID,
-                "attachment_id": attachmentID,
-            ])
-        }
-    }
-
-
-
-
-
-
     @MainActor
 
     func v2WorkspaceAction(params: [String: Any]) -> V2CallResult {
@@ -5015,54 +4063,6 @@ class TerminalController {
     }
 
 
-    private nonisolated func v2FeedbackSubmit(params: [String: Any]) -> V2CallResult {
-        guard let email = params["email"] as? String else {
-            return .err(code: "invalid_params", message: "Missing email", data: ["field": "email"])
-        }
-        guard let body = params["body"] as? String else {
-            return .err(code: "invalid_params", message: "Missing body", data: ["field": "body"])
-        }
-        let imagePaths = params["image_paths"] as? [String] ?? []
-
-        let semaphore = DispatchSemaphore(value: 0)
-        var result: V2CallResult = .err(code: "internal_error", message: "Feedback submission failed", data: nil)
-
-        Task {
-            let resolved: V2CallResult
-            do {
-                let attachmentCount = try await FeedbackComposerBridge().submit(
-                    email: email,
-                    message: body,
-                    imagePaths: imagePaths
-                )
-                resolved = .ok([
-                    "submitted": true,
-                    "attachment_count": attachmentCount,
-                ])
-            } catch let error as FeedbackComposerBridgeError {
-                let code: String
-                switch error {
-                case .invalidEmail, .emptyMessage, .messageTooLong, .tooManyImages, .invalidImagePath:
-                    code = "invalid_params"
-                case .submissionFailed:
-                    code = "request_failed"
-                }
-                resolved = .err(code: code, message: error.localizedDescription, data: nil)
-            } catch {
-                resolved = .err(code: "internal_error", message: error.localizedDescription, data: nil)
-            }
-
-            result = resolved
-            semaphore.signal()
-        }
-
-        if semaphore.wait(timeout: .now() + 35) == .timedOut {
-            return .err(code: "timeout", message: "Feedback submission timed out", data: nil)
-        }
-
-        return result
-    }
-
     // MARK: - V2 Feed (workstream) handlers
 
     private nonisolated func v2FeedPush(params: [String: Any]) -> V2CallResult {
@@ -5125,7 +4125,6 @@ class TerminalController {
 
         CmuxEventBus.shared.publishWorkstreamEvent(event, phase: "received")
         v2ApplyIMessageModeSideEffects(for: event)
-        Task { @MainActor in self.agentChatTranscriptService?.noteHookEvent(event) }
 
         let result = FeedCoordinator.shared.ingestBlocking(
             event: event,
@@ -6129,7 +5128,6 @@ class TerminalController {
             let focus = v2FocusAllowed(requested: v2Bool(params, "focus") ?? false)
             let omnibarVisible = v2Bool(params, "show_omnibar") ?? true
             let transparentBackground = v2Bool(params, "transparent_background") ?? false
-            let bypassRemoteProxy = v2Bool(params, "bypass_remote_proxy") ?? v2IsDiffViewerURL(url)
 
             var createdSplit = true
             var placementStrategy = "split_right"
@@ -6142,8 +5140,7 @@ class TerminalController {
                     selectWhenNotFocused: true,
                     creationPolicy: .automationPreload,
                     omnibarVisible: omnibarVisible,
-                    transparentBackground: transparentBackground,
-                    bypassRemoteProxy: bypassRemoteProxy
+                    transparentBackground: transparentBackground
                 )
                 createdSplit = false
                 placementStrategy = "reuse_right_sibling"
@@ -6155,8 +5152,7 @@ class TerminalController {
                     focus: focus,
                     creationPolicy: .automationPreload,
                     omnibarVisible: omnibarVisible,
-                    transparentBackground: transparentBackground,
-                    bypassRemoteProxy: bypassRemoteProxy
+                    transparentBackground: transparentBackground
                 )
             }
 
@@ -6185,8 +5181,7 @@ class TerminalController {
                 "created_split": createdSplit,
                 "placement_strategy": placementStrategy,
                 "show_omnibar": createdPanel?.isOmnibarVisible ?? omnibarVisible,
-                "transparent_background": transparentBackground,
-                "bypass_remote_proxy": bypassRemoteProxy
+                "transparent_background": transparentBackground
             ])
         }
         return result
@@ -11121,12 +10116,6 @@ class TerminalController {
         return "OK \(newTabId?.uuidString ?? "unknown")"
     }
 
-    /// v1 socket error for a left/up split directed at a mirror workspace
-    /// (kept here for the still-app-side v1 `new_split`; the coordinator-side
-    /// v1 `new_pane` carries the same wording via its sidebar context).
-    private static let v1MirrorDirectionError =
-        "ERROR: direction left/up is not supported in a remote tmux mirror workspace"
-
     private func newSplit(_ args: String) -> String {
         guard let tabManager = tabManager else { return "ERROR: TabManager not available" }
 
@@ -11167,13 +10156,6 @@ class TerminalController {
                 return
             }
 
-            if tab.isRemoteTmuxMirror, direction.insertFirst {
-                // Routed tmux `split-window` cannot insert before the target
-                // pane; reject before mutating the remote session.
-                result = Self.v1MirrorDirectionError
-                return
-            }
-
             switch tab.newTerminalSplitOutcome(
                 from: targetSurface,
                 orientation: direction.orientation,
@@ -11181,8 +10163,6 @@ class TerminalController {
             ) {
             case .created(let panel):
                 result = "OK \(panel.id.uuidString)"
-            case .routedToRemote:
-                result = "OK routed-to-remote-tmux"
             case .failed:
                 break
             }
@@ -12105,7 +11085,7 @@ class TerminalController {
         // Single source of truth for spatial (left-to-right, top-to-bottom) panel
         // order lives on `Workspace.orderedPanelIds`, derived from bonsplit's tab
         // ordering. This avoids relying on Dictionary iteration order and keeps the
-        // serializer, the reorder gate, and the mobile observer hash consistent.
+        // serializer and the reorder gate consistent.
         tab.orderedPanelIds.compactMap { tab.panels[$0] }
     }
 
@@ -12823,380 +11803,6 @@ class TerminalController {
         return false
     }
 
-    // MARK: - Mobile Host V2 Methods
-
-    @MainActor
-    func mobileHostHandleRPC(_ request: MobileHostRPCRequest) async -> MobileHostRPCResult {
-        // The mobile data-plane RPC speaks `MobileHostRPCRequest` /
-        // `MobileHostRPCResult` and dispatches directly to the app-side
-        // `v2Mobile*` bodies. It deliberately does NOT route through the v2
-        // control-socket `ControlCommandCoordinator` (whose native result type is
-        // `ControlCallResult`): doing so would force a
-        // `MobileHostRPCRequest → ControlRequest → ControlCallResult →
-        // MobileHostRPCResult` type round-trip with no behavior change. The v2
-        // control socket shares the same bodies through `handleMobileHost`, so the
-        // wire bytes stay identical across both entrypoints without a bridge here.
-        let result: V2CallResult
-        switch request.method {
-        case "mobile.host.status":
-            result = v2MobileHostStatus(params: request.params, includePrivateMetadata: false)
-        case "mobile.attach_ticket.create":
-            result = await v2MobileAttachTicketCreate(params: request.params)
-        case "mobile.workspace.list", "workspace.list":
-            result = v2MobileWorkspaceList(params: request.params)
-        case "workspace.create":
-            result = v2MobileWorkspaceCreate(params: request.params)
-        case "mobile.terminal.create", "terminal.create":
-            result = v2MobileTerminalCreate(params: request.params)
-        case "mobile.terminal.input", "terminal.input":
-            result = v2MobileTerminalInput(params: request.params)
-        case "mobile.terminal.paste", "terminal.paste":
-            result = v2MobileTerminalPaste(params: request.params)
-        case "mobile.terminal.paste_image", "terminal.paste_image":
-            result = v2MobileTerminalPasteImage(params: request.params)
-        case "mobile.terminal.replay", "terminal.replay":
-            result = v2MobileTerminalReplay(params: request.params)
-        case "mobile.terminal.viewport", "terminal.viewport":
-            result = v2MobileTerminalViewport(params: request.params)
-        case "mobile.terminal.scroll", "terminal.scroll":
-            result = v2MobileTerminalScroll(params: request.params)
-        case "mobile.terminal.mouse", "terminal.mouse":
-            result = v2MobileTerminalMouse(params: request.params)
-        case "workspace.action":
-            result = v2MobileWorkspaceAction(params: request.params)
-        case let method where method.hasPrefix("mobile.chat."):
-            result = await v2MobileChatDispatch(method: method, params: request.params)
-        case "workspace.close":
-            result = v2MobileWorkspaceClose(params: request.params)
-        case "workspace.group.collapse":
-            result = v2MobileWorkspaceGroupSetCollapsed(params: request.params, isCollapsed: true)
-        case "workspace.group.expand":
-            result = v2MobileWorkspaceGroupSetCollapsed(params: request.params, isCollapsed: false)
-        case "notification.dismiss":
-            result = v2MobileNotificationDismiss(params: request.params)
-        case "notification.reconcile":
-            result = v2MobileNotificationReconcile(params: request.params)
-        case "dogfood.feedback.submit":
-            result = await v2MobileDogfoodFeedbackSubmit(params: request.params)
-        default:
-            result = .err(code: "method_not_found", message: "Unknown mobile method", data: [
-                "method": request.method
-            ])
-        }
-        return mobileHostResult(result)
-    }
-
-    /// Privileged agent feedback sink (the Mac↔phone feedback loop).
-    ///
-    /// Reads `{ text, terminal_text, build_stamp, diagnostic_blob_base64 }` off
-    /// the wire and hands them to ``DogfoodFeedbackService`` (in the
-    /// `CmuxFeedback` package), which caps the fields, rejects an oversized
-    /// base64 blob without decoding, and writes a self-contained bundle
-    /// directory under `~/.cache/cmux-dogfood-feedback/<ISO8601>_<shortid>/`
-    /// (a `bundle.json` manifest plus the decoded `diagnostic.log`) off the main
-    /// actor. This method owns only the trust-boundary privilege check and the
-    /// wire mapping; the validation, allocation caps, and filesystem I/O live in
-    /// the service.
-    ///
-    /// It is protected by the same-account Stack-auth authorization the rest of
-    /// the mobile data plane enforces, so it never accepts an unauthenticated
-    /// caller. The phone only ever routes here for `@manaflow.ai` users on an
-    /// active connection, so this exists in Release builds too (the team can
-    /// dogfood beta/prod), and only a Mac that runs the watcher acts on it.
-    func v2MobileDogfoodFeedbackSubmit(params: [String: Any]) async -> V2CallResult {
-        // Privilege check at the trust boundary: the mobile data plane only
-        // accepts same-account connections, so the caller is this Mac's own Stack
-        // account. The service re-enforces the @manaflow.ai gate, but we resolve
-        // the authenticated email here because it requires the main-actor
-        // `MobileHostService`. (The phone also gates the route on `@manaflow.ai`
-        // + `dogfood.v1`, but the Mac is the real boundary.)
-        let localEmail = await MobileHostService.shared.currentAuthenticatedLocalUserEmail()
-        let submission = DogfoodFeedbackSubmission(
-            text: v2RawString(params, "text") ?? "",
-            terminalText: v2RawString(params, "terminal_text") ?? "",
-            buildStamp: v2RawString(params, "build_stamp") ?? "",
-            diagnosticBlobBase64: v2RawString(params, "diagnostic_blob_base64") ?? ""
-        )
-        let outcome = await DogfoodFeedbackService().submit(submission, authenticatedEmail: localEmail)
-        switch outcome {
-        case let .written(bundlePath, diagnosticLogBytes):
-            return .ok([
-                "ok": true,
-                "bundle_path": bundlePath,
-                "diagnostic_log_bytes": diagnosticLogBytes,
-            ])
-        case .unauthorized:
-            return .err(
-                code: "unauthorized",
-                message: "Feedback agent sink is restricted to privileged accounts",
-                data: nil
-            )
-        case let .invalidParams(reason):
-            return .err(code: "invalid_params", message: reason, data: nil)
-        case .internalError:
-            return .err(
-                code: "internal_error",
-                message: "Failed to persist dogfood feedback bundle",
-                data: nil
-            )
-        }
-    }
-
-    /// Mobile-gated wrapper over ``v2WorkspaceAction(params:)``.
-    func v2MobileWorkspaceAction(params: [String: Any]) -> V2CallResult {
-        let rawAction = v2RawString(params, "action")
-        guard Self.mobileAllowsWorkspaceAction(rawAction) else {
-            return .err(
-                code: "method_not_found",
-                message: "Unsupported workspace action for mobile",
-                data: ["action": v2OrNull(rawAction)]
-            )
-        }
-        // Reject a present-but-malformed workspace_id like the other mobile
-        // handlers, then require it to actually be present and resolvable: this
-        // is a mutating action, so it must target an explicit workspace and never
-        // fall back to the Mac's currently selected workspace (which
-        // v2WorkspaceAction would otherwise do for a missing workspace_id).
-        if let error = mobileWorkspaceIDValidationError(params: params) {
-            return error
-        }
-        guard v2UUID(params, "workspace_id") != nil else {
-            return .err(code: "invalid_params", message: "Missing or invalid workspace_id", data: nil)
-        }
-        return v2WorkspaceAction(params: params)
-    }
-
-    private func mobileHostResult(_ result: V2CallResult) -> MobileHostRPCResult {
-        switch result {
-        case let .ok(payload):
-            return .ok(payload)
-        case let .err(code, message, data):
-            let safeMessage = code == "internal_error" ? "Mobile host operation failed" : message
-            let safeData = code == "internal_error" ? nil : data
-            return .failure(MobileHostRPCError(code: code, message: safeMessage, data: safeData))
-        }
-    }
-
-    func v2MobileHostStatus(
-        params: [String: Any],
-        includePrivateMetadata: Bool = true
-    ) -> V2CallResult {
-        let status = MobileHostService.shared.statusSnapshot()
-        // Single source of truth shared with the mobile listener's public-status
-        // paths, so the advertised capabilities can never drift. Includes
-        // workspace.actions.v1 (the mobile-gated pin/unpin/rename handler), which
-        // the iOS client uses to show or hide rename/pin.
-        let capabilities = MobileHostService.mobileHostCapabilities
-        guard includePrivateMetadata else {
-            return .ok(MobileHostService.publicStatusPayload(
-                routesPayload: status.routes.map(\.mobileHostJSONObject)
-            ))
-        }
-
-        let tabManager = v2ResolveTabManager(params: params)
-        let workspaceCount = tabManager?.tabs.count ?? 0
-
-        return .ok([
-            "mac_device_id": MobileHostIdentity.deviceID(),
-            "mac_display_name": v2OrNull(MobileHostIdentity.displayName()),
-            "host_service": status.payload,
-            "workspace_count": workspaceCount,
-            "terminal_fidelity": "render_grid",
-            "capabilities": capabilities,
-        ])
-    }
-
-    #if DEBUG
-    #endif
-
-    @MainActor
-    func v2MobileAttachTicketCreate(params: [String: Any]) async -> V2CallResult {
-        let ttl = TimeInterval(max(30, min(v2Int(params, "ttl_seconds") ?? 600, 3600)))
-        let routeID = v2OptionalTrimmedRawString(params, "route_id")
-            ?? v2OptionalTrimmedRawString(params, "routeID")
-        let routeKind = v2OptionalTrimmedRawString(params, "route_kind")
-            ?? v2OptionalTrimmedRawString(params, "routeKind")
-        let scope = v2OptionalTrimmedRawString(params, "scope")
-        // scope=mac mints a Mac-wide ticket that grants access to every
-        // workspace on the host. Without this, the ticket gets pinned to
-        // the workspace selected at QR-generation time, and tapping any
-        // other workspace from the paired iPhone falls back to Stack
-        // Auth verification, which is brittle on real-world networks.
-        let isMacScope = scope?.lowercased() == "mac"
-
-        if let error = mobileWorkspaceIDValidationError(params: params) {
-            return error
-        }
-        if let error = mobileTerminalAliasValidationError(params: params) {
-            return error
-        }
-
-        let resolvedWorkspaceID: String
-        let resolvedTerminalID: String?
-        if isMacScope {
-            resolvedWorkspaceID = ""
-            resolvedTerminalID = nil
-        } else {
-            guard let resolved = mobileResolveWorkspaceAndSurface(params: params, requireTerminal: false) else {
-                return .err(code: "not_found", message: "Workspace not found", data: nil)
-            }
-            let terminalPanel: TerminalPanel?
-            if let surfaceId = resolved.surfaceId {
-                guard let panel = resolved.workspace.terminalPanel(for: surfaceId) else {
-                    return .err(
-                        code: "invalid_request",
-                        message: "terminal_id does not reference a terminal",
-                        data: nil
-                    )
-                }
-                terminalPanel = panel
-            } else {
-                terminalPanel = nil
-            }
-            resolvedWorkspaceID = resolved.workspace.id.uuidString
-            resolvedTerminalID = terminalPanel?.id.uuidString
-        }
-
-        do {
-            let payload = try await MobileHostService.shared.createAttachTicket(
-                workspaceID: resolvedWorkspaceID,
-                terminalID: resolvedTerminalID,
-                ttl: ttl,
-                routeID: routeID,
-                routeKind: routeKind
-            )
-            return .ok(payload)
-        } catch MobileAttachTicketStoreError.noRoutes {
-            return .err(
-                code: "unavailable",
-                message: "Mobile host routes are not available yet",
-                data: nil
-            )
-        } catch MobileAttachTicketStoreError.routeUnavailable {
-            var data: [String: Any] = [:]
-            if let routeID {
-                data["route_id"] = routeID
-            }
-            if let routeKind {
-                data["route_kind"] = routeKind
-            }
-            return .err(
-                code: "unavailable",
-                message: "Requested mobile host route is not available",
-                data: data.isEmpty ? nil : data
-            )
-        } catch {
-            return .err(
-                code: "internal_error",
-                message: "Failed to create mobile attach ticket",
-                data: ["error": String(describing: error)]
-            )
-        }
-    }
-
-    enum MobileTerminalAliasUUID {
-        case missing
-        case value(UUID)
-        case invalid
-        case conflict
-    }
-
-    func mobileTerminalAliasUUID(params: [String: Any]) -> MobileTerminalAliasUUID {
-        var selected: UUID?
-        var sawAlias = false
-        for key in ["surface_id", "terminal_id", "tab_id"] {
-            guard v2HasNonNullParam(params, key) else {
-                continue
-            }
-            sawAlias = true
-            guard let candidate = v2UUID(params, key) else {
-                return .invalid
-            }
-            if let selected, selected != candidate {
-                return .conflict
-            }
-            selected = selected ?? candidate
-        }
-        if let selected {
-            return .value(selected)
-        }
-        return sawAlias ? .invalid : .missing
-    }
-
-    private func mobileTerminalAliasValidationError(params: [String: Any]) -> V2CallResult? {
-        switch mobileTerminalAliasUUID(params: params) {
-        case .missing, .value:
-            return nil
-        case .invalid:
-            return .err(code: "invalid_params", message: "Missing or invalid terminal_id", data: nil)
-        case .conflict:
-            return .err(code: "invalid_params", message: "Conflicting terminal identifiers", data: nil)
-        }
-    }
-
-    private func mobileWorkspaceIDValidationError(params: [String: Any]) -> V2CallResult? {
-        guard v2HasNonNullParam(params, "workspace_id"),
-              v2UUID(params, "workspace_id") == nil else {
-            return nil
-        }
-        return .err(code: "invalid_params", message: "Missing or invalid workspace_id", data: nil)
-    }
-
-    func clearAllMobileViewportReports(reason: String) {
-        guard !mobileViewportReportsBySurfaceID.isEmpty ||
-            !mobileViewportReportCleanupTimersBySurfaceID.isEmpty else {
-            return
-        }
-
-        for timer in mobileViewportReportCleanupTimersBySurfaceID.values {
-            timer.cancel()
-        }
-        let surfaceIDs = Array(mobileViewportReportsBySurfaceID.keys)
-        mobileViewportReportsBySurfaceID.removeAll()
-        mobileViewportReportCleanupTimersBySurfaceID.removeAll()
-
-        for surfaceID in surfaceIDs {
-            terminalPanel(surfaceID: surfaceID)?.surface.clearMobileViewportLimit(reason: reason)
-        }
-    }
-
-    #if DEBUG
-    func debugResetMobileViewportReportsForTesting() {
-        clearAllMobileViewportReports(reason: "mobile.viewport.testReset")
-    }
-
-    func debugSetMobileViewportReportForTesting(
-        surfaceID: UUID,
-        clientID: String,
-        columns: Int,
-        rows: Int,
-        updatedAt: Date = Date()
-    ) {
-        var reports = mobileViewportReportsBySurfaceID[surfaceID] ?? [:]
-        reports[clientID] = MobileViewportReport(
-            columns: columns,
-            rows: rows,
-            updatedAt: updatedAt
-        )
-        mobileViewportReportsBySurfaceID[surfaceID] = reports
-    }
-
-    func debugMobileViewportReportClientIDsForTesting(surfaceID: UUID) -> Set<String>? {
-        guard let reports = mobileViewportReportsBySurfaceID[surfaceID] else {
-            return nil
-        }
-        return Set(reports.keys)
-    }
-    #endif
-
-    private func terminalPanel(surfaceID: UUID) -> TerminalPanel? {
-        guard let located = AppDelegate.shared?.locateSurface(surfaceId: surfaceID),
-              let workspace = located.tabManager.tabs.first(where: { $0.id == located.workspaceId }) else {
-            return nil
-        }
-        return workspace.terminalPanel(for: surfaceID)
-    }
-
     // Restored: still used by the v1 close-workspace path (its v2
     // counterpart moved to ControlCommandCoordinator).
     private func workspaceCloseProtectedMessage() -> String {
@@ -13206,9 +11812,8 @@ class TerminalController {
         )
     }
 
-    // Shared workspace-create implementation (restored): the workspace.create
-    // command moved to ControlCommandCoordinator, but v2MobileWorkspaceCreate
-    // still drives this body for the mobile data-plane create path.
+    // Shared workspace-create implementation: the workspace.create
+    // command moved to ControlCommandCoordinator; this body still backs it.
     func v2WorkspaceCreate(
         params: [String: Any],
         tabManager resolvedTabManager: TabManager? = nil
@@ -13307,643 +11912,6 @@ class TerminalController {
         ])
     }
 
-    func v2MobileWorkspaceCreate(params: [String: Any]) -> V2CallResult {
-        guard let tabManager = v2ResolveTabManager(params: params) else {
-            return .err(code: "unavailable", message: "Workspace context is unavailable", data: nil)
-        }
-        var createParams = params
-        createParams["focus"] = false
-        createParams["eager_load_terminal"] = false
-        createParams["auto_refresh_metadata"] = false
-        let createResult = v2WorkspaceCreate(params: createParams, tabManager: tabManager)
-        switch createResult {
-        case let .ok(payload):
-            let createdWorkspaceID = (payload as? [String: Any])?["workspace_id"] as? String
-            if let createdWorkspaceID {
-                createParams["workspace_id"] = createdWorkspaceID
-            }
-            // workspace.updated emit is handled by MobileWorkspaceListObserver
-            // which watches TabManager.tabsPublisher directly. Don't fire here.
-            return v2MobileWorkspaceList(
-                params: createParams,
-                tabManager: tabManager,
-                createdWorkspaceID: createdWorkspaceID
-            )
-        case .err:
-            return createResult
-        }
-    }
-
-    func v2MobileTerminalCreate(params: [String: Any]) -> V2CallResult {
-        guard let tabManager = v2ResolveTabManager(params: params) else {
-            return .err(code: "unavailable", message: "Workspace context is unavailable", data: nil)
-        }
-        if let error = mobileWorkspaceIDValidationError(params: params) {
-            return error
-        }
-        guard let workspace = v2ResolveWorkspace(params: params, tabManager: tabManager) else {
-            return .err(code: "not_found", message: "Workspace not found", data: nil)
-        }
-        guard let paneId = workspace.bonsplitController.focusedPaneId ?? workspace.bonsplitController.allPaneIds.first else {
-            return .err(code: "not_found", message: "Pane not found", data: nil)
-        }
-        guard let terminal = workspace.newTerminalSurface(
-            inPane: paneId,
-            focus: false,
-            autoRefreshMetadata: false,
-            preserveFocusWhenUnfocused: false, inheritWorkingDirectoryFallback: true
-        ) else {
-            return .err(code: "internal_error", message: "Failed to create terminal", data: nil)
-        }
-        // workspace.updated emit is handled by MobileWorkspaceListObserver.
-        return v2MobileWorkspaceList(
-            params: params,
-            tabManager: tabManager,
-            createdTerminalID: terminal.id.uuidString
-        )
-    }
-
-    func v2MobileTerminalReplay(params: [String: Any]) -> V2CallResult {
-        if let error = mobileWorkspaceIDValidationError(params: params) {
-            return error
-        }
-        if let error = mobileTerminalAliasValidationError(params: params) {
-            return error
-        }
-        guard let resolved = mobileResolveWorkspaceAndSurface(params: params, requireTerminal: true),
-              let surfaceId = resolved.surfaceId,
-              let terminalPanel = resolved.workspace.terminalPanel(for: surfaceId) else {
-            #if DEBUG
-            cmuxDebugLog("mobile.terminal.replay NOT_FOUND surface=\(v2RawString(params, "surface_id") ?? "nil")")
-            #endif
-            return .err(code: "not_found", message: "Terminal surface not found", data: nil)
-        }
-        let state = MobileTerminalByteTee.shared.replayState(surfaceID: surfaceId)
-        let seq = state?.seq ?? 0
-        let renderGrid = mobileTerminalRenderGridFrame(
-            terminalPanel: terminalPanel,
-            surfaceID: surfaceId,
-            seq: seq
-        )
-        #if DEBUG
-        cmuxDebugLog("mobile.terminal.replay surface=\(surfaceId.uuidString.prefix(8)) renderGrid=\(renderGrid != nil) seq=\(seq) hasState=\(state != nil)")
-        #endif
-        var payload: [String: Any] = [
-            "workspace_id": resolved.workspace.id.uuidString,
-            "surface_id": surfaceId.uuidString,
-            "seq": seq,
-        ]
-        if let renderGrid,
-           let renderGridObject = try? renderGrid.jsonObject() {
-            payload["columns"] = renderGrid.columns
-            payload["rows"] = renderGrid.rows
-            payload["render_grid"] = renderGridObject
-        } else {
-            let snapshotData = readTerminalTextFromVTExportForSnapshot(
-                terminalPanel: terminalPanel,
-                bindingAction: "write_active_file:copy,vt",
-                lineLimit: nil,
-                normalizeLineEndings: false
-            )?.data(using: .utf8) ?? Data()
-            let data = state?.data ?? Data()
-            if let surface = terminalPanel.surface.liveSurfaceForGhosttyAccess(reason: "mobileTerminalReplay") {
-                let size = ghostty_surface_size(surface)
-                payload["columns"] = max(Int(size.columns), 1)
-                payload["rows"] = max(Int(size.rows), 1)
-            }
-            if !snapshotData.isEmpty {
-                payload["snapshot_format"] = "ghostty.active.vt"
-                payload["snapshot_data_b64"] = snapshotData.base64EncodedString()
-            } else if !data.isEmpty {
-                payload["data_b64"] = data.base64EncodedString()
-            }
-        }
-        return .ok(payload)
-    }
-
-    /// Record (or clear) a paired device's reported terminal grid, recompute
-    /// the smallest grid across all attached devices, cap this surface to it
-    /// (drawing the macOS viewport border when the pane is larger), and return
-    /// the resulting effective grid so the device can pin + letterbox its own
-    /// render to match. This is the iOS/macOS half of the tmux-style shared
-    /// resize: the smallest attached viewport wins and every device shows the
-    /// same cols×rows with a clear border around the live area.
-    func v2MobileTerminalViewport(params: [String: Any]) -> V2CallResult {
-        if let error = mobileWorkspaceIDValidationError(params: params) {
-            return error
-        }
-        if let error = mobileTerminalAliasValidationError(params: params) {
-            return error
-        }
-        guard let resolved = mobileResolveWorkspaceAndSurface(params: params, requireTerminal: true),
-              let surfaceId = resolved.surfaceId,
-              let terminalPanel = resolved.workspace.terminalPanel(for: surfaceId) else {
-            return .err(code: "not_found", message: "Terminal surface not found", data: nil)
-        }
-
-        if v2Bool(params, "clear") == true {
-            if let clientID = v2String(params, "client_id") {
-                clearMobileViewportReport(
-                    surfaceID: terminalPanel.id,
-                    clientID: clientID,
-                    reason: "mobile.terminal.viewport.clear"
-                )
-            }
-        } else {
-            applyMobileViewportReport(params: params, terminalPanel: terminalPanel, sticky: true)
-        }
-
-        var payload: [String: Any] = [
-            "workspace_id": resolved.workspace.id.uuidString,
-            "surface_id": surfaceId.uuidString,
-        ]
-        if let surface = terminalPanel.surface.liveSurfaceForGhosttyAccess(reason: "mobileTerminalViewport") {
-            let size = ghostty_surface_size(surface)
-            payload["columns"] = max(Int(size.columns), 1)
-            payload["rows"] = max(Int(size.rows), 1)
-        }
-        return .ok(payload)
-    }
-
-    /// Forward a phone scroll gesture to the real surface so libghostty handles
-    /// it per-mode (scrollback in the normal screen, mouse-wheel to the program
-    /// in the alt screen). The producer already exports the live `vp_top`, so
-    /// the resulting viewport mirrors back to the phone; nudge an emit since a
-    /// pure scroll with no PTY output may not fire a render/tick on its own.
-    func v2MobileTerminalScroll(params: [String: Any]) -> V2CallResult {
-        if let error = mobileWorkspaceIDValidationError(params: params) {
-            return error
-        }
-        if let error = mobileTerminalAliasValidationError(params: params) {
-            return error
-        }
-        guard let resolved = mobileResolveWorkspaceAndSurface(params: params, requireTerminal: true),
-              let surfaceId = resolved.surfaceId,
-              let terminalPanel = resolved.workspace.terminalPanel(for: surfaceId) else {
-            return .err(code: "not_found", message: "Terminal surface not found", data: nil)
-        }
-        let deltaLines = (params["delta_lines"] as? NSNumber)?.doubleValue ?? 0
-        let col = (params["col"] as? NSNumber)?.intValue ?? 0
-        let row = (params["row"] as? NSNumber)?.intValue ?? 0
-        if deltaLines != 0 {
-            terminalPanel.surface.mobileScroll(deltaLines: deltaLines, col: max(0, col), row: max(0, row))
-            MobileTerminalRenderObserver.shared.noteTerminalBytes(surfaceID: terminalPanel.id)
-        }
-        return .ok(mobileTerminalScrollResponsePayload(
-            workspaceID: resolved.workspace.id,
-            terminalPanel: terminalPanel,
-            surfaceID: surfaceId,
-            params: params
-        ))
-    }
-
-    func v2MobileTerminalMouse(params: [String: Any]) -> V2CallResult {
-        if let error = mobileWorkspaceIDValidationError(params: params) {
-            return error
-        }
-        if let error = mobileTerminalAliasValidationError(params: params) {
-            return error
-        }
-        guard let resolved = mobileResolveWorkspaceAndSurface(params: params, requireTerminal: true),
-              let surfaceId = resolved.surfaceId,
-              let terminalPanel = resolved.workspace.terminalPanel(for: surfaceId) else {
-            return .err(code: "not_found", message: "Terminal surface not found", data: nil)
-        }
-        let col = (params["col"] as? NSNumber)?.intValue ?? 0
-        let row = (params["row"] as? NSNumber)?.intValue ?? 0
-        terminalPanel.surface.mobileClick(col: max(0, col), row: max(0, row))
-        MobileTerminalRenderObserver.shared.noteTerminalBytes(surfaceID: terminalPanel.id)
-        return .ok([
-            "workspace_id": resolved.workspace.id.uuidString,
-            "surface_id": surfaceId.uuidString,
-        ])
-    }
-
-    func v2MobileTerminalInput(params: [String: Any]) -> V2CallResult {
-        guard let text = v2RawString(params, "text"), !text.isEmpty else {
-            return .err(code: "invalid_params", message: "Missing text", data: nil)
-        }
-        if let error = mobileWorkspaceIDValidationError(params: params) {
-            return error
-        }
-        if let error = mobileTerminalAliasValidationError(params: params) {
-            return error
-        }
-        guard let resolved = mobileResolveWorkspaceAndSurface(params: params, requireTerminal: true),
-              let surfaceId = resolved.surfaceId,
-              let terminalPanel = resolved.workspace.terminalPanel(for: surfaceId) else {
-            return .err(code: "not_found", message: "Terminal surface not found", data: nil)
-        }
-
-        applyMobileViewportReport(params: params, terminalPanel: terminalPanel)
-
-        #if DEBUG
-        let sendStart = ProcessInfo.processInfo.systemUptime
-        #endif
-        let sendResult = terminalPanel.surface.sendInputResult(text)
-        switch sendResult {
-        case .sent:
-            terminalPanel.surface.forceRefresh(reason: "mobileHost.terminalInput")
-        case .queued:
-            break
-        case .inputQueueFull:
-            return .err(code: "input_queue_full", message: Self.terminalInputQueueFullMessage, data: ["surface_id": surfaceId.uuidString])
-        case .surfaceUnavailable:
-            return .err(code: "surface_unavailable", message: Self.terminalSurfaceUnavailableMessage, data: ["surface_id": surfaceId.uuidString])
-        case .processExited:
-            return .err(code: "process_exited", message: Self.terminalProcessExitedMessage, data: ["surface_id": surfaceId.uuidString])
-        }
-        #if DEBUG
-        let sendMs = (ProcessInfo.processInfo.systemUptime - sendStart) * 1000.0
-        cmuxDebugLog(
-            "mobile.terminal.input workspace=\(resolved.workspace.id.uuidString.prefix(8)) surface=\(surfaceId.uuidString.prefix(8)) queued=\(sendResult == .queued ? 1 : 0) chars=\(text.count) ms=\(String(format: "%.2f", sendMs))"
-        )
-        #endif
-        var payload: [String: Any] = [
-            "workspace_id": resolved.workspace.id.uuidString,
-            "surface_id": terminalPanel.id.uuidString,
-            "queued": sendResult == .queued,
-        ]
-        if let seq = MobileTerminalByteTee.shared.currentSequence(surfaceID: surfaceId) {
-            payload["terminal_seq"] = seq
-        }
-        return .ok(payload)
-    }
-
-    /// Handle `terminal.paste_image`: a paired client (the iOS app) forwards an
-    /// image it pasted as base64 bytes. We materialize it to a temp file on the
-    /// Mac and inject the shell-escaped path as terminal input, exactly the way a
-    /// local clipboard-image paste does, so the running TUI (e.g. Claude Code)
-    /// attaches the image from the path.
-    func v2MobileTerminalPasteImage(params: [String: Any]) -> V2CallResult {
-        guard let base64 = v2RawString(params, "image_base64"),
-              let imageData = Data(base64Encoded: base64), !imageData.isEmpty else {
-            return .err(code: "invalid_params", message: "Missing or invalid image_base64", data: nil)
-        }
-        let format = v2RawString(params, "image_format") ?? "png"
-        if let error = mobileWorkspaceIDValidationError(params: params) {
-            return error
-        }
-        if let error = mobileTerminalAliasValidationError(params: params) {
-            return error
-        }
-        guard let resolved = mobileResolveWorkspaceAndSurface(params: params, requireTerminal: true),
-              let surfaceId = resolved.surfaceId,
-              let terminalPanel = resolved.workspace.terminalPanel(for: surfaceId) else {
-            return .err(code: "not_found", message: "Terminal surface not found", data: nil)
-        }
-
-        applyMobileViewportReport(params: params, terminalPanel: terminalPanel)
-
-        guard let escapedPath = GhosttyApp.terminalPasteboard.saveImageData(imageData, fileExtension: format) else {
-            return .err(code: "invalid_params", message: "Image payload was empty or exceeded the size limit", data: nil)
-        }
-
-        let sendResult = terminalPanel.surface.sendInputResult(escapedPath)
-        switch sendResult {
-        case .sent:
-            terminalPanel.surface.forceRefresh(reason: "mobileHost.terminalPasteImage")
-        case .queued:
-            break
-        case .inputQueueFull:
-            return .err(code: "input_queue_full", message: Self.terminalInputQueueFullMessage, data: ["surface_id": surfaceId.uuidString])
-        case .surfaceUnavailable:
-            return .err(code: "surface_unavailable", message: Self.terminalSurfaceUnavailableMessage, data: ["surface_id": surfaceId.uuidString])
-        case .processExited:
-            return .err(code: "process_exited", message: Self.terminalProcessExitedMessage, data: ["surface_id": surfaceId.uuidString])
-        }
-        #if DEBUG
-        cmuxDebugLog(
-            "mobile.terminal.paste_image workspace=\(resolved.workspace.id.uuidString.prefix(8)) surface=\(surfaceId.uuidString.prefix(8)) bytes=\(imageData.count) format=\(format)"
-        )
-        #endif
-        return .ok([
-            "workspace_id": resolved.workspace.id.uuidString,
-            "surface_id": terminalPanel.id.uuidString,
-            "queued": sendResult == .queued,
-        ])
-    }
-
-    /// Deliver a composed block from the mobile composer as a bracketed paste
-    /// followed by an optional single submit key.
-    ///
-    /// This mirrors the macOS TextBox composer dispatch
-    /// (`[.pasteText(payload), .namedKey(submitKey)]`): the text goes through
-    /// `sendText` (libghostty `ghostty_surface_text`), which bracketed-pastes it
-    /// (`ESC[200~ … ESC[201~` when DECSET 2004 is active) so the agent's line
-    /// editor inserts the whole, possibly multi-line, block as literal text
-    /// instead of treating every interior newline as a submit. A single named
-    /// submit key then commits it once. The `terminal.input` path is wrong for a
-    /// composed block: `parsedSocketInputEvents` rewrites every `\n`/`\r` to a
-    /// raw CR, so an N-line message fragments into N submissions.
-    ///
-    /// `submit_key` is optional: `return`/`enter` (default) or `ctrl+enter`
-    /// submit; `none` pastes without submitting so the composer can keep editing.
-    func v2MobileTerminalPaste(params: [String: Any]) -> V2CallResult {
-        guard let text = v2RawString(params, "text"), !text.isEmpty else {
-            return .err(code: "invalid_params", message: "Missing text", data: nil)
-        }
-        // Resolve the optional submit key up front so an unsupported value fails
-        // before any text is pasted (no partial application). The phone sends
-        // `return` as the default submit *intent*; the agent-aware upgrade to
-        // `ctrl+enter` happens below once the surface (and its agent context) is
-        // resolved, because only the Mac knows which agent is running.
-        let submitKeyRaw = (v2String(params, "submit_key") ?? "return").lowercased()
-        var submitKeyName: String?
-        var submitKeyWasReturnIntent = false
-        switch submitKeyRaw {
-        case "", "return", "enter":
-            submitKeyName = "return"
-            submitKeyWasReturnIntent = true
-        case "ctrl+enter":
-            submitKeyName = "ctrl+enter"
-        case "none":
-            submitKeyName = nil
-        default:
-            return .err(code: "invalid_params", message: "Unsupported submit_key", data: ["submit_key": submitKeyRaw])
-        }
-        if let error = mobileWorkspaceIDValidationError(params: params) {
-            return error
-        }
-        if let error = mobileTerminalAliasValidationError(params: params) {
-            return error
-        }
-        guard let resolved = mobileResolveWorkspaceAndSurface(params: params, requireTerminal: true),
-              let surfaceId = resolved.surfaceId,
-              let terminalPanel = resolved.workspace.terminalPanel(for: surfaceId) else {
-            return .err(code: "not_found", message: "Terminal surface not found", data: nil)
-        }
-
-        // Mirror the macOS TextBox composer's submit-key selection
-        // (`TextBoxInput.dispatchEvents`): Claude Code needs `ctrl+enter` to
-        // submit a multi-line block, while plain `return` submits a newline mid
-        // prompt. The phone cannot know the running agent, so it always asks for
-        // `return`; upgrade that intent here when the surface is Claude and the
-        // composed text spans multiple lines. Explicit `ctrl+enter`/`none` from
-        // the client are honored as-is.
-        if submitKeyWasReturnIntent,
-           text.contains("\n") || text.contains("\r"),
-           TextBoxAgentDetection.isClaudeCode(
-               context: WorkspaceContentView.terminalAgentContext(panel: terminalPanel, workspace: resolved.workspace)
-           ) {
-            submitKeyName = "ctrl+enter"
-        }
-
-        applyMobileViewportReport(params: params, terminalPanel: terminalPanel)
-
-        // Send through the TerminalPanel explicit-input wrappers (not the raw
-        // surface): they run `resumeForExplicitInputIfNeeded()` first, waking a
-        // hibernated agent terminal the same way local typing does, so a mobile
-        // composer submit cannot write into a cold surface.
-        guard terminalPanel.sendText(text) else {
-            return .err(code: "surface_unavailable", message: Self.terminalSurfaceUnavailableMessage, data: ["surface_id": surfaceId.uuidString])
-        }
-
-        // The paste text is already accepted by the surface above. From here on a
-        // submit-key failure must NOT surface as an RPC error: the client treats
-        // any error as "nothing was sent" and keeps the composer draft, so a
-        // retry would paste the whole block a second time. Report partial
-        // success instead — `submitted: false` plus `submit_error` — so the
-        // client clears the draft (the text is sitting at the prompt) and can
-        // tell the user the submit keypress is still needed.
-        var submitted = false
-        var submitError: String?
-        if let submitKeyName {
-            let keyResult = terminalPanel.sendNamedKeyResult(submitKeyName)
-            if keyResult.accepted {
-                submitted = true
-            } else {
-                switch keyResult {
-                case .inputQueueFull:
-                    submitError = "input_queue_full"
-                case .surfaceUnavailable:
-                    submitError = "surface_unavailable"
-                case .processExited:
-                    submitError = "process_exited"
-                case .unknownKey, .sent, .queued:
-                    // .sent / .queued are accepted results and unreachable in this
-                    // else-branch; grouped here only to keep the switch exhaustive.
-                    submitError = "unknown_key"
-                }
-            }
-        }
-
-        terminalPanel.surface.forceRefresh(reason: "mobileHost.terminalPaste")
-
-        #if DEBUG
-        cmuxDebugLog(
-            "mobile.terminal.paste workspace=\(resolved.workspace.id.uuidString.prefix(8)) surface=\(surfaceId.uuidString.prefix(8)) chars=\(text.count) submitted=\(submitted ? 1 : 0)"
-        )
-        #endif
-
-        var payload: [String: Any] = [
-            "workspace_id": resolved.workspace.id.uuidString,
-            "surface_id": terminalPanel.id.uuidString,
-            "submitted": submitted,
-        ]
-        if let submitError {
-            payload["submit_error"] = submitError
-        }
-        if let seq = MobileTerminalByteTee.shared.currentSequence(surfaceID: surfaceId) {
-            payload["terminal_seq"] = seq
-        }
-        return .ok(payload)
-    }
-
-    private func applyMobileViewportReport(
-        params: [String: Any],
-        terminalPanel: TerminalPanel,
-        sticky: Bool = false
-    ) {
-        guard let clientID = v2String(params, "client_id"),
-              let rawColumns = v2Int(params, "viewport_columns"),
-              let rawRows = v2Int(params, "viewport_rows") else {
-            return
-        }
-
-        let columns = min(max(rawColumns, 20), 300)
-        let rows = min(max(rawRows, 5), 120)
-        let now = Date()
-        var reports = mobileViewportReportsBySurfaceID[terminalPanel.id] ?? [:]
-        reports = reports.filter { _, report in
-            report.sticky || now.timeIntervalSince(report.updatedAt) <= Self.mobileViewportReportTTL
-        }
-        reports[clientID] = MobileViewportReport(
-            columns: columns,
-            rows: rows,
-            updatedAt: now,
-            sticky: sticky
-        )
-        mobileViewportReportsBySurfaceID[terminalPanel.id] = reports
-        scheduleMobileViewportReportCleanup(surfaceID: terminalPanel.id, reports: reports)
-
-        guard let minColumns = reports.values.map(\.columns).min(),
-              let minRows = reports.values.map(\.rows).min() else {
-            return
-        }
-        terminalPanel.surface.applyMobileViewportLimit(
-            columns: minColumns,
-            rows: minRows,
-            reason: "mobile.terminal.input"
-        )
-    }
-
-    /// Remove a single client's viewport report for a surface (dedicated
-    /// `mobile.terminal.viewport` clear, or a disconnect), then recompute the
-    /// remaining min and re-apply or clear the surface's viewport limit so the
-    /// macOS border reflects only the devices still attached.
-    private func clearMobileViewportReport(surfaceID: UUID, clientID: String, reason: String) {
-        guard var reports = mobileViewportReportsBySurfaceID[surfaceID],
-              reports.removeValue(forKey: clientID) != nil else {
-            return
-        }
-        if reports.isEmpty {
-            mobileViewportReportsBySurfaceID[surfaceID] = nil
-            mobileViewportReportCleanupTimersBySurfaceID[surfaceID]?.cancel()
-            mobileViewportReportCleanupTimersBySurfaceID[surfaceID] = nil
-            terminalPanel(surfaceID: surfaceID)?.surface.clearMobileViewportLimit(reason: reason)
-            return
-        }
-        mobileViewportReportsBySurfaceID[surfaceID] = reports
-        scheduleMobileViewportReportCleanup(surfaceID: surfaceID, reports: reports)
-        if let minColumns = reports.values.map(\.columns).min(),
-           let minRows = reports.values.map(\.rows).min() {
-            terminalPanel(surfaceID: surfaceID)?.surface.applyMobileViewportLimit(
-                columns: minColumns,
-                rows: minRows,
-                reason: reason
-            )
-        }
-    }
-
-    /// Drop every viewport report owned by the given client IDs across all
-    /// surfaces. Called when a mobile connection closes so a disconnected
-    /// device stops pinning the grid even though it never sent an explicit
-    /// clear. Sticky reports rely on this signal instead of the TTL.
-    func clearMobileViewportReports(clientIDs: Set<String>, reason: String) {
-        guard !clientIDs.isEmpty else { return }
-        for surfaceID in Array(mobileViewportReportsBySurfaceID.keys) {
-            for clientID in clientIDs {
-                clearMobileViewportReport(surfaceID: surfaceID, clientID: clientID, reason: reason)
-            }
-        }
-    }
-
-    private func scheduleMobileViewportReportCleanup(
-        surfaceID: UUID,
-        reports: [String: MobileViewportReport]
-    ) {
-        mobileViewportReportCleanupTimersBySurfaceID[surfaceID]?.cancel()
-        // Sticky reports live for the connection lifetime, so they never drive
-        // a TTL timer; only non-sticky (input-piggyback) reports expire.
-        guard let nextExpiry = reports.values
-            .filter({ !$0.sticky })
-            .map({ $0.updatedAt.addingTimeInterval(Self.mobileViewportReportTTL) })
-            .min() else {
-            mobileViewportReportCleanupTimersBySurfaceID[surfaceID] = nil
-            return
-        }
-
-        let timer = DispatchSource.makeTimerSource(queue: .main)
-        let millisecondsUntilExpiry = max(1, Int((nextExpiry.timeIntervalSinceNow + 1) * 1000))
-        timer.schedule(deadline: .now() + .milliseconds(millisecondsUntilExpiry))
-        timer.setEventHandler { [weak self] in
-            Task { @MainActor [weak self] in
-                self?.pruneMobileViewportReports(surfaceID: surfaceID, reason: "mobile.viewport.reportsExpired")
-            }
-        }
-        mobileViewportReportCleanupTimersBySurfaceID[surfaceID] = timer
-        timer.resume()
-    }
-
-    private func pruneMobileViewportReports(surfaceID: UUID, reason: String) {
-        let now = Date()
-        guard var reports = mobileViewportReportsBySurfaceID[surfaceID] else {
-            mobileViewportReportCleanupTimersBySurfaceID[surfaceID]?.cancel()
-            mobileViewportReportCleanupTimersBySurfaceID[surfaceID] = nil
-            return
-        }
-
-        reports = reports.filter { _, report in
-            report.sticky || now.timeIntervalSince(report.updatedAt) <= Self.mobileViewportReportTTL
-        }
-
-        guard !reports.isEmpty else {
-            mobileViewportReportsBySurfaceID[surfaceID] = nil
-            mobileViewportReportCleanupTimersBySurfaceID[surfaceID]?.cancel()
-            mobileViewportReportCleanupTimersBySurfaceID[surfaceID] = nil
-            terminalPanel(surfaceID: surfaceID)?.surface.clearMobileViewportLimit(reason: reason)
-            return
-        }
-
-        mobileViewportReportsBySurfaceID[surfaceID] = reports
-        if let minColumns = reports.values.map(\.columns).min(),
-           let minRows = reports.values.map(\.rows).min() {
-            terminalPanel(surfaceID: surfaceID)?.surface.applyMobileViewportLimit(
-                columns: minColumns,
-                rows: minRows,
-                reason: reason
-            )
-        }
-        scheduleMobileViewportReportCleanup(surfaceID: surfaceID, reports: reports)
-    }
-
-    func mobileResolveWorkspaceAndSurface(
-        params: [String: Any],
-        requireTerminal: Bool
-    ) -> (tabManager: TabManager, workspace: Workspace, surfaceId: UUID?)? {
-        guard let tabManager = v2ResolveTabManager(params: params),
-              let workspace = v2ResolveWorkspace(params: params, tabManager: tabManager) else {
-            return nil
-        }
-
-        let requestedSurfaceId = v2UUID(params, "surface_id")
-            ?? v2UUID(params, "terminal_id")
-            ?? v2UUID(params, "tab_id")
-
-        let surfaceId: UUID?
-        if let requestedSurfaceId {
-            guard workspace.panels[requestedSurfaceId] != nil else {
-                return nil
-            }
-            surfaceId = requestedSurfaceId
-        } else if requireTerminal {
-            surfaceId = workspace.focusedTerminalPanel?.id
-                ?? mobileTerminalPanels(in: workspace).first?.id
-        } else {
-            surfaceId = nil
-        }
-
-        // A session-restored / never-foregrounded terminal has its libghostty
-        // surface created lazily — today only on the first keystroke (via the
-        // input path's `requestBackgroundSurfaceStartIfNeeded`). The mobile
-        // render-grid producer only reads a *live* surface, so such a terminal
-        // shows blank on the phone until the user types. When a mobile client
-        // resolves a terminal to read or drive, materialize the surface
-        // headlessly so attaching alone loads it. Idempotent and a no-op once
-        // the surface exists.
-        if requireTerminal,
-           let surfaceId,
-           let panel = workspace.terminalPanel(for: surfaceId) {
-            panel.surface.requestBackgroundSurfaceStartIfNeeded()
-        }
-
-        return (tabManager, workspace, surfaceId)
-    }
-
-    func mobileTerminalPanels(in workspace: Workspace) -> [TerminalPanel] {
-        // Use the workspace's spatial (left-to-right, top-to-bottom) panel order
-        // so the phone's terminal dropdown matches the on-screen bonsplit layout,
-        // rather than focused-first/UUID order. `is_focused` in the payload still
-        // tells the phone which terminal is active.
-        orderedPanels(in: workspace).compactMap { $0 as? TerminalPanel }
-    }
-
-    func mobileNonEmpty(_ raw: String?) -> String? {
-        let trimmed = raw?.trimmingCharacters(in: .whitespacesAndNewlines)
-        return trimmed?.isEmpty == false ? trimmed : nil
-    }
-
     deinit {
         if let browserDownloadObserver {
             NotificationCenter.default.removeObserver(browserDownloadObserver)
@@ -13952,4 +11920,56 @@ class TerminalController {
         // deinit never runs; listener teardown is applicationWillTerminate's
         // synchronous stop() on the main actor.
     }
+}
+
+extension TerminalController {
+    private nonisolated func v2WorkspaceEnv(params: [String: Any]) -> V2CallResult {
+        // Validate any explicit target before resolving. This endpoint can print
+        // secrets, so a malformed or stale explicit target must error rather than
+        // silently fall back to the selected workspace (unlike the generic
+        // v2ResolveWorkspace, which falls through to the selection).
+        for key in ["workspace_id", "surface_id", "terminal_id", "tab_id", "pane_id"] {
+            if v2HasNonNullParam(params, key), v2UUID(params, key) == nil {
+                return .err(code: "invalid_params", message: "Missing or invalid \(key)", data: nil)
+            }
+        }
+        return v2MainSync { () -> V2CallResult in
+            v2RefreshKnownRefs()
+            guard let tabManager = v2ResolveTabManager(params: params) else {
+                return .err(code: "unavailable", message: "TabManager not available", data: nil)
+            }
+            // Resolve strictly for explicit targets; only fall back to the selected
+            // workspace when no explicit target was supplied.
+            let resolved: Workspace?
+            if let wsId = v2UUID(params, "workspace_id") {
+                resolved = tabManager.tabs.first(where: { $0.id == wsId })
+            } else if let surfaceId = v2UUID(params, "surface_id") ?? v2UUID(params, "terminal_id") ?? v2UUID(params, "tab_id") {
+                resolved = tabManager.tabs.first(where: { $0.panels[surfaceId] != nil })
+            } else if let paneId = v2UUID(params, "pane_id") {
+                if let located = v2LocatePane(paneId), located.tabManager === tabManager {
+                    resolved = located.workspace
+                } else {
+                    resolved = nil
+                }
+            } else if let selectedId = tabManager.selectedTabId {
+                resolved = tabManager.tabs.first(where: { $0.id == selectedId })
+            } else {
+                resolved = nil
+            }
+            guard let workspace = resolved else {
+                return .err(code: "not_found", message: "Workspace not found", data: nil)
+            }
+            let windowId = v2ResolveWindowId(tabManager: tabManager)
+            let env = workspace.workspaceEnvironment
+            return .ok([
+                "window_id": v2OrNull(windowId?.uuidString),
+                "window_ref": v2Ref(kind: .window, uuid: windowId),
+                "workspace_id": workspace.id.uuidString,
+                "workspace_ref": v2Ref(kind: .workspace, uuid: workspace.id),
+                "env": env,
+                "count": env.count,
+            ])
+        }
+    }
+
 }

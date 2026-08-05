@@ -1,5 +1,4 @@
 import Foundation
-import CmuxCore
 import CmuxSidebar
 import Testing
 

@@ -9,7 +9,6 @@ import AppKit
 import SwiftUI
 import UniformTypeIdentifiers
 import WebKit
-import CMUXMobileCore
 import ObjectiveC.runtime
 import Bonsplit
 import UserNotifications

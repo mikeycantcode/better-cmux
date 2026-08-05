@@ -2,10 +2,10 @@ public import Foundation
 
 /// The system/misc-domain slice of the control-command seam (a constituent of
 /// the ``ControlCommandContext`` umbrella): `system.identify`, `system.tree`,
-/// `auth.login`, `session.restore_previous`, `settings.open`, `feedback.open`,
+/// `auth.login`, `session.restore_previous`, `settings.open`,
 /// `extension.sidebar.snapshot`, `workspace.action`, `surface.action` /
 /// `tab.action`, `surface.drag_to_split` / `surface.split_off`, and the
-/// DEBUG-only `mobile.dev_stack_auth.configure`.
+
 ///
 /// Every method is `@MainActor`: the conformer (the interim composition owner)
 /// and the coordinator both live on the main actor, so these are plain
@@ -56,15 +56,6 @@ public protocol ControlSystemContext: AnyObject {
     /// - Returns: The open resolution.
     func controlSettingsOpen(targetRaw: String?, requestedActivate: Bool) -> ControlSettingsOpenResolution
 
-    /// Schedules the feedback composer for `feedback.open`.
-    ///
-    /// - Parameters:
-    ///   - workspaceID: The explicit `workspace_id`, if any.
-    ///   - windowID: The explicit `window_id`, if any.
-    ///   - requestedActivate: The requested `activate` flag (the app applies
-    ///     the focus-allowance policy).
-    func controlFeedbackOpen(workspaceID: UUID?, windowID: UUID?, requestedActivate: Bool)
-
     /// Snapshots the routed window's workspaces for
     /// `extension.sidebar.snapshot`.
     ///
@@ -73,7 +64,7 @@ public protocol ControlSystemContext: AnyObject {
     func controlExtensionSidebarSnapshot(routing: ControlRoutingSelectors) -> ControlExtensionSidebarSnapshot?
 
     /// Runs one `workspace.action` mutation, delegating to the shared
-    /// app-side `v2WorkspaceAction` (also driven by the mobile host's gated
+    /// app-side `v2WorkspaceAction` (shared with the
     /// `workspace.action` RPC, so the body stays app-side) and bridging its
     /// fully-shaped result.
     ///
@@ -113,11 +104,4 @@ public protocol ControlSystemContext: AnyObject {
     /// - Returns: The fully shaped call result.
     func controlSurfaceSplitOff(params: [String: JSONValue]) -> ControlCallResult
 
-    #if DEBUG
-    /// Configures (or clears, with `nil`) the accepted dev Stack auth token
-    /// for the DEBUG-only `mobile.dev_stack_auth.configure`.
-    ///
-    /// - Parameter token: The token to accept, or `nil` to disable.
-    func controlMobileDevStackAuthSetToken(_ token: String?)
-    #endif
 }

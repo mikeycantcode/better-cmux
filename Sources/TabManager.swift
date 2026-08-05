@@ -217,7 +217,7 @@ class TabManager: ObservableObject {
     /// subscribers; same contract as `tabsPublisher`.
     let selectedTabIdPublisher = CurrentValueSubject<UUID?, Never>(nil)
     /// Legacy Combine bridge for the remaining `tabManager.$workspaceGroups`
-    /// subscribers (e.g. MobileWorkspaceListObserver); same contract as
+    /// subscribers ; same contract as
     /// `tabsPublisher`. Emits during willSet and replays the current value
     /// on subscribe — the `Published.Publisher` semantics those call sites
     /// were written against.
@@ -293,9 +293,6 @@ class TabManager: ObservableObject {
             if !isRestoringSessionSnapshot {
                 workspaces.expandWorkspaceGroupForSelectionIfNeeded()
             }
-            sentryBreadcrumb("workspace.switch", data: [
-                "tabCount": tabs.count
-            ])
             let previousTabId = oldValue
             if let previousTabId,
                let previousPanelId = focusedPanelId(for: previousTabId) {
@@ -643,26 +640,6 @@ class TabManager: ObservableObject {
     private func sidebarMetadataSettingsDidChange() {
         sidebarGitMetadataService.sidebarGitMetadataWatchSettingsDidChange()
         pullRequestProbing.sidebarPullRequestPollingSettingsDidChange()
-        refreshRemotePortScanningEnablement()
-    }
-
-    /// Last ports-visibility enablement fanned out to remote sessions; gates
-    /// the `UserDefaults.didChangeNotification` firehose to actual transitions.
-    private var lastRemotePortScanningEnabled: Bool?
-
-    /// Propagates the sidebar ports-visibility settings to every live remote
-    /// session so that disabling `sidebar.showPorts` (or enabling
-    /// `sidebar.hideAllDetails`) actually stops the backend ssh port-scan loop,
-    /// not just the sidebar display (issue #6123). New remote workspaces pick
-    /// up the current value at creation, so this only needs to react to a
-    /// change for already-connected sessions.
-    private func refreshRemotePortScanningEnablement() {
-        let enabled = Workspace.remotePortScanningEnabledFromSettings()
-        guard enabled != lastRemotePortScanningEnabled else { return }
-        lastRemotePortScanningEnabled = enabled
-        for tab in tabs where tab.isRemoteWorkspace {
-            tab.applyRemotePortScanningEnabled(enabled)
-        }
     }
 
     func refreshTrackedWorkspaceGitMetadataForTesting() {
@@ -1081,7 +1058,6 @@ class TabManager: ObservableObject {
             maybeMutateSelectionDuringWorkspaceCreationForDev(snapshot: snapshot)
 #endif
             let nextTabCount = snapshot.tabs.count + 1
-            sentryBreadcrumb("workspace.create", data: ["tabCount": nextTabCount])
             let explicitWorkingDirectory = normalizedWorkingDirectory(overrideWorkingDirectory)
             let workingDirectory = explicitWorkingDirectory ?? snapshot.preferredWorkingDirectory
             let inheritedConfig = workspaceCreationConfigTemplate(
@@ -1684,21 +1660,12 @@ class TabManager: ObservableObject {
     func setCustomTitle(
         tabId: UUID,
         title: String?,
-        source: Workspace.CustomTitleSource = .user,
-        propagateToRemoteTmux: Bool = true
+        source: Workspace.CustomTitleSource = .user
     ) -> Bool {
         guard let index = tabs.firstIndex(where: { $0.id == tabId }) else { return false }
         let applied = tabs[index].setCustomTitle(title, source: source)
         if applied, selectedTabId == tabId {
             updateWindowTitle(for: tabs[index])
-        }
-        // A remote tmux mirror workspace rename propagates to `rename-session`,
-        // but only when the write landed (an `.auto` write rejected over a
-        // user-set title must not desync the remote session name).
-        if applied, propagateToRemoteTmux, tabs[index].isRemoteTmuxMirror {
-            AppDelegate.shared?.remoteTmuxController.handleMirrorWorkspaceRenamed(
-                workspaceId: tabId, title: title
-            )
         }
         return applied
     }
@@ -2013,13 +1980,6 @@ class TabManager: ObservableObject {
     func closeWorkspace(_ workspace: Workspace, recordHistory: Bool = true) {
         guard tabs.count > 1 else { return }
         panelTitleUpdateCoalescer.flushNow()
-        sentryBreadcrumb("workspace.close", data: ["tabCount": tabs.count - 1])
-        // User-initiated close of a mirrored remote tmux session kills it on the
-        // remote. (App quit tears down windows without calling closeWorkspace, so
-        // quitting still leaves remote sessions alive.)
-        if workspace.isRemoteTmuxMirror {
-            AppDelegate.shared?.remoteTmuxController.handleWorkspaceClosed(workspaceId: workspace.id)
-        }
         if recordHistory,
            workspace.isRestorableInSessionSnapshot,
            let index = tabs.firstIndex(where: { $0.id == workspace.id }) {
@@ -2048,7 +2008,6 @@ class TabManager: ObservableObject {
         workspace.withClosedPanelHistorySuppressed {
             workspace.teardownAllPanels()
         }
-        workspace.teardownRemoteConnection()
         unwireClosedBrowserTracking(for: workspace)
         browserModel.removeClosedBrowserPanels(forWorkspaceId: workspace.id)
         workspace.owningTabManager = nil
@@ -2234,19 +2193,6 @@ class TabManager: ObservableObject {
         sidebarMultiSelection.replaceSelection(with: workspaceIds.intersection(existingIds))
     }
 
-    /// Marks the window's pending close as a tab/session close so a remote-tmux
-    /// mirror among `workspaces` is KILLED (synced with tmux) on the close commit
-    /// rather than detached. The single decision point for every close path that
-    /// closes the whole window directly — the last-workspace branch of
-    /// ``closeWorkspaceIfRunningProcess`` and the batch/anchor paths in
-    /// ``closeWorkspacesWithConfirmation`` — so every explicit tab-close intent kills
-    /// consistently. ``AppDelegate``'s `shouldClose`/`onClose` consume or clear the
-    /// marker (veto vs commit).
-    private func markRemoteTmuxKillOnWindowCloseIfNeeded(for workspaces: [Workspace]) {
-        guard workspaces.contains(where: { $0.isRemoteTmuxMirror }),
-              let windowId = AppDelegate.shared?.windowId(for: self) else { return }
-        AppDelegate.shared?.remoteTmuxController.markKillSessionsOnWindowClose(windowId: windowId)
-    }
 
     func closeWorkspacesWithConfirmation(_ workspaceIds: [UUID], allowPinned: Bool) {
         let workspaces = orderedClosableWorkspaces(workspaceIds, allowPinned: allowPinned)
@@ -2267,9 +2213,6 @@ class TabManager: ObservableObject {
 
         if plan.workspaces.count == tabs.count,
            let firstWorkspace = plan.workspaces.first {
-            // Closing every tab is still an explicit tab/session close: kill the
-            // remote-tmux session(s) on commit, not detach.
-            markRemoteTmuxKillOnWindowCloseIfNeeded(for: plan.workspaces)
             if let window {
                 window.performClose(nil)
                 return
@@ -2299,8 +2242,6 @@ class TabManager: ObservableObject {
                 // Anchor confirmed (or suppressed); skip the inner re-prompt
                 // by closing without going through closeWorkspaceIfRunningProcess.
                 if tabs.count <= 1 {
-                    // Still a tab/session close → kill the remote session on commit.
-                    markRemoteTmuxKillOnWindowCloseIfNeeded(for: [workspace])
                     if let window {
                         window.performClose(nil)
                     } else {
@@ -2545,13 +2486,6 @@ class TabManager: ObservableObject {
         }
         if tabs.count <= 1 {
             // Last workspace in this window closes via the window-close path, but it
-            // is still an explicit TAB/session close: for a remote-tmux mirror, mark
-            // the close to KILL the session on commit (synced with tmux), even though
-            // it also closes the app window. The marker is consumed on the (non-vetoed)
-            // close commit, or cleared if the close is vetoed (single-window quit
-            // warning) so a cancelled close never kills. A plain window/quit close
-            // never sets it, so it detaches. Non-last workspaces kill via closeWorkspace.
-            markRemoteTmuxKillOnWindowCloseIfNeeded(for: [workspace])
             if let window {
                 window.performClose(nil)
             } else {
@@ -2816,48 +2750,12 @@ class TabManager: ObservableObject {
     func closePanelAfterChildExited(tabId: UUID, surfaceId: UUID) {
         guard let tab = tabs.first(where: { $0.id == tabId }) else { return }
         guard tab.panels[surfaceId] != nil else { return }
-        let keepsPersistentRemoteSurfaceOpen =
-            tab.shouldKeepPersistentRemoteSurfaceOpenAfterChildExit(surfaceId)
-        if !keepsPersistentRemoteSurfaceOpen,
-           tab.shouldDemoteWorkspaceAfterChildExit(surfaceId: surfaceId) {
-            let relayPort: Int?
-            if tab.remoteConfiguration?.transport == .ssh {
-                relayPort = tab.remoteConfiguration?.relayPort
-            } else {
-                relayPort = nil
-            }
-            tab.markRemoteTerminalSessionEnded(
-                surfaceId: surfaceId,
-                relayPort: relayPort,
-                allowUntracked: !tab.isRemoteTerminalSurface(surfaceId)
-            )
-        }
-        let handlesRemoteExitThroughWorkspace =
-            tab.panels.count <= 1 && tab.shouldDemoteWorkspaceAfterChildExit(surfaceId: surfaceId)
-
 #if DEBUG
         cmuxDebugLog(
             "surface.close.childExited tab=\(tabId.uuidString.prefix(5)) " +
-            "surface=\(surfaceId.uuidString.prefix(5)) panels=\(tab.panels.count) workspaces=\(tabs.count) " +
-            "remoteWorkspace=\(tab.isRemoteWorkspace ? 1 : 0) keepRemote=\(handlesRemoteExitThroughWorkspace ? 1 : 0) " +
-            "keepPersistentRemote=\(keepsPersistentRemoteSurfaceOpen ? 1 : 0)"
+            "surface=\(surfaceId.uuidString.prefix(5)) panels=\(tab.panels.count) workspaces=\(tabs.count)"
         )
 #endif
-
-        // A persistent SSH workspace must never silently replace a failed remote attach with
-        // a local login shell. Keep the exited surface visible so the user can see the error
-        // and retry instead of making a detached remote workspace look local after relaunch.
-        if keepsPersistentRemoteSurfaceOpen {
-            tab.markPersistentRemotePTYAttachFailed(surfaceId: surfaceId)
-            return
-        }
-
-        // Route the last remote child exit through Workspace close handling so remote teardown
-        // and replacement-panel logic run before TabManager considers removing the workspace.
-        if handlesRemoteExitThroughWorkspace {
-            closeRuntimeSurface(tabId: tabId, surfaceId: surfaceId)
-            return
-        }
 
         // Child-exit on the last panel should collapse the workspace, matching explicit close
         // semantics (and close the window when it was the last workspace).
@@ -3689,7 +3587,6 @@ class TabManager: ObservableObject {
         guard let tab = tabs.first(where: { $0.id == tabId }),
               tab.panels[surfaceId] != nil else { return nil }
         tab.clearSplitZoom()
-        sentryBreadcrumb("split.create", data: ["direction": String(describing: direction)])
         return newSplit(tabId: tabId, surfaceId: surfaceId, direction: direction, focus: focus)
     }
 
@@ -3827,8 +3724,7 @@ class TabManager: ObservableObject {
         initialCommand: String? = nil,
         tmuxStartCommand: String? = nil,
         startupEnvironment: [String: String] = [:],
-        initialDividerPosition: CGFloat? = nil,
-        remotePTYSessionID: String? = nil
+        initialDividerPosition: CGFloat? = nil
     ) -> UUID? {
         guard let tab = tabs.first(where: { $0.id == tabId }) else { return nil }
         return tab.newTerminalSplit(
@@ -3840,8 +3736,7 @@ class TabManager: ObservableObject {
             initialCommand: initialCommand,
             tmuxStartCommand: tmuxStartCommand,
             startupEnvironment: startupEnvironment,
-            initialDividerPosition: initialDividerPosition,
-            remotePTYSessionID: remotePTYSessionID
+            initialDividerPosition: initialDividerPosition
         )?.id
     }
 
@@ -5923,7 +5818,6 @@ extension TabManager {
         // panel/socket callbacks cannot keep mutating hidden pre-restore state.
         AppDelegate.shared?.notificationStore?.clearNotifications(forTabId: workspace.id)
         workspace.teardownAllPanels()
-        workspace.teardownRemoteConnection()
         workspace.owningTabManager = nil
     }
 

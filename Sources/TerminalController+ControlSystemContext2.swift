@@ -5,8 +5,7 @@ import Foundation
 
 /// The system-domain action witnesses (`workspace.action`, `surface.action` /
 /// `tab.action`): the `workspace.action` bridge to the still-shared
-/// `v2WorkspaceAction` (also driven by the mobile host's gated
-/// `v2MobileWorkspaceAction` wrapper, so the body stays app-side) and the
+/// `v2WorkspaceAction` (the body stays app-side) and the
 /// byte-faithful mutation switch of the former `v2TabAction`. Split out of
 /// `TerminalController+ControlSystemContext` to keep the conformance readable.
 extension TerminalController {
@@ -15,7 +14,7 @@ extension TerminalController {
 
     func controlWorkspaceAction(params: [String: JSONValue]) -> ControlCallResult {
         // `v2WorkspaceAction` stays in TerminalController.swift (shared with the
-        // mobile host's gated `v2MobileWorkspaceAction`). Forward the raw params
+        // Forward the raw params
         // and bridge its Foundation result, exactly as `surface.split_off` does.
         let foundationParams = params.mapValues(\.foundationObject)
         switch v2WorkspaceAction(params: foundationParams) {
@@ -192,10 +191,6 @@ extension TerminalController {
             case .created(let newPanel):
                 _ = workspace.reorderSurface(panelId: newPanel.id, toIndex: targetIndex, focus: focus)
                 return finish(.created(newPanel.id))
-            case .routedToRemote:
-                // Routed to the remote tmux mirror as `new-window`; the tab
-                // arrives via %window-add (tmux appends, so no local reorder).
-                return finish(.routedToRemote)
             case .failed:
                 return .createFailed
             }

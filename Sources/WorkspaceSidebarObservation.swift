@@ -1,5 +1,4 @@
 import Combine
-import CmuxCore
 import Foundation
 import CmuxSidebar
 
@@ -34,10 +33,6 @@ private struct SidebarObservationState: Equatable {
     let panelGitBranches: [UUID: SidebarGitBranchState]
     let pullRequest: SidebarPullRequestState?
     let panelPullRequests: [UUID: SidebarPullRequestState]
-    let remoteConfiguration: WorkspaceRemoteConfiguration?
-    let remoteConnectionState: WorkspaceRemoteConnectionState
-    let remoteConnectionDetail: String?
-    let activeRemoteTerminalSessionCount: Int
     let listeningPorts: [Int]
     let browserMediaActivity: BrowserMediaActivity
 }
@@ -93,18 +88,10 @@ extension Workspace {
             sidebarMetadata.pullRequestPublisher,
             sidebarMetadata.panelPullRequestsPublisher
         )
-        let remoteFields = Publishers.CombineLatest4(
-            $remoteConfiguration,
-            $remoteConnectionState,
-            $remoteConnectionDetail,
-            $activeRemoteTerminalSessionCount
-        )
-
-        return Publishers.CombineLatest4(
+        return Publishers.CombineLatest3(
             workspaceFields,
             metadataFields,
-            gitFields,
-            remoteFields
+            gitFields
         )
             .combineLatest($listeningPorts)
             .compactMap { [weak self] groupedFields, listeningPorts -> SidebarObservationState? in
@@ -112,7 +99,6 @@ extension Workspace {
                 let workspaceFields = groupedFields.0
                 let metadataFields = groupedFields.1
                 let gitFields = groupedFields.2
-                let remoteFields = groupedFields.3
                 return SidebarObservationState(
                     currentDirectory: workspaceFields.0,
                     extensionSidebarProjectRootPath: workspaceFields.1,
@@ -126,10 +112,6 @@ extension Workspace {
                     panelGitBranches: gitFields.1,
                     pullRequest: gitFields.2,
                     panelPullRequests: gitFields.3,
-                    remoteConfiguration: remoteFields.0,
-                    remoteConnectionState: remoteFields.1,
-                    remoteConnectionDetail: remoteFields.2,
-                    activeRemoteTerminalSessionCount: remoteFields.3,
                     listeningPorts: listeningPorts,
                     browserMediaActivity: self.browserMediaActivity
                 )

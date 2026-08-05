@@ -368,7 +368,6 @@ import CmuxTerminalCore
                 engine: FakeTerminalEngine(),
                 viewProvider: FakeTerminalSurfaceViewProvider(surfaceView: nativeView, paneHost: paneHost),
                 spawnPolicy: FakeSpawnPolicyProvider(),
-                byteTee: FakeTerminalByteTee(),
                 rendererRealization: FakeRendererRealizationScheduler(),
                 hibernationRecorder: FakeHibernationRecorder(),
                 runtimeTeardown: TerminalSurfaceRuntimeTeardownCoordinator(),

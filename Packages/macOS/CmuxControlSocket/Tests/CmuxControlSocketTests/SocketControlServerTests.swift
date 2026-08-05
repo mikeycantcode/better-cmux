@@ -171,7 +171,6 @@ struct SocketControlServerLifecycleTests {
         #expect(server.accessMode == .cmuxOnly)
         #expect(server.currentSocketPath == harness.socketPath)
         #expect(server.activeSocketPath(preferredPath: "/tmp/other.sock") == harness.socketPath)
-        #expect(server.currentSocketPathForRemoteRestore() == harness.socketPath)
         #expect(harness.recorder.started.count == 1)
         #expect(harness.recorder.recordedPaths == [harness.socketPath])
         #expect(harness.recorder.breadcrumbs.contains("socket.listener.listening"))
@@ -236,7 +235,6 @@ struct SocketControlServerLifecycleTests {
 
         #expect(!server.isRunning)
         #expect(!FileManager.default.fileExists(atPath: harness.socketPath))
-        #expect(server.currentSocketPathForRemoteRestore() == nil)
         #expect(server.activeSocketPath(preferredPath: "/tmp/pref.sock") == "/tmp/pref.sock")
         let health = server.listenerHealth(expectedSocketPath: harness.socketPath)
         #expect(!health.isRunning)
@@ -352,7 +350,6 @@ struct SocketControlServerReservationTests {
 
         let reserved = server.reserveStartupSocketPath(harness.socketPath)
         #expect(reserved == harness.socketPath)
-        #expect(server.currentSocketPathForRemoteRestore() == harness.socketPath)
         #expect(server.activeSocketPath(preferredPath: "/tmp/pref.sock") == harness.socketPath)
 
         #expect(server.start(socketPath: harness.socketPath, accessMode: .cmuxOnly))

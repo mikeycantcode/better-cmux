@@ -15,19 +15,12 @@ public enum ControlCommandExecutionPolicy: Sendable, Equatable {
     /// from the main thread.
     case socketWorker(mainThreadCallable: Bool)
 
-    /// Classifies a method: every `vm.`- and `remotes.`-prefixed method and the
-    /// fixed socket-worker set run on the worker; everything else runs on the
-    /// main actor.
-    ///
-    /// `remotes.*` (the `cmux remotes` device-registry verbs) make blocking,
-    /// authenticated web API calls just like `vm.*`, so they must stay off the
-    /// main actor; a prefix match keeps the three verbs in lockstep without
-    /// listing each.
+    /// Classifies a method: the fixed socket-worker set runs on the worker;
+    /// everything else runs on the main actor.
     ///
     /// - Parameter method: The trimmed method name.
     public init(forMethod method: String) {
-        if method.hasPrefix("vm.") || method.hasPrefix("remotes.")
-            || Self.socketWorkerMethods.contains(method) {
+        if Self.socketWorkerMethods.contains(method) {
             self = .socketWorker(
                 mainThreadCallable: Self.mainThreadCallableSocketWorkerMethods.contains(method)
             )
@@ -46,11 +39,6 @@ public enum ControlCommandExecutionPolicy: Sendable, Equatable {
     private static let socketWorkerMethods: Set<String> = [
         "system.ping",
         "system.capabilities",
-        "auth.status",
-        "auth.sign_in_url",
-        "auth.begin_sign_in",
-        "auth.sign_out",
-        "feedback.submit",
         "feed.push",
         "feed.permission.reply",
         "feed.question.reply",
@@ -62,7 +50,6 @@ public enum ControlCommandExecutionPolicy: Sendable, Equatable {
         "browser.profiles.clear",
         "browser.profiles.delete",
         "browser.import.cookies",
-        "mobile.attach_ticket.create",
         "system.top",
         "system.memory",
         // `workspace.env` is a read that resolves a workspace and copies its
@@ -75,17 +62,6 @@ public enum ControlCommandExecutionPolicy: Sendable, Equatable {
         // dispatcher answers method_not_found and `cmux open`'s smart
         // placement fails outright.
         "workspace.snapshot",
-        "workspace.remote.pty_sessions",
-        "workspace.remote.pty_close",
-        "workspace.remote.pty_detach",
-        "workspace.remote.pty_bridge",
-        "workspace.remote.pty_resize",
-        "remote.tmux.sessions",
-        "remote.tmux.attach",
-        "remote.tmux.detach",
-        "remote.tmux.state",
-        "remote.tmux.mirror",
-        "remote.tmux.window",
         "sidebar.custom.validate",
         "sidebar.custom.reload",
         "sidebar.custom.select",

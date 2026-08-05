@@ -492,7 +492,6 @@ enum SettingsSearchIndex {
         "notifications.sound": settingID(for: .app, idSuffix: "notification-sound"),
         "notifications.customSoundFilePath": settingID(for: .app, idSuffix: "notification-sound"),
         "notifications.command": settingID(for: .app, idSuffix: "notification-command"),
-        "app.sendAnonymousTelemetry": settingID(for: .app, idSuffix: "telemetry"),
         "app.defaultTerminal": settingID(for: .app, idSuffix: "default-terminal"),
         "app.confirmQuit": settingID(for: .app, idSuffix: "warn-before-quit"),
         "app.warnBeforeQuit": settingID(for: .app, idSuffix: "warn-before-quit"),

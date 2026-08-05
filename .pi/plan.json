@@ -1,0 +1,83 @@
+{
+  "title": "VS Code File Icons for Sidebar File Explorer",
+  "objective": "Replace the default file explorer icon style with VS Code-style per-extension file icons. This involves bundling the Material Icon Theme SVG set, creating an extension-to-icon mapping, and updating the FileExplorerCellView to render the correct icon for each file type.",
+  "createdAt": "2026-07-18T19:19:44.408Z",
+  "updatedAt": "2026-07-18T19:47:25.723Z",
+  "steps": [
+    {
+      "id": "step-1",
+      "title": "Research VS Code file icon set",
+      "description": "Look up the Material Icon Theme (PKief/vscode-material-icon-theme) repository structure to understand the SVG icon set, which files are available, and how extensions map to icons. Identify the key icons needed for common file types (swift, ts, js, py, go, rs, md, json, yaml, etc.).",
+      "status": "complete",
+      "dependencies": [],
+      "files": [],
+      "notes": "Researched Material Icon Theme. 1250 SVG icons available, 1378 extension mappings, 369 unique icon names. MIT licensed. Package installed at /tmp/node_modules/material-icon-theme/. Icon SVGs are simple vector graphics that map to file extensions via material-icons.json."
+    },
+    {
+      "id": "step-2",
+      "title": "Create asset catalog for file type icons",
+      "description": "Add the SVG icon files to the app's asset catalog or Resources directory. Create a structured set of SVG icons for common file extensions, sourced from the Material Icon Theme project. Organize them into a discoverable directory structure under Resources/FileTypeIcons/.",
+      "status": "complete",
+      "dependencies": [
+        "step-1"
+      ],
+      "files": [
+        "Resources/FileTypeIcons/*.svg"
+      ],
+      "notes": "Created Resources/FileTypeIcons/ with 76 SVG icons from material-icon-theme. Created Sources/FileExplorerVSCodeIcons.swift with extension-to-icon mapping, file name mapping, and icon loading/caching logic."
+    },
+    {
+      "id": "step-3",
+      "title": "Build file extension-to-icon mapping",
+      "description": "Create a Swift data structure (e.g., dictionary or enum) that maps file extensions ('.swift', '.ts', '.js', '.py', '.go', '.rs', '.md', '.json', '.yaml', '.css', '.html', etc.) to the corresponding icon image name. Include a catch-all fallback for unknown extensions. Place this in a new file or extend FileExplorerStore.",
+      "status": "complete",
+      "dependencies": [
+        "step-2"
+      ],
+      "files": [
+        "Sources/FileExplorerVSCodeIcons.swift"
+      ],
+      "notes": "FileExplorerVSCodeIcons.swift created with extensionMapping, fileNameMapping, icon(forExtension:size:), icon(forFileName:size:), folderIcon(size:), and caching."
+    },
+    {
+      "id": "step-4",
+      "title": "Update FileExplorerStyle to add vscodeIcons style",
+      "description": "Add a new case `.vscodeIcons` to the `FileExplorerStyle` enum. Configure its visual properties (rowHeight, indentation, iconSize, etc.) based on the VS Code default look. Update the style description and the debug view. Change the default style from `.highDensity` to `.vscodeIcons`.",
+      "status": "complete",
+      "dependencies": [
+        "step-3"
+      ],
+      "files": [
+        "Sources/FileExplorerStore.swift",
+        "Sources/cmuxApp.swift"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "step-5",
+      "title": "Update FileExplorerCellView icon rendering",
+      "description": "Modify `FileExplorerCellView.configure(with:node:gitStatus:)` to render the mapped VS Code icon for the `.vscodeIcons` style. For directories, use a folder icon. For files, look up the extension in the icon mapping and display the corresponding SVG/PDF image. Fall back to SF Symbol `doc` for unknown extensions.",
+      "status": "complete",
+      "dependencies": [
+        "step-3",
+        "step-4"
+      ],
+      "files": [
+        "Sources/FileExplorerCellView.swift"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "step-6",
+      "title": "Build and verify",
+      "description": "Run the reload script with a tag to build the Debug app. Launch and verify the file explorer shows VS Code-style icons in the left sidebar dropdown. Check icons for multiple file types (Swift, TypeScript, JSON, Markdown, etc.).",
+      "status": "complete",
+      "dependencies": [
+        "step-4",
+        "step-5"
+      ],
+      "files": [],
+      "notes": "App built and launched successfully with CMUX_SKIP_ZIG_BUILD=1. 76 SVG icons copied to bundle. VS Code-style icons now used by default in the file explorer sidebar."
+    }
+  ]
+}

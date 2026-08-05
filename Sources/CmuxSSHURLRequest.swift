@@ -23,7 +23,7 @@ struct CmuxSSHURLRequest: Equatable {
     static let maxTitleLength = 160
     static let supportedSchemes: Set<String> = ["cmux", "cmux-nightly", "cmux-dev"]
     static var activeSupportedSchemes: Set<String> {
-        [AuthEnvironment.callbackScheme.lowercased()]
+        [CmuxURLScheme.callbackScheme.lowercased()]
     }
 
     let originalURL: URL
@@ -534,7 +534,7 @@ struct CmuxNavigationURLRequest: Equatable {
     }
 
     static var activeSupportedSchemes: Set<String> {
-        [AuthEnvironment.callbackScheme.lowercased()]
+        [CmuxURLScheme.callbackScheme.lowercased()]
     }
 
     let originalURL: URL
@@ -606,14 +606,14 @@ struct CmuxNavigationURLRequest: Equatable {
         }
     }
 
-    static func workspaceLink(workspaceId: UUID, scheme: String = AuthEnvironment.callbackScheme) -> String {
+    static func workspaceLink(workspaceId: UUID, scheme: String = CmuxURLScheme.callbackScheme) -> String {
         "\(scheme)://workspace/\(workspaceId.uuidString)"
     }
 
     static func paneLink(
         workspaceId: UUID,
         paneId: UUID,
-        scheme: String = AuthEnvironment.callbackScheme
+        scheme: String = CmuxURLScheme.callbackScheme
     ) -> String {
         "\(scheme)://workspace/\(workspaceId.uuidString)/pane/\(paneId.uuidString)"
     }
@@ -621,7 +621,7 @@ struct CmuxNavigationURLRequest: Equatable {
     static func surfaceLink(
         workspaceId: UUID,
         surfaceId: UUID,
-        scheme: String = AuthEnvironment.callbackScheme
+        scheme: String = CmuxURLScheme.callbackScheme
     ) -> String {
         "\(scheme)://workspace/\(workspaceId.uuidString)/surface/\(surfaceId.uuidString)"
     }
@@ -901,5 +901,72 @@ struct CmuxTextURLRequest: Equatable {
         }
         let prefix = String(name.prefix(64))
         return prefix.count == name.count ? name : "\(prefix)..."
+    }
+}
+
+/// The cmux:// deep-link URL scheme (formerly part of the removed auth
+/// environment). Debug builds register cmux-dev[-<tag>]:// so they can
+/// coexist with the installed stable app.
+enum CmuxURLScheme {
+    static var callbackScheme: String {
+        callbackScheme(
+            environment: ProcessInfo.processInfo.environment,
+            bundleIdentifier: Bundle.main.bundleIdentifier
+        )
+    }
+
+    static func callbackScheme(
+        environment: [String: String],
+        bundleIdentifier: String?
+    ) -> String {
+        #if DEBUG
+        return callbackScheme(environment: environment, bundleIdentifier: bundleIdentifier, isDebugBuild: true)
+        #else
+        return callbackScheme(environment: environment, bundleIdentifier: bundleIdentifier, isDebugBuild: false)
+        #endif
+    }
+
+    static func callbackScheme(
+        environment: [String: String],
+        bundleIdentifier: String?,
+        isDebugBuild: Bool
+    ) -> String {
+        if let overridden = environment["CMUX_AUTH_CALLBACK_SCHEME"]?
+            .trimmingCharacters(in: .whitespacesAndNewlines),
+           !overridden.isEmpty {
+            return overridden
+        }
+        if isDebugBuild {
+            if let tag = environment["CMUX_TAG"]?
+                .trimmingCharacters(in: .whitespacesAndNewlines),
+               !tag.isEmpty,
+               let schemeTag = sanitizedCallbackSchemeTag(tag) {
+                return "cmux-dev-\(schemeTag)"
+            }
+            return "cmux-dev"
+        }
+        if bundleIdentifier == "com.cmuxterm.app.nightly" {
+            return "cmux-nightly"
+        }
+        return "cmux"
+    }
+
+    static func sanitizedCallbackSchemeTag(_ rawTag: String) -> String? {
+        let lowercased = rawTag.lowercased()
+        var result = ""
+        var previousWasHyphen = false
+        for scalar in lowercased.unicodeScalars {
+            let isAllowed = (scalar.value >= 97 && scalar.value <= 122)
+                || (scalar.value >= 48 && scalar.value <= 57)
+            if isAllowed {
+                result.unicodeScalars.append(scalar)
+                previousWasHyphen = false
+            } else if !previousWasHyphen {
+                result.append("-")
+                previousWasHyphen = true
+            }
+        }
+        result = result.trimmingCharacters(in: CharacterSet(charactersIn: "-"))
+        return result.isEmpty ? nil : result
     }
 }

@@ -7,21 +7,6 @@
    <Group
       location = "container:Packages/Shared"
       name = "Packages (Shared)">
-      <FileRef
-         location = "group:CmuxAgentChat">
-      </FileRef>
-      <FileRef
-         location = "group:CMUXAuthCore">
-      </FileRef>
-      <FileRef
-         location = "group:CmuxAuthRuntime">
-      </FileRef>
-      <FileRef
-         location = "group:CMUXMobileCore">
-      </FileRef>
-      <FileRef
-         location = "group:CmuxSyncStore">
-      </FileRef>
    </Group>
    <Group
       location = "container:Packages/macOS"
@@ -48,16 +33,10 @@
          location = "group:CmuxControlSocket">
       </FileRef>
       <FileRef
-         location = "group:CmuxCore">
-      </FileRef>
-      <FileRef
          location = "group:CMUXDebugLog">
       </FileRef>
       <FileRef
          location = "group:CmuxExtensionKit">
-      </FileRef>
-      <FileRef
-         location = "group:CmuxFeedback">
       </FileRef>
       <FileRef
          location = "group:CmuxFoundation">
@@ -76,15 +55,6 @@
       </FileRef>
       <FileRef
          location = "group:CMUXProjectModel">
-      </FileRef>
-      <FileRef
-         location = "group:CmuxRemoteDaemon">
-      </FileRef>
-      <FileRef
-         location = "group:CmuxRemoteSession">
-      </FileRef>
-      <FileRef
-         location = "group:CmuxRemoteWorkspace">
       </FileRef>
       <FileRef
          location = "group:CmuxSettings">

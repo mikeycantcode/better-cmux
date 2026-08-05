@@ -23,12 +23,8 @@ public struct ControlSurfaceSplitInputs: Sendable, Equatable {
     public let initialCommand: String?
     /// The trimmed-non-empty `tmux_start_command`, or `nil`.
     public let tmuxStartCommand: String?
-    /// The trimmed-non-empty `remote_pty_session_id`, or `nil`.
-    public let remotePTYSessionID: String?
     /// The startup environment (`startup_environment`/`initial_env`), `[:]` if none.
     public let startupEnvironment: [String: String]
-    /// Options the caller already knows a routed remote tmux split cannot honor.
-    public let clientUnsupportedRemoteTmuxOptions: [String]
     /// Whether the request asked to focus the new split.
     public let requestedFocus: Bool
     /// The clamped `[0.1, 0.9]` initial divider position, or `nil`.
@@ -43,9 +39,7 @@ public struct ControlSurfaceSplitInputs: Sendable, Equatable {
         workingDirectory: String?,
         initialCommand: String?,
         tmuxStartCommand: String?,
-        remotePTYSessionID: String?,
         startupEnvironment: [String: String],
-        clientUnsupportedRemoteTmuxOptions: [String],
         requestedFocus: Bool,
         initialDividerPosition: Double?
     ) {
@@ -56,9 +50,7 @@ public struct ControlSurfaceSplitInputs: Sendable, Equatable {
         self.workingDirectory = workingDirectory
         self.initialCommand = initialCommand
         self.tmuxStartCommand = tmuxStartCommand
-        self.remotePTYSessionID = remotePTYSessionID
         self.startupEnvironment = startupEnvironment
-        self.clientUnsupportedRemoteTmuxOptions = clientUnsupportedRemoteTmuxOptions
         self.requestedFocus = requestedFocus
         self.initialDividerPosition = initialDividerPosition
     }

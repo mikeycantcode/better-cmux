@@ -1,5 +1,4 @@
 import CmuxFoundation
-import CmuxCore
 import AppKit
 import CmuxCommandPalette
 import Darwin
@@ -853,8 +852,8 @@ final class VSCodeServeWebController {
               let rhsHost = BrowserInsecureHTTPSettings.normalizeHost(rhs.host ?? "") else {
             return false
         }
-        return RemoteLoopbackProxyAlias.isLoopbackHost(lhsHost)
-            && RemoteLoopbackProxyAlias.isLoopbackHost(rhsHost)
+        return BrowserLoopbackHost.isLoopbackHost(lhsHost)
+            && BrowserLoopbackHost.isLoopbackHost(rhsHost)
     }
 }
 

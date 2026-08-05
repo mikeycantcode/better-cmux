@@ -31,15 +31,13 @@ ROOT = os.path.dirname(SCRIPT_DIR)
 PACKAGES_DIR = os.path.join(ROOT, "Packages")
 WORKSPACE_DATA = os.path.join(ROOT, "cmux.xcworkspace", "contents.xcworkspacedata")
 
-# Group directories, in the order they appear in the workspace.
-GROUPS = ["Shared", "iOS", "macOS"]
+# Group directories, in the order they appear in the workspace. Only groups
+# whose folder exists are rendered.
+GROUPS = [g for g in ["Shared", "iOS", "macOS"] if os.path.isdir(os.path.join(PACKAGES_DIR, g))]
 
 # Structural workspace entries that are not Packages/<group>/* folders; kept
 # verbatim so regeneration only ever touches package membership.
-TOP_LEVEL_PROJECTS = ["group:cmux.xcodeproj", "group:ios/cmux-ios.xcodeproj"]
-# The iOS app's own SwiftPM package lives outside Packages/; it heads the iOS
-# group.
-IOS_APP_PACKAGE_REF = "container:ios/cmuxPackage"
+TOP_LEVEL_PROJECTS = ["group:cmux.xcodeproj"]
 # The Examples group is curated by hand and lives under a different container.
 EXAMPLES_GROUP = (
     "container:Examples",
@@ -88,8 +86,6 @@ def render() -> str:
         out += _file_ref(loc, "   ")
     for group in GROUPS:
         refs = [f"group:{name}" for name in packages_in(group)]
-        if group == "iOS":
-            refs = [IOS_APP_PACKAGE_REF] + refs
         out += _group(f"container:Packages/{group}", f"Packages ({group})", refs)
     out += _group(*EXAMPLES_GROUP)
     out += "</Workspace>\n"

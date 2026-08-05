@@ -1,5 +1,4 @@
 import AppKit
-import CmuxRemoteSession
 import Bonsplit
 import CmuxControlSocket
 import Foundation
@@ -276,7 +275,7 @@ extension TerminalController {
     }
 
     func controlSurfaceParsePortScanKickReason(_ rawReason: String) -> String? {
-        Self.parseRemotePortScanKickReason(rawReason)?.rawValue
+        Self.parsePortScanKickReason(rawReason)
     }
 
     // MARK: - report_tty
@@ -298,20 +297,11 @@ extension TerminalController {
             validSurfaceIds: validSurfaceIds
         )
         guard let surfaceId, validSurfaceIds.contains(surfaceId) else {
-            if tab.isRemoteWorkspace, validSurfaceIds.isEmpty {
-                tab.rememberPendingRemoteSurfaceTTY(ttyName, requestedSurfaceId: requestedSurfaceID)
-                return .pending
-            }
             return .surfaceNotFound
         }
 
         tab.surfaceTTYNames[surfaceId] = ttyName
-        if tab.isRemoteWorkspace {
-            tab.syncRemotePortScanTTYs()
-            _ = tab.applyPendingRemoteSurfacePortKickIfNeeded(to: surfaceId)
-        } else {
-            PortScanner.shared.registerTTY(workspaceId: workspaceID, panelId: surfaceId, ttyName: ttyName)
-        }
+        PortScanner.shared.registerTTY(workspaceId: workspaceID, panelId: surfaceId, ttyName: ttyName)
         return .recorded(surfaceID: surfaceId)
     }
 
@@ -369,10 +359,6 @@ extension TerminalController {
         requestedSurfaceID: UUID?,
         reasonRawValue: String
     ) -> ControlSurfacePortsKickResolution {
-        guard let reason = PortScanKickReason(rawValue: reasonRawValue) else {
-            // Unreachable: the coordinator only forwards a value the app produced.
-            return .workspaceNotFound
-        }
         guard let tab = controlTabForSidebarMutation(id: workspaceID) else {
             return .workspaceNotFound
         }
@@ -385,18 +371,10 @@ extension TerminalController {
             validSurfaceIds: validSurfaceIds
         )
         guard let surfaceId, validSurfaceIds.contains(surfaceId) else {
-            if tab.isRemoteWorkspace, validSurfaceIds.isEmpty {
-                tab.rememberPendingRemoteSurfacePortKick(reason: reason, requestedSurfaceId: requestedSurfaceID)
-                return .pending
-            }
             return .surfaceNotFound
         }
 
-        if tab.isRemoteWorkspace {
-            tab.kickRemotePortScan(panelId: surfaceId, reason: reason)
-        } else {
-            PortScanner.shared.kick(workspaceId: workspaceID, panelId: surfaceId)
-        }
+        PortScanner.shared.kick(workspaceId: workspaceID, panelId: surfaceId)
         return .kicked(surfaceID: surfaceId)
     }
 
@@ -425,17 +403,8 @@ extension TerminalController {
             return requestedSurfaceId
         }
         if let focusedSurfaceId = workspace.focusedPanelId,
-           validSurfaceIds.contains(focusedSurfaceId),
-           (!workspace.isRemoteWorkspace || workspace.isRemoteTerminalSurface(focusedSurfaceId)) {
+           validSurfaceIds.contains(focusedSurfaceId) {
             return focusedSurfaceId
-        }
-        guard workspace.isRemoteWorkspace else { return nil }
-        let remoteTerminalSurfaceIds = validSurfaceIds.filter { workspace.isRemoteTerminalSurface($0) }
-        if remoteTerminalSurfaceIds.count == 1 {
-            return remoteTerminalSurfaceIds.first
-        }
-        if validSurfaceIds.count == 1 {
-            return validSurfaceIds.first
         }
         return nil
     }

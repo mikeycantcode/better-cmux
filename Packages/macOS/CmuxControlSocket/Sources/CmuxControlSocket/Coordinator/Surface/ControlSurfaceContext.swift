@@ -17,7 +17,7 @@ public import Foundation
 /// conformance (app bundle). The lone exception is ``controlDebugTerminals`` — its
 /// payload is dozens of irreducibly app-coupled `NSWindow`/`NSView`/Ghostty
 /// pointer fields, so the app returns it as a bridged ``JSONValue`` (the same
-/// single-method passthrough `workspace.remote.configure` uses).
+/// single-method passthroughs use).
 @MainActor
 public protocol ControlSurfaceContext: AnyObject {
     /// Whether a TabManager resolves for surface routing, used to distinguish the

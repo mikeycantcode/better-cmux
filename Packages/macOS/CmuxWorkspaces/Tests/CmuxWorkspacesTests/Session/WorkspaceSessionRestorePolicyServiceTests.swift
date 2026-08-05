@@ -64,18 +64,6 @@ struct WorkspaceSessionRestorePolicyServiceTests {
         }
     }
 
-    private struct FakeTerminalSnapshot: WorkspaceSessionRemoteRestoreTerminalSnapshot {
-        var isRemoteTerminal: Bool?
-        var remotePTYSessionID: String?
-    }
-
-    private struct FakePanelSnapshot: WorkspaceSessionRemoteRestorePanelSnapshot {
-        var terminal: FakeTerminalSnapshot?
-    }
-
-    private struct FakeRemoteSnapshot: WorkspaceSessionRemoteRestoreSnapshot {
-        var panels: [FakePanelSnapshot]
-    }
 
     private func makeService(
         applyStoredApproval: @escaping @Sendable (FakeBinding, URL, Data?) -> FakeBinding = { binding, _, _ in binding },
@@ -211,38 +199,6 @@ struct WorkspaceSessionRestorePolicyServiceTests {
         #expect(command.contains("hermes --provider 'codex' run"))
     }
 
-    @Test("remote reconnect waits when restored terminals can authenticate")
-    func remoteReconnectWaitsWhenTerminalsAuthenticate() {
-        let service = makeService()
-        let approvalTerminal = FakePanelSnapshot(
-            terminal: FakeTerminalSnapshot(isRemoteTerminal: true, remotePTYSessionID: nil)
-        )
-        let ptyTerminal = FakePanelSnapshot(
-            terminal: FakeTerminalSnapshot(isRemoteTerminal: false, remotePTYSessionID: "pty-1")
-        )
-
-        #expect(service.shouldAutoConnectRestoredRemote(
-            foregroundAuthToken: nil,
-            snapshot: FakeRemoteSnapshot(panels: [approvalTerminal])
-        ))
-        #expect(!service.shouldAutoConnectRestoredRemote(
-            foregroundAuthToken: "token",
-            snapshot: FakeRemoteSnapshot(panels: [approvalTerminal])
-        ))
-        #expect(!service.shouldAutoConnectRestoredRemote(
-            foregroundAuthToken: "token",
-            snapshot: FakeRemoteSnapshot(panels: [ptyTerminal])
-        ))
-        #expect(service.shouldAutoConnectRestoredRemote(
-            foregroundAuthToken: "token",
-            snapshot: FakeRemoteSnapshot(panels: [])
-        ))
-        #expect(!service.shouldAutoConnectRestoredRemote(
-            foregroundAuthToken: nil,
-            snapshot: FakeRemoteSnapshot(panels: []),
-            isRunningUnderAutomatedTests: true
-        ))
-    }
 
     @Test("scrollback resolution prefers captured text and gates fallback")
     func scrollbackResolutionPrefersCapturedTextAndGatesFallback() {

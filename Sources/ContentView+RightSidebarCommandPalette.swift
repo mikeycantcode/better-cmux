@@ -258,13 +258,7 @@ extension ContentView {
         let progress = workspace.progress.map {
             CustomSidebarWorkspaceSnapshot.Progress(value: $0.value, label: $0.label)
         }
-        let remote = workspace.remoteDisplayTarget.map { target in
-            CustomSidebarWorkspaceSnapshot.Remote(
-                target: target,
-                stateRawValue: workspace.remoteConnectionState.rawValue,
-                isConnected: workspace.remoteConnectionState == .connected
-            )
-        }
+        let remote: CustomSidebarWorkspaceSnapshot.Remote? = nil
         return CustomSidebarWorkspaceSnapshot(
             id: workspace.id,
             title: workspace.customTitle ?? workspace.title,

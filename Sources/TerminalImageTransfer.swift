@@ -1,7 +1,6 @@
 import Foundation
 import CmuxTerminal
 import AppKit
-import CmuxRemoteSession
 import UniformTypeIdentifiers
 
 enum TerminalImageTransferMode {
@@ -9,20 +8,13 @@ enum TerminalImageTransferMode {
     case drop
 }
 
-enum TerminalRemoteUploadTarget: Equatable {
-    case workspaceRemote
-    case detectedSSH(DetectedSSHSession)
-}
-
 enum TerminalImageTransferTarget: Equatable {
     case local
-    case remote(TerminalRemoteUploadTarget)
 }
 
 enum TerminalImageTransferPlan: Equatable {
     case insertText(String)
     case insertTextSegments([String], interSegmentDelay: TimeInterval)
-    case uploadFiles([URL], TerminalRemoteUploadTarget)
     case reject
 }
 
@@ -79,16 +71,6 @@ enum PasteboardFileURLReader {
 
 enum TerminalImageTransferExecutionError: Error {
     case cancelled
-}
-
-// The app-side conformer of the session coordinator's transfer-cancellation
-// seam; the operation already provided every member by contract, the
-// extension only names the cancellation error the legacy controller threw
-// directly.
-extension TerminalImageTransferOperation: RemoteTransferCancelling {
-    var cancellationError: any Error {
-        TerminalImageTransferExecutionError.cancelled
-    }
 }
 
 final class TerminalImageTransferOperation: @unchecked Sendable {
@@ -229,31 +211,21 @@ enum TerminalImageTransferPlanner {
     ) -> TerminalImageTransferPlan {
         guard !fileURLs.isEmpty else { return .reject }
 
-        switch target {
-        case .local:
-            if mode == .drop,
-               fileURLs.count > 1,
-               fileURLs.allSatisfy(isLocalImageFileURL) {
-                return .insertTextSegments(
-                    insertedTextSegments(forFileURLs: fileURLs),
-                    interSegmentDelay: 2.0
-                )
-            }
-            return .insertText(insertedText(forFileURLs: fileURLs))
-        case .remote(let remoteTarget):
-            guard fileURLs.allSatisfy(isRemoteUploadableFileURL) else {
-                return .insertText(insertedText(forFileURLs: fileURLs))
-            }
-            return .uploadFiles(fileURLs, remoteTarget)
+        if mode == .drop,
+           fileURLs.count > 1,
+           fileURLs.allSatisfy(isLocalImageFileURL) {
+            return .insertTextSegments(
+                insertedTextSegments(forFileURLs: fileURLs),
+                interSegmentDelay: 2.0
+            )
         }
+        return .insertText(insertedText(forFileURLs: fileURLs))
     }
 
     @discardableResult
     static func executeForTesting(
         plan: TerminalImageTransferPlan,
         operation: TerminalImageTransferOperation? = nil,
-        uploadWorkspaceRemote: ([URL], TerminalImageTransferOperation, @escaping (Result<[String], Error>) -> Void) -> Void,
-        uploadDetectedSSH: (DetectedSSHSession, [URL], TerminalImageTransferOperation, @escaping (Result<[String], Error>) -> Void) -> Void,
         insertText: @escaping (String) -> Void,
         scheduleAfter: @escaping (TimeInterval, @escaping () -> Void) -> Void = { delay, work in
             DispatchQueue.main.asyncAfter(deadline: .now() + delay, execute: work)
@@ -263,8 +235,6 @@ enum TerminalImageTransferPlanner {
         execute(
             plan: plan,
             operation: operation,
-            uploadWorkspaceRemote: uploadWorkspaceRemote,
-            uploadDetectedSSH: uploadDetectedSSH,
             insertText: insertText,
             scheduleAfter: scheduleAfter,
             onFailure: onFailure
@@ -275,8 +245,6 @@ enum TerminalImageTransferPlanner {
     static func execute(
         plan: TerminalImageTransferPlan,
         operation: TerminalImageTransferOperation? = nil,
-        uploadWorkspaceRemote: ([URL], TerminalImageTransferOperation, @escaping (Result<[String], Error>) -> Void) -> Void,
-        uploadDetectedSSH: (DetectedSSHSession, [URL], TerminalImageTransferOperation, @escaping (Result<[String], Error>) -> Void) -> Void,
         insertText: @escaping (String) -> Void,
         scheduleAfter: @escaping (TimeInterval, @escaping () -> Void) -> Void = { delay, work in
             DispatchQueue.main.asyncAfter(deadline: .now() + delay, execute: work)
@@ -300,20 +268,6 @@ enum TerminalImageTransferPlanner {
                 insertText: insertText,
                 scheduleAfter: scheduleAfter
             )
-            return operation
-        case .uploadFiles(let fileURLs, .workspaceRemote):
-            let operation = operation ?? TerminalImageTransferOperation()
-            uploadWorkspaceRemote(fileURLs, operation) { result in
-                guard operation.finish() else { return }
-                finishUpload(result: result, insertText: insertText, onFailure: onFailure)
-            }
-            return operation
-        case .uploadFiles(let fileURLs, .detectedSSH(let session)):
-            let operation = operation ?? TerminalImageTransferOperation()
-            uploadDetectedSSH(session, fileURLs, operation) { result in
-                guard operation.finish() else { return }
-                finishUpload(result: result, insertText: insertText, onFailure: onFailure)
-            }
             return operation
         case .reject:
             return operation
@@ -356,16 +310,6 @@ enum TerminalImageTransferPlanner {
         guard !pathExtension.isEmpty,
               let type = UTType(filenameExtension: pathExtension),
               type.conforms(to: .image) else {
-            return false
-        }
-        return true
-    }
-
-    private static func isRemoteUploadableFileURL(_ fileURL: URL) -> Bool {
-        let normalizedFileURL = fileURL.standardizedFileURL
-        guard normalizedFileURL.isFileURL,
-              let resourceValues = try? normalizedFileURL.resourceValues(forKeys: [.isRegularFileKey]),
-              resourceValues.isRegularFile == true else {
             return false
         }
         return true
@@ -435,26 +379,6 @@ enum TerminalImageTransferPlanner {
         PasteboardFileURLReader.fileURLs(from: pasteboard)
     }
 
-    private static func finishUpload(
-        result: Result<[String], Error>,
-        insertText: @escaping (String) -> Void,
-        onFailure: @escaping (Error) -> Void
-    ) {
-        switch result {
-        case .success(let remotePaths):
-            let content = remotePaths
-                .map(escapeForShell)
-                .joined(separator: " ")
-            guard !content.isEmpty else {
-                onFailure(NSError(domain: "cmux.remote.drop", code: 5))
-                return
-            }
-            insertText(content)
-        case .failure(let error):
-            onFailure(error)
-        }
-    }
-
     private static func sendTextSegments(
         _ segments: [String],
         index: Int,
@@ -496,21 +420,6 @@ enum TerminalImageTransferPlanner {
 extension TerminalSurface {
     @MainActor
     func resolvedImageTransferTarget() -> TerminalImageTransferTarget {
-        guard let workspace = owningWorkspace() else { return .local }
-        if workspace.isRemoteTerminalSurface(id) {
-            return .remote(.workspaceRemote)
-        }
-        // Remote tmux mirror surfaces have no local TTY/process, so the SSH
-        // detector below can't see them. Upload pasted images to the tmux host
-        // over SSH (where claude runs can read them) instead of inserting a
-        // macOS-local path the remote host has no access to.
-        if let target = AppDelegate.shared?.remoteTmuxController.remoteUploadTarget(forSurfaceId: id) {
-            return .remote(target)
-        }
-        if let ttyName = workspace.surfaceTTYNames[id],
-           let session = TerminalSSHSessionDetector.detect(forTTY: ttyName) {
-            return .remote(.detectedSSH(session))
-        }
-        return .local
+        .local
     }
 }

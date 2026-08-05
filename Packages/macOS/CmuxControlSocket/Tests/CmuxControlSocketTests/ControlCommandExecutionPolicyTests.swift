@@ -3,27 +3,13 @@ import Testing
 
 @Suite("ControlCommandExecutionPolicy")
 struct ControlCommandExecutionPolicyTests {
-    @Test func vmPrefixedMethodsRunOnTheSocketWorker() {
-        #expect(ControlCommandExecutionPolicy(forMethod: "vm.create") == .socketWorker(mainThreadCallable: false))
-        #expect(ControlCommandExecutionPolicy(forMethod: "vm.anything.else").runsOnSocketWorker)
-    }
-
-    @Test func remotesPrefixedMethodsRunOnTheSocketWorker() {
-        // `cmux remotes` verbs make blocking authenticated web API calls, so
-        // they must run on the worker; otherwise the dispatcher never reaches
-        // their handler and returns method_not_found.
-        #expect(ControlCommandExecutionPolicy(forMethod: "remotes.list") == .socketWorker(mainThreadCallable: false))
-        #expect(ControlCommandExecutionPolicy(forMethod: "remotes.add") == .socketWorker(mainThreadCallable: false))
-        #expect(ControlCommandExecutionPolicy(forMethod: "remotes.remove") == .socketWorker(mainThreadCallable: false))
-    }
-
     @Test func fixedWorkerSetRunsOnTheSocketWorker() {
         for method in [
-            "system.ping", "system.capabilities", "auth.status", "auth.sign_in_url",
+            "system.ping", "system.capabilities",
             "feed.push", "browser.download.wait", "system.top", "system.memory",
-            "workspace.remote.pty_bridge", "workspace.env", "sidebar.custom.reload",
+            "workspace.env", "sidebar.custom.reload",
             "sidebar.custom.open",
-            "debug.sidebar.simulate_drag", "mobile.attach_ticket.create",
+            "debug.sidebar.simulate_drag",
             // JavaScript-evaluating browser methods block on page JS and must
             // not hold the main actor (see socketWorkerMethods rationale).
             "browser.eval", "browser.wait", "browser.snapshot", "browser.click",
@@ -47,7 +33,9 @@ struct ControlCommandExecutionPolicyTests {
         for method in [
             "surface.list", "workspace.create", "window.list", "browser.url.get",
             "browser.open_split", "browser.screenshot", "browser.cookies.get",
-            "mobile.terminal.create", "feed.jump", "vmx.create", "",
+            "mobile.terminal.create", "feed.jump", "vmx.create", "vm.create",
+            "remotes.list", "auth.status", "workspace.remote.pty_bridge",
+            "mobile.attach_ticket.create", "",
         ] {
             let policy = ControlCommandExecutionPolicy(forMethod: method)
             #expect(policy == .mainActor, "\(method)")
@@ -59,6 +47,5 @@ struct ControlCommandExecutionPolicyTests {
         #expect(ControlCommandExecutionPolicy(forMethod: "system.ping") == .socketWorker(mainThreadCallable: true))
         #expect(ControlCommandExecutionPolicy(forMethod: "system.capabilities") == .socketWorker(mainThreadCallable: true))
         #expect(ControlCommandExecutionPolicy(forMethod: "system.top") == .socketWorker(mainThreadCallable: false))
-        #expect(ControlCommandExecutionPolicy(forMethod: "vm.create") == .socketWorker(mainThreadCallable: false))
     }
 }

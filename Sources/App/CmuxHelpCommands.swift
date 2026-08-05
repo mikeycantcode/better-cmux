@@ -1,5 +1,4 @@
 import AppKit
-import CmuxFeedback
 import SwiftUI
 
 extension cmuxApp {
@@ -10,10 +9,6 @@ extension cmuxApp {
             secondaryDocsHelpMenuItems
 
             Divider()
-
-            splitCommandButton(title: String(localized: "sidebar.help.sendFeedback", defaultValue: "Send Feedback"), shortcut: menuShortcut(for: .sendFeedback)) {
-                presentFeedbackFromHelpMenu()
-            }
 
             Button(String(localized: "command.checkForUpdates.title", defaultValue: "Check for Updates")) {
                 AppDelegate.shared?.checkForUpdates(nil)
@@ -79,14 +74,4 @@ extension cmuxApp {
         }
     }
 
-    private func presentFeedbackFromHelpMenu() {
-        if let targetWindow = NSApp.keyWindow ?? NSApp.mainWindow {
-            FeedbackComposerBridge().openComposer(in: targetWindow)
-            return
-        }
-
-        if let targetWindow = AppDelegate.shared?.showMainWindowFromMenuBar() {
-            FeedbackComposerBridge().openComposer(in: targetWindow)
-        }
-    }
 }

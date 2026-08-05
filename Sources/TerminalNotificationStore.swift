@@ -314,20 +314,6 @@ final class TerminalNotificationStore: ObservableObject {
         dismissedTombstonesLoaded = false
     }
 
-    /// Phone-banner dismissals for superseded notifications, deferred until the
-    /// replacement banner push for the same tab/surface is actually queued.
-    /// ``PhonePushClient/forward(_:badgeCount:)`` throttles per tab/surface, so
-    /// dismissing the old banner unconditionally could strand the phone with no
-    /// banner at all for a still-unread notification when the replacement push
-    /// was dropped. When a replacement forward is expected, the store stashes
-    /// the superseded ids here and emits the dismiss only after the push is
-    /// queued, making clear+replace atomic from the phone's perspective; when
-    /// no replacement will be forwarded at all, `recordNotification` emits the
-    /// dismiss immediately instead of stashing. While deferred, the phone keeps
-    /// the older (stale-text) banner — the pre-existing throttle behavior — and
-    /// the reconcile sweep still classifies the ids correctly because they are
-    /// tombstoned at supersede time.
-    private var supersededPhoneDismissBuffer = SupersededPhoneDismissBuffer()
 
     /// Classify which of the phone's delivered banner ids have been handled on
     /// this Mac: still in the store and read, or recently removed (tombstoned).
@@ -362,63 +348,16 @@ final class TerminalNotificationStore: ObservableObject {
     /// live-attached phone, and a silent APNs badge push (the cold lane) so a
     /// pocketed phone still drops the banner and badge. Both carry the
     /// authoritative unread count.
-    ///
-    /// The cold lane is sent UNCONDITIONALLY (never gated on live subscribers):
-    /// the push route fans out to every iOS device token registered for the
-    /// user, so one live-attached phone must not starve an offline second
-    /// device of its dismiss. The push is idempotent on a device that already
-    /// handled the live event — removing an already-removed banner is a no-op
-    /// and the badge is an absolute SET — and bursts coalesce in
-    /// ``PhonePushClient/forwardDismissed(ids:badgeCount:)``.
     private func emitNotificationsDismissed(ids: [String]) {
         guard !ids.isEmpty else { return }
         recordDismissTombstones(ids: ids.compactMap { UUID(uuidString: $0) })
-        let unreadCount = indexes.unreadCount
-        // Live lane: nonisolated static fan-out; short-circuits when no phone is
-        // subscribed.
-        MobileHostService.emitEvent(
-            topic: Self.dismissedEventTopic,
-            payload: ["ids": ids, "unread_count": unreadCount]
-        )
-        // Cold lane: mirror the dismiss through APNs for every registered
-        // device, attached or not (no-op unless phone forwarding is on).
-        PhonePushClient.shared.forwardDismissed(ids: ids, badgeCount: unreadCount)
     }
 
-    /// A user-driven dismiss emit that also carries any stale superseded-banner
-    /// ids the caller drained from ``supersededPhoneDismissBuffer``. Once the
-    /// current notification for a tab/surface is read/cleared/removed, no
-    /// replacement push will ever flush those stragglers (their forward was
-    /// throttled), so they must ride along with the triggering emit or an
-    /// offline phone keeps the stale banner until its next reconcile.
     private func emitNotificationsDismissed(ids: [String], drainedSuperseded: [String]) {
-        guard !drainedSuperseded.isEmpty else {
-            emitNotificationsDismissed(ids: ids)
-            return
-        }
-        let extra = drainedSuperseded.filter { !ids.contains($0) }
-        emitNotificationsDismissed(ids: ids + extra)
+        emitNotificationsDismissed(ids: ids + drainedSuperseded.filter { !ids.contains($0) })
     }
 
-    /// The last unread count pushed over ``badgeEventTopic``, so the chokepoint
-    /// only emits on real transitions.
-    private var lastEmittedPhoneBadgeCount: Int?
-
-    /// Pushes the authoritative unread count to an attached phone whenever it
-    /// changes. Runs from ``refreshUnreadPresentation()`` — the same chokepoint
-    /// that refreshes the Mac Dock badge — so every mutation lane (markRead,
-    /// markUnread, record, restore, clear) keeps the phone badge correct without
-    /// per-call-site emits. Cheap when nothing is attached (subscriber
-    /// short-circuit inside `emitEvent`).
-    private func emitUnreadBadgeEventIfChanged() {
-        let count = indexes.unreadCount
-        guard count != lastEmittedPhoneBadgeCount else { return }
-        lastEmittedPhoneBadgeCount = count
-        MobileHostService.emitEvent(
-            topic: Self.badgeEventTopic,
-            payload: ["unread_count": count]
-        )
-    }
+    private func emitUnreadBadgeEventIfChanged() {}
 
     private enum AuthorizationRequestOrigin: String {
         case notificationDelivery = "notification_delivery"
@@ -1186,48 +1125,7 @@ final class TerminalNotificationStore: ObservableObject {
         if !idsToClear.isEmpty {
             center.removeDeliveredNotificationsOffMain(withIdentifiers: idsToClear)
             center.removePendingNotificationRequestsOffMain(withIdentifiers: idsToClear)
-            // A newer notification for this tab+surface superseded the old one
-            // and its Mac banner was just cleared. When a replacement banner
-            // push is expected, DEFER the phone-banner dismiss until that push
-            // is actually queued (see ``deliverNotificationSideEffects``): the
-            // phone must never lose its only banner to a dismissal whose
-            // replacement was throttled. When no replacement will be forwarded
-            // (suppressed/focused, non-desktop effects, forwarding off, or the
-            // `.onlyWhenAway` presence gate suppressing it while the Mac is
-            // active), emit the dismiss immediately — nothing is coming to
-            // replace the banner, and the Mac is not showing one either, so
-            // deferring would just leave the stale banner stuck until a later
-            // forward. Only the burst throttle is a legitimate defer-and-flush
-            // case, which is why ``PhonePushClient/willForwardReplacement()``
-            // mirrors the real send gate but ignores that throttle.
-            let replacementWillForward = !shouldSuppressExternalDelivery
-                && effects.desktop
-                && PhonePushClient.shared.willForwardReplacement()
-            if replacementWillForward {
-                // The superseded entries already left the store; tombstone them
-                // now so the reconcile sweep stays correct while the dismiss is
-                // deferred.
-                recordDismissTombstones(ids: idsToClear.compactMap { UUID(uuidString: $0) })
-                supersededPhoneDismissBuffer.stash(
-                    ids: idsToClear,
-                    forKey: SupersededPhoneDismissBuffer.key(
-                        tabId: notification.tabId,
-                        surfaceId: notification.surfaceId
-                    )
-                )
-            } else {
-                // Also drain anything still parked for this key from an earlier
-                // throttled supersede; this emit is its last guaranteed ride.
-                emitNotificationsDismissed(
-                    ids: idsToClear,
-                    drainedSuperseded: supersededPhoneDismissBuffer.flush(
-                        forKey: SupersededPhoneDismissBuffer.key(
-                            tabId: notification.tabId,
-                            surfaceId: notification.surfaceId
-                        )
-                    )
-                )
-            }
+            emitNotificationsDismissed(ids: idsToClear)
         }
         deliverNotificationSideEffects(
             notification,
@@ -1268,30 +1166,6 @@ final class TerminalNotificationStore: ObservableObject {
             suppressedNotificationFeedbackHandler(self, notification, effects)
         } else {
             notificationDeliveryHandler(self, notification, effects)
-            // Mirror to the user's iPhone (opt-in, off by default). Only on the
-            // desktop-delivery path so it matches what the Mac actually shows;
-            // suppressed/focused notifications are not forwarded. The badge is
-            // the authoritative unread total at send time (the store was already
-            // mutated above, so it includes this notification); the server
-            // stamps it as `aps.badge` so the icon badge is SET, not incremented.
-            if effects.desktop {
-                let queued = PhonePushClient.shared.forward(notification, badgeCount: indexes.unreadCount)
-                // Only once the replacement banner push is queued is it safe to
-                // clear the superseded banners it replaces (deferred from
-                // `recordNotification`); a throttled push leaves them stashed
-                // for the next successful forward of this tab/surface.
-                if queued {
-                    let superseded = supersededPhoneDismissBuffer.flush(
-                        forKey: SupersededPhoneDismissBuffer.key(
-                            tabId: notification.tabId,
-                            surfaceId: notification.surfaceId
-                        )
-                    )
-                    if !superseded.isEmpty {
-                        emitNotificationsDismissed(ids: superseded)
-                    }
-                }
-            }
         }
     }
 
@@ -1348,17 +1222,10 @@ final class TerminalNotificationStore: ObservableObject {
         var updated = notifications
         guard let index = updated.firstIndex(where: { $0.id == id }) else { return }
         guard !updated[index].isRead else { return }
-        let supersededKey = SupersededPhoneDismissBuffer.key(
-            tabId: updated[index].tabId,
-            surfaceId: updated[index].surfaceId
-        )
         updated[index].isRead = true
         notifications = updated
         center.removeDeliveredNotificationsOffMain(withIdentifiers: [id.uuidString])
-        emitNotificationsDismissed(
-            ids: [id.uuidString],
-            drainedSuperseded: supersededPhoneDismissBuffer.flush(forKey: supersededKey)
-        )
+        emitNotificationsDismissed(ids: [id.uuidString])
     }
 
     func markUnread(id: UUID) {
@@ -1398,7 +1265,7 @@ final class TerminalNotificationStore: ObservableObject {
             center.removeDeliveredNotificationsOffMain(withIdentifiers: idsToClear)
             emitNotificationsDismissed(
                 ids: idsToClear,
-                drainedSuperseded: supersededPhoneDismissBuffer.flush(matchingTabId: tabId)
+                drainedSuperseded: []
             )
         }
     }
@@ -1406,20 +1273,11 @@ final class TerminalNotificationStore: ObservableObject {
     func markRead(forTabId tabId: UUID, surfaceId: UUID?) {
         var updated = notifications
         var idsToClear: [String] = []
-        var supersededDrained = supersededPhoneDismissBuffer.flush(
-            forKey: SupersededPhoneDismissBuffer.key(tabId: tabId, surfaceId: surfaceId)
-        )
         for index in updated.indices {
             if updated[index].matches(tabId: tabId, surfaceId: surfaceId),
                !updated[index].isRead {
                 updated[index].isRead = true
                 idsToClear.append(updated[index].id.uuidString)
-                supersededDrained.append(contentsOf: supersededPhoneDismissBuffer.flush(
-                    forKey: SupersededPhoneDismissBuffer.key(
-                        tabId: updated[index].tabId,
-                        surfaceId: updated[index].surfaceId
-                    )
-                ))
             }
         }
         if !idsToClear.isEmpty {
@@ -1434,7 +1292,7 @@ final class TerminalNotificationStore: ObservableObject {
         if !idsToClear.isEmpty {
             center.removeDeliveredNotificationsOffMain(withIdentifiers: idsToClear)
             center.removePendingNotificationRequestsOffMain(withIdentifiers: idsToClear)
-            emitNotificationsDismissed(ids: idsToClear, drainedSuperseded: supersededDrained)
+            emitNotificationsDismissed(ids: idsToClear)
         }
     }
 
@@ -1514,7 +1372,7 @@ final class TerminalNotificationStore: ObservableObject {
             center.removePendingNotificationRequestsOffMain(withIdentifiers: idsToClear)
             emitNotificationsDismissed(
                 ids: idsToClear,
-                drainedSuperseded: supersededPhoneDismissBuffer.flushAll()
+                drainedSuperseded: []
             )
         }
     }
@@ -1530,15 +1388,7 @@ final class TerminalNotificationStore: ObservableObject {
             clearFocusedReadIndicator(forTabId: removed.tabId, surfaceId: removed.surfaceId)
         }
         center.removeDeliveredNotificationsOffMain(withIdentifiers: [id.uuidString])
-        let supersededDrained = removed.map { removedNotification in
-            supersededPhoneDismissBuffer.flush(
-                forKey: SupersededPhoneDismissBuffer.key(
-                    tabId: removedNotification.tabId,
-                    surfaceId: removedNotification.surfaceId
-                )
-            )
-        } ?? []
-        emitNotificationsDismissed(ids: [id.uuidString], drainedSuperseded: supersededDrained)
+        emitNotificationsDismissed(ids: [id.uuidString])
     }
 
     func restoreSessionNotifications(_ restoredNotifications: [TerminalNotification], forTabId tabId: UUID) {
@@ -1615,7 +1465,7 @@ final class TerminalNotificationStore: ObservableObject {
         CmuxEventBus.shared.publishNotificationCleared(ids: ids, workspaceId: nil, surfaceId: nil)
         center.removeDeliveredNotificationsOffMain(withIdentifiers: ids)
         center.removePendingNotificationRequestsOffMain(withIdentifiers: ids)
-        emitNotificationsDismissed(ids: ids, drainedSuperseded: supersededPhoneDismissBuffer.flushAll())
+        emitNotificationsDismissed(ids: ids, drainedSuperseded: [])
     }
 
     func clearNotifications(
@@ -1629,18 +1479,9 @@ final class TerminalNotificationStore: ObservableObject {
         var updated: [TerminalNotification] = []
         updated.reserveCapacity(notifications.count)
         var idsToClear: [String] = []
-        var supersededDrained = supersededPhoneDismissBuffer.flush(
-            forKey: SupersededPhoneDismissBuffer.key(tabId: tabId, surfaceId: surfaceId)
-        )
         for notification in notifications {
             if notification.matches(tabId: tabId, surfaceId: surfaceId) {
                 idsToClear.append(notification.id.uuidString)
-                supersededDrained.append(contentsOf: supersededPhoneDismissBuffer.flush(
-                    forKey: SupersededPhoneDismissBuffer.key(
-                        tabId: notification.tabId,
-                        surfaceId: notification.surfaceId
-                    )
-                ))
             } else {
                 updated.append(notification)
             }
@@ -1657,7 +1498,7 @@ final class TerminalNotificationStore: ObservableObject {
             CmuxEventBus.shared.publishNotificationCleared(ids: idsToClear, workspaceId: tabId, surfaceId: surfaceId)
             center.removeDeliveredNotificationsOffMain(withIdentifiers: idsToClear)
             center.removePendingNotificationRequestsOffMain(withIdentifiers: idsToClear)
-            emitNotificationsDismissed(ids: idsToClear, drainedSuperseded: supersededDrained)
+            emitNotificationsDismissed(ids: idsToClear)
         }
     }
 
@@ -1725,7 +1566,7 @@ final class TerminalNotificationStore: ObservableObject {
             center.removePendingNotificationRequestsOffMain(withIdentifiers: idsToClear)
             emitNotificationsDismissed(
                 ids: idsToClear,
-                drainedSuperseded: supersededPhoneDismissBuffer.flush(matchingTabId: tabId)
+                drainedSuperseded: []
             )
         }
     }

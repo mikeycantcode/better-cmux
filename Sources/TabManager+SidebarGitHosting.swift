@@ -8,7 +8,7 @@ import CmuxSidebar
 // TabManager is the window-side host of the extracted CmuxSidebarGit
 // services: snapshot reads of workspace/panel state, synchronous projection
 // writes of branch and PR badge state onto Workspace, and the environment
-// toggles (settings + mobile-host activity) the schedulers honor. Every
+// toggles (settings) the schedulers honor. Every
 // method forwards to the same Workspace/defaults accessors the legacy
 // in-class subsystem used, so state transitions stay byte-identical.
 
@@ -24,7 +24,8 @@ extension TabManager: SidebarGitHosting {
     }
 
     func isRemoteWorkspace(_ workspaceId: UUID) -> Bool? {
-        tabs.first(where: { $0.id == workspaceId })?.isRemoteWorkspace
+        // Remote workspaces were removed; every existing workspace is local.
+        workspaceExists(workspaceId) ? false : nil
     }
 
     func panelIds(in workspaceId: UUID) -> [UUID] {
@@ -138,13 +139,9 @@ extension TabManager: SidebarGitHosting {
         SidebarWorkspaceDetailDefaults.pullRequestPollingEnabled(defaults: .standard)
     }
 
-    func mobileHostHasRecentActivity(within interval: TimeInterval) -> Bool {
-        MobileHostRequestActivity.hasRecentActivity(within: interval)
-    }
+    func mobileHostHasRecentActivity(within interval: TimeInterval) -> Bool { false }
 
-    func mobileHostQuietDelay(for interval: TimeInterval) -> TimeInterval {
-        MobileHostRequestActivity.quietDelay(for: interval)
-    }
+    func mobileHostQuietDelay(for interval: TimeInterval) -> TimeInterval { 0 }
 }
 
 extension SidebarPullRequestState {

@@ -10,9 +10,9 @@ private let notificationWebSocketServerLog = Logger(subsystem: "dev.cmux", categ
 /// The server is **loopback-only** and has **no authentication**: while
 /// ``NotificationWebSocketSettings/isEnabled(defaults:)`` is `true`, any local
 /// process can read notifications and send actions. It mirrors
-/// `MobileHostService`'s `Network` patterns: a dedicated serial callback queue,
+/// the app's `Network` patterns: a dedicated serial callback queue,
 /// an `NWParameters(tls:nil, tcp:)` stack restricted to loopback, and a pure
-/// reconciliation decision (`MobileHostService.syncDecision`) for
+/// reconciliation decision for
 /// ``syncToSettings()``.
 ///
 /// Construct it once at the app's composition root and inject it; there is no
@@ -33,7 +33,7 @@ final class NotificationWebSocketServer {
     /// settings change needs a restart. `nil` while stopped.
     private var appliedPort: Int?
     /// Upper bound on concurrently-accepted connections (mirrors
-    /// `MobileHostService`). Bounds the resource cost of abandoned/half-open
+    /// the removed mobile host). Bounds the resource cost of abandoned/half-open
     /// loopback peers since there is no authentication gate.
     private let maximumActiveConnectionCount = 16
 
@@ -121,7 +121,7 @@ final class NotificationWebSocketServer {
             // Predictable port for v1: do not rebind on an ephemeral port; stop.
             stop()
         case let .waiting(error):
-            if MobileHostService.isAddressUnavailable(error) {
+            if Self.isAddressUnavailable(error) {
                 notificationWebSocketServerLog.error("notification websocket port \(port) unavailable: \(String(describing: error), privacy: .public); stopping")
                 stop()
             }
@@ -136,8 +136,8 @@ final class NotificationWebSocketServer {
             return
         }
         // Loopback enforcement: reject any peer that is not on the loopback
-        // interface, reusing MobileHostService's address classifier.
-        guard MobileHostService.isLoopbackConnection(connection) else {
+        // interface.
+        guard Self.isLoopbackConnection(connection) else {
             notificationWebSocketServerLog.error("notification websocket rejected non-loopback connection")
             connection.cancel()
             return
@@ -179,30 +179,60 @@ final class NotificationWebSocketServer {
         }
     }
 
-    /// Reconciles the live listener with the current settings.
-    ///
-    /// Reuses `MobileHostService.syncDecision` so the enable/disable and
-    /// restart-on-port-change logic stays a single, unit-tested pure function:
-    /// disabled → stop; enabled and not running → start; enabled and the
-    /// configured port changed → restart; otherwise no-op.
+    /// Reconciles the live listener with the current settings: disabled → stop;
+    /// enabled and not running → start; enabled and the configured port
+    /// changed → restart; otherwise no-op.
     func syncToSettings() {
         let enabled = NotificationWebSocketSettings.isEnabled(defaults: defaults)
         let desiredPort = NotificationWebSocketSettings.port(defaults: defaults)
-        switch MobileHostService.syncDecision(
-            enabled: enabled,
-            listenerRunning: listener != nil,
-            desiredPort: desiredPort,
-            appliedPort: appliedPort
-        ) {
-        case .noop:
-            break
-        case .start:
+        guard enabled else {
+            if listener != nil { stop() }
+            return
+        }
+        guard listener != nil else {
             start()
-        case .stop:
-            stop()
-        case .restart:
+            return
+        }
+        if appliedPort != desiredPort {
             stop()
             start()
+        }
+    }
+
+    /// Whether `error` means the address/port cannot be bound (in use, not
+    /// available, or permission denied) versus a transient waiting reason.
+    nonisolated static func isAddressUnavailable(_ error: NWError) -> Bool {
+        if case let .posix(code) = error {
+            return code == .EADDRINUSE || code == .EADDRNOTAVAIL || code == .EACCES
+        }
+        return false
+    }
+
+    /// Whether an incoming connection's remote peer is on the loopback interface.
+    nonisolated static func isLoopbackConnection(_ connection: NWConnection) -> Bool {
+        isLoopbackEndpoint(connection.endpoint) || isLoopbackEndpoint(connection.currentPath?.remoteEndpoint)
+    }
+
+    nonisolated static func isLoopbackEndpoint(_ endpoint: NWEndpoint?) -> Bool {
+        guard case let .hostPort(host, _)? = endpoint else { return false }
+        switch host {
+        case let .ipv4(address):
+            // 127.0.0.0/8
+            return address.rawValue.first == 127
+        case let .ipv6(address):
+            let bytes = Array(address.rawValue)
+            guard bytes.count == 16 else { return false }
+            // ::1
+            let isV6Loopback = bytes[0..<15].allSatisfy { $0 == 0 } && bytes[15] == 1
+            // IPv4-mapped loopback ::ffff:127.0.0.0/8
+            let isV4MappedLoopback = bytes[0..<10].allSatisfy { $0 == 0 }
+                && bytes[10] == 0xff && bytes[11] == 0xff && bytes[12] == 127
+            return isV6Loopback || isV4MappedLoopback
+        case let .name(name, _):
+            let lowered = name.lowercased()
+            return lowered == "localhost" || lowered.hasSuffix(".localhost")
+        @unknown default:
+            return false
         }
     }
 }

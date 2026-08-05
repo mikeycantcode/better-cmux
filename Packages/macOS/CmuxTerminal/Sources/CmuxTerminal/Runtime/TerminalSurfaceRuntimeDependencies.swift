@@ -6,8 +6,7 @@ public import CmuxTerminalCore
 /// `GhosttyApp` statics; later the app's composition root proper) and passed
 /// to every `TerminalSurface` initializer. The bundle replaces the god-file
 /// reach-ups into `GhosttyApp.shared`, `TerminalController.shared`,
-/// `MobileTerminalByteTee.shared`, `RendererRealizationController.shared`,
-/// and `AgentHibernationController.shared`.
+/// `RendererRealizationController.shared` and `AgentHibernationController.shared`.
 public struct TerminalSurfaceRuntimeDependencies {
     /// The process-wide surface registry.
     public let registry: any TerminalSurfaceRegistering
@@ -20,9 +19,6 @@ public struct TerminalSurfaceRuntimeDependencies {
 
     /// Live settings reads folded into spawn environments.
     public let spawnPolicy: any TerminalSurfaceSpawnPolicyProviding
-
-    /// The mobile PTY byte-tee installer.
-    public let byteTee: any TerminalByteTeeBinding
 
     /// The renderer-reclamation pass scheduler.
     public let rendererRealization: any TerminalRendererRealizationScheduling
@@ -60,7 +56,6 @@ public struct TerminalSurfaceRuntimeDependencies {
         engine: any TerminalEngineHosting,
         viewProvider: any TerminalSurfaceViewProviding,
         spawnPolicy: any TerminalSurfaceSpawnPolicyProviding,
-        byteTee: any TerminalByteTeeBinding,
         rendererRealization: any TerminalRendererRealizationScheduling,
         hibernationRecorder: any AgentHibernationRecording,
         runtimeTeardown: TerminalSurfaceRuntimeTeardownCoordinator,
@@ -75,7 +70,6 @@ public struct TerminalSurfaceRuntimeDependencies {
         self.engine = engine
         self.viewProvider = viewProvider
         self.spawnPolicy = spawnPolicy
-        self.byteTee = byteTee
         self.rendererRealization = rendererRealization
         self.hibernationRecorder = hibernationRecorder
         self.runtimeTeardown = runtimeTeardown

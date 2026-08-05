@@ -13,7 +13,7 @@ internal import CMUXDebugLog
 ///
 /// Lifted verbatim from `Sources/GhosttyTerminalView.swift`; the legacy
 /// reach-ups into `GhosttyApp.shared` / `TerminalController.shared` /
-/// `MobileTerminalByteTee.shared` / `RendererRealizationController.shared` /
+/// `RendererRealizationController.shared` /
 /// `AgentHibernationController.shared` are inverted through the seams in
 /// ``TerminalSurfaceRuntimeDependencies``.
 ///
@@ -64,7 +64,6 @@ public final class TerminalSurface: Identifiable, ObservableObject {
     let registry: any TerminalSurfaceRegistering
     let engine: any TerminalEngineHosting
     let spawnPolicyProvider: any TerminalSurfaceSpawnPolicyProviding
-    let byteTee: any TerminalByteTeeBinding
     let rendererRealization: any TerminalRendererRealizationScheduling
     let hibernationRecorder: any AgentHibernationRecording
     let runtimeTeardown: TerminalSurfaceRuntimeTeardownCoordinator
@@ -205,7 +204,6 @@ public final class TerminalSurface: Identifiable, ObservableObject {
     var lastUncappedPixelHeight: UInt32 = 0
     var lastXScale: CGFloat = 0
     var lastYScale: CGFloat = 0
-    var mobileViewportCellLimit: (columns: Int, rows: Int)?
     // Debug metadata is read from debug/CLI paths off the main thread; the
     // lock is the sanctioned carve-out for tiny values shared with
     // synchronous off-isolation readers.
@@ -232,13 +230,6 @@ public final class TerminalSurface: Identifiable, ObservableObject {
     var claudeCommandShimCompletionTask: Task<Void, Never>?
     var claudeCommandShimInstallCompleted = false
     var claudeCommandShimPendingCreationSource: RuntimeSurfaceCreationSource?
-    /// The retained byte-tee lease for the libghostty PTY tee callback (cmux
-    /// fork extension). Installed in `createSurface` after
-    /// `ghostty_surface_new` succeeds; released alongside
-    /// `surfaceCallbackContext` whenever we tear down or rebuild the
-    /// surface. The Mac sync server reads the tee'd bytes to broadcast
-    /// raw PTY output to paired iPhones (`MobileTerminalByteTee`).
-    var mobileByteTeeLease: (any TerminalByteTeeLease)?
     /// The desired focus state for the Ghostty C surface. May be set before the
     /// C surface exists (e.g. during layout restoration); `createSurface`
     /// reapplies this value once the runtime surface exists, then keeps using it
@@ -403,7 +394,6 @@ public final class TerminalSurface: Identifiable, ObservableObject {
         self.registry = dependencies.registry
         self.engine = dependencies.engine
         self.spawnPolicyProvider = dependencies.spawnPolicy
-        self.byteTee = dependencies.byteTee
         self.rendererRealization = dependencies.rendererRealization
         self.hibernationRecorder = dependencies.hibernationRecorder
         self.runtimeTeardown = dependencies.runtimeTeardown
@@ -485,22 +475,6 @@ public final class TerminalSurface: Identifiable, ObservableObject {
         let manualIOContext = manualIOContext
         self.manualIOContext = nil
 
-        // Mirror teardownSurface/suspend: release the retained mobile byte-tee
-        // userdata and drop the per-surface tee state keyed by this surface id,
-        // BEFORE freeing the surface. A terminal closed via deinit (not explicit
-        // teardown) would otherwise leak the tee userdata and leave stale mobile
-        // replay buffers keyed by the old id. If teardown already ran, it nil'd
-        // mobileByteTeeLease, so teeLease is nil here and ?.release() no-ops.
-        let teeLease = mobileByteTeeLease
-        mobileByteTeeLease = nil
-        // `dropSurface` is @MainActor but `deinit` is nonisolated, so hop to the
-        // main actor with the surface id captured by value (no self capture).
-        // Dropping by id only clears the registry/replay state; releasing
-        // `teeLease` on each exit path frees the userdata independently.
-        let teeSurfaceID = id
-        let teeBinding = byteTee
-        Task { @MainActor in teeBinding.dropSurface(surfaceID: teeSurfaceID) }
-
         // Nil out the surface pointer so any in-flight closures (e.g. geometry
         // reconcile dispatched via DispatchQueue.main.async) that read self.surface
         // before this object is fully deallocated will see nil and bail out,
@@ -520,7 +494,6 @@ public final class TerminalSurface: Identifiable, ObservableObject {
 #endif
             callbackContext?.release()
             manualIOContext?.release()
-            teeLease?.release()
             return
         }
 
@@ -529,7 +502,6 @@ public final class TerminalSurface: Identifiable, ObservableObject {
             runtimeSurfaceFreedOutOfBandForTesting = false
             callbackContext?.release()
             manualIOContext?.release()
-            teeLease?.release()
             return
         }
 #endif
@@ -551,10 +523,9 @@ public final class TerminalSurface: Identifiable, ObservableObject {
             surface: surfaceToFree,
             callbackContext: callbackContext
         )
-        // The teardown coordinator releases callbackContext; manualIOContext and
-        // teeLease are not transported through the request, so release them here.
+        // The teardown coordinator releases callbackContext; manualIOContext is
+        // not transported through the request, so release it here.
         manualIOContext?.release()
-        teeLease?.release()
     }
 }
 

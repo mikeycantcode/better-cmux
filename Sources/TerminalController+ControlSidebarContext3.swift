@@ -200,11 +200,6 @@ extension TerminalController {
             }
             return .created(id)
         }
-        if tab.isRemoteTmuxMirror, insertFirst {
-            // Routed tmux `split-window` cannot insert before the target
-            // pane; reject before mutating the remote session.
-            return .mirrorInsertFirstRejected
-        }
         switch tab.newTerminalSplitOutcome(
             from: focusedPanelId,
             orientation: orientation,
@@ -213,8 +208,6 @@ extension TerminalController {
         ) {
         case .created(let panel):
             return .created(panel.id)
-        case .routedToRemote:
-            return .routedToRemote
         case .failed:
             return .failed
         }
@@ -267,8 +260,6 @@ extension TerminalController {
         ) {
         case .created(let panel):
             return .created(panel.id)
-        case .routedToRemote:
-            return .routedToRemote
         case .failed:
             return .failed
         }

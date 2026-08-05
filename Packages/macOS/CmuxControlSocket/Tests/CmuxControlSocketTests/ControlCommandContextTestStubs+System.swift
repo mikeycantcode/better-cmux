@@ -28,7 +28,6 @@ extension ControlSystemContext {
     func controlSettingsOpen(targetRaw: String?, requestedActivate: Bool) -> ControlSettingsOpenResolution {
         .opened(target: targetRaw ?? "general")
     }
-    func controlFeedbackOpen(workspaceID: UUID?, windowID: UUID?, requestedActivate: Bool) {}
     func controlExtensionSidebarSnapshot(routing: ControlRoutingSelectors) -> ControlExtensionSidebarSnapshot? { nil }
     func controlWorkspaceAction(params: [String: JSONValue]) -> ControlCallResult {
         .err(code: "unavailable", message: "TabManager not available", data: nil)
@@ -46,6 +45,5 @@ extension ControlSystemContext {
         .err(code: "unavailable", message: "AppDelegate not available", data: nil)
     }
     #if DEBUG
-    func controlMobileDevStackAuthSetToken(_ token: String?) {}
     #endif
 }

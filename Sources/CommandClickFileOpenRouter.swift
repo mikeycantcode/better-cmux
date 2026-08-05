@@ -72,10 +72,6 @@ enum CommandClickFileOpenRouter {
                 panelId: surfaceId,
                 preferredWorkspaceId: preferredWorkspaceId
             )?.workspace ?? workspace
-            guard !resolvedWorkspace.isRemoteTerminalSurface(surfaceId) else {
-                fallback?()
-                return
-            }
             guard shouldRouteInCmux(path: filePath) else {
                 fallback?()
                 return

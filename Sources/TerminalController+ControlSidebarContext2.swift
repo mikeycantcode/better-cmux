@@ -1,5 +1,4 @@
 import CmuxControlSocket
-import CmuxRemoteSession
 import Foundation
 import CmuxWorkspaces
 import CmuxSidebar
@@ -258,12 +257,7 @@ extension TerminalController {
             tab.pruneSurfaceMetadata(validSurfaceIds: validSurfaceIds)
             guard validSurfaceIds.contains(scope.panelID) else { return }
             tab.surfaceTTYNames[scope.panelID] = ttyName
-            if tab.isRemoteWorkspace {
-                tab.syncRemotePortScanTTYs()
-                _ = tab.applyPendingRemoteSurfacePortKickIfNeeded(to: scope.panelID)
-            } else {
-                PortScanner.shared.registerTTY(workspaceId: scope.workspaceID, panelId: scope.panelID, ttyName: ttyName)
-            }
+            PortScanner.shared.registerTTY(workspaceId: scope.workspaceID, panelId: scope.panelID, ttyName: ttyName)
         }
     }
 
@@ -275,20 +269,11 @@ extension TerminalController {
             requireLiveSurface: true
         ) { tab, surfaceId in
             tab.surfaceTTYNames[surfaceId] = ttyName
-            if tab.isRemoteWorkspace {
-                tab.syncRemotePortScanTTYs()
-                _ = tab.applyPendingRemoteSurfacePortKickIfNeeded(to: surfaceId)
-            } else {
-                PortScanner.shared.registerTTY(workspaceId: tab.id, panelId: surfaceId, ttyName: ttyName)
-            }
+            PortScanner.shared.registerTTY(workspaceId: tab.id, panelId: surfaceId, ttyName: ttyName)
         }
     }
 
     func controlSidebarScheduleScopedPortsKick(scope: ControlSidebarPanelScope, reasonRawValue: String) {
-        guard let reason = PortScanKickReason(rawValue: reasonRawValue) else {
-            // Unreachable: the coordinator only forwards a value this app produced.
-            return
-        }
         TerminalMutationBus.shared.enqueueMainActorMutation {
             guard let tabManager = AppDelegate.shared?.tabManagerFor(tabId: scope.workspaceID),
                   let tab = tabManager.tabs.first(where: { $0.id == scope.workspaceID }) else {
@@ -297,30 +282,18 @@ extension TerminalController {
             let validSurfaceIds = Set(tab.panels.keys)
             tab.pruneSurfaceMetadata(validSurfaceIds: validSurfaceIds)
             guard validSurfaceIds.contains(scope.panelID) else { return }
-            if tab.isRemoteWorkspace {
-                tab.kickRemotePortScan(panelId: scope.panelID, reason: reason)
-            } else {
-                PortScanner.shared.kick(workspaceId: scope.workspaceID, panelId: scope.panelID)
-            }
+            PortScanner.shared.kick(workspaceId: scope.workspaceID, panelId: scope.panelID)
         }
     }
 
     func controlSidebarPortsKick(tabArg: String?, panelArg: String?, reasonRawValue: String) -> ControlSidebarPanelWriteResolution {
-        guard let reason = PortScanKickReason(rawValue: reasonRawValue) else {
-            // Unreachable: the coordinator only forwards a value this app produced.
-            return .tabNotFound
-        }
-        return controlSidebarResolvePanelWrite(
+        controlSidebarResolvePanelWrite(
             tabArg: tabArg,
             panelArg: panelArg,
             prune: false,
             requireLiveSurface: false
         ) { tab, surfaceId in
-            if tab.isRemoteWorkspace {
-                tab.kickRemotePortScan(panelId: surfaceId, reason: reason)
-            } else {
-                PortScanner.shared.kick(workspaceId: tab.id, panelId: surfaceId)
-            }
+            PortScanner.shared.kick(workspaceId: tab.id, panelId: surfaceId)
         }
     }
 

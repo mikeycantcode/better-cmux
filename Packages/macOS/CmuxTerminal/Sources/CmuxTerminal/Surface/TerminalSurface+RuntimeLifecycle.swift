@@ -130,8 +130,6 @@ extension TerminalSurface {
               GhosttySurfaceRuntimeProbe.surfacePointerAppearsLive(surface) else {
             let callbackContext = surfaceCallbackContext
             surfaceCallbackContext = nil
-            let teeLease = mobileByteTeeLease
-            mobileByteTeeLease = nil
             registry.unregisterRuntimeSurface(surface, ownerId: id)
             self.surface = nil
             activePortalHostLease = nil
@@ -146,7 +144,6 @@ extension TerminalSurface {
             )
 #endif
             callbackContext?.release()
-            teeLease?.release()
             return nil
         }
         return surface
@@ -234,9 +231,6 @@ extension TerminalSurface {
         surfaceCallbackContext = nil
         let manualIOContext = manualIOContext
         self.manualIOContext = nil
-        let teeLease = mobileByteTeeLease
-        mobileByteTeeLease = nil
-        byteTee.dropSurface(surfaceID: id)
 
         let surfaceToFree = surface
         if let surfaceToFree {
@@ -247,7 +241,6 @@ extension TerminalSurface {
         guard let surfaceToFree else {
             callbackContext?.release()
             manualIOContext?.release()
-            teeLease?.release()
             return
         }
 
@@ -256,7 +249,6 @@ extension TerminalSurface {
             runtimeSurfaceFreedOutOfBandForTesting = false
             callbackContext?.release()
             manualIOContext?.release()
-            teeLease?.release()
             return
         }
 #endif
@@ -272,9 +264,8 @@ extension TerminalSurface {
                 freeSurface: freeSurface
             )
             // The teardown coordinator releases callbackContext; manualIOContext
-            // and teeLease are not transported through the request, so release them here.
+            // is not transported through the request, so release it here.
             manualIOContext?.release()
-            teeLease?.release()
             return
         }
 #endif
@@ -285,7 +276,6 @@ extension TerminalSurface {
             ghostty_surface_free(surfaceToFree)
             callbackContext?.release()
             manualIOContext?.release()
-            teeLease?.release()
         }
     }
 
@@ -302,9 +292,6 @@ extension TerminalSurface {
         surfaceCallbackContext = nil
         let manualIOContext = manualIOContext
         self.manualIOContext = nil
-        let teeLease = mobileByteTeeLease
-        mobileByteTeeLease = nil
-        byteTee.dropSurface(surfaceID: id)
 
         let surfaceToFree = surface
         if let surfaceToFree {
@@ -319,7 +306,6 @@ extension TerminalSurface {
         guard let surfaceToFree else {
             callbackContext?.release()
             manualIOContext?.release()
-            teeLease?.release()
             return
         }
 
@@ -341,9 +327,8 @@ extension TerminalSurface {
                 freeSurface: freeSurface
             )
             // The teardown coordinator releases callbackContext; manualIOContext
-            // and teeLease are not transported through the request, so release them here.
+            // is not transported through the request, so release it here.
             manualIOContext?.release()
-            teeLease?.release()
             return
         }
 #endif
@@ -352,7 +337,6 @@ extension TerminalSurface {
             ghostty_surface_free(surfaceToFree)
             callbackContext?.release()
             manualIOContext?.release()
-            teeLease?.release()
         }
     }
 
@@ -554,14 +538,6 @@ extension TerminalSurface {
         // realizeRenderer() double-realize and trip Ghostty's defunct assert.
         rendererRealized = true
         recordRuntimeSurfaceCreation()
-        // Install the PTY tee so MobileTerminalByteTee receives every byte
-        // the read thread produces, in order, before the VT parser runs.
-        // Paired iPhones consume these bytes via `terminal.bytes` events
-        // and feed them into their own libghostty surface, guaranteeing
-        // grid parity by construction. The lease is released alongside
-        // `surfaceCallbackContext` when the surface tears down.
-        mobileByteTeeLease?.release()
-        mobileByteTeeLease = byteTee.installTee(on: createdSurface, surfaceID: id)
         if runtimeInitialInput != nil {
             nextRuntimeInitialInput = nil
         }

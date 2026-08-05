@@ -11,10 +11,6 @@ import Foundation
 enum TerminalPanelCreationOutcome {
     /// A local panel was created synchronously.
     case created(TerminalPanel)
-    /// The request was forwarded to the remote tmux session backing this
-    /// mirror workspace. No local panel exists yet — it arrives via the
-    /// mirror's `%layout-change` / `%window-add` handling.
-    case routedToRemote
     /// Nothing was created or routed.
     case failed
 

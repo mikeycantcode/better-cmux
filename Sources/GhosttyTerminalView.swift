@@ -16,10 +16,8 @@ import CoreText
 import Darwin
 import Carbon.HIToolbox
 import os
-import Sentry
 import Bonsplit
 import CMUXAgentLaunch
-import CMUXMobileCore
 import IOSurface
 import UniformTypeIdentifiers
 
@@ -349,7 +347,7 @@ class GhosttyApp {
     // constructs exactly one instance of each capability here. These statics
     // are the documented transitional accessors for god-file callers
     // (GhosttyTerminalView.swift, AppDelegate, Workspace, TerminalController,
-    // TextBoxInput, MainWindowFocusController, MobileTerminalRenderObserver)
+    // TextBoxInput, MainWindowFocusController)
     // that cannot take constructor injection until their own decomposition
     // slices land. They dissolve into composition-root injection when
     // GhosttyAppService replaces this type.
@@ -398,7 +396,6 @@ class GhosttyApp {
         engine: GhosttyApp.shared,
         viewProvider: TerminalSurfaceViewFactory(),
         spawnPolicy: TerminalSurfaceSpawnPolicyBridge(),
-        byteTee: TerminalMobileByteTeeBridge(),
         rendererRealization: RendererRealizationController.shared,
         hibernationRecorder: TerminalAgentHibernationRecorder(),
         runtimeTeardown: GhosttyApp.terminalSurfaceRuntimeTeardown,
@@ -509,17 +506,7 @@ class GhosttyApp {
             func completeClipboardRequest(with text: String) {
                 let finish = {
                     guard callbackContext.runtimeSurface == requestSurface else { return }
-                    // Remote tmux mirror panes need tmux to bracket the paste
-                    // because the local manual-I/O surface cannot know the
-                    // remote pane's bracketed-paste mode.
-                    let handledByMirror = !text.isEmpty && MainActor.assumeIsolated {
-                        AppDelegate.shared?.remoteTmuxController.pasteIntoMirror(
-                            surfaceId: callbackContext.surfaceId,
-                            text: text
-                        ) ?? false
-                    }
-                    let completionText = handledByMirror ? "" : text
-                    completionText.withCString { ptr in
+                    text.withCString { ptr in
                         ghostty_surface_complete_clipboard_request(requestSurface, ptr, state, false)
                     }
                     callbackContext.terminalSurface?.noteClipboardReadCompleted()
@@ -576,33 +563,6 @@ class GhosttyApp {
                 TerminalImageTransferPlanner.execute(
                     plan: plan,
                     operation: operation,
-                    uploadWorkspaceRemote: { fileURLs, operation, finish in
-                        guard let workspace = MainActor.assumeIsolated({
-                            callbackContext.terminalSurface?.owningWorkspace()
-                        }) else {
-                            finish(.failure(NSError(domain: "cmux.remote.paste", code: 3)))
-                            GhosttyApp.terminalPasteboard.cleanupTransferredTemporaryImageFiles(fileURLs)
-                            return
-                        }
-                        workspace.uploadDroppedFilesForRemoteTerminal(
-                            fileURLs,
-                            operation: operation,
-                            completion: { result in
-                                finish(result)
-                                GhosttyApp.terminalPasteboard.cleanupTransferredTemporaryImageFiles(fileURLs)
-                            }
-                        )
-                    },
-                    uploadDetectedSSH: { session, fileURLs, operation, finish in
-                        session.uploadDroppedFiles(
-                            fileURLs,
-                            operation: operation,
-                            completion: { result in
-                                finish(result)
-                                GhosttyApp.terminalPasteboard.cleanupTransferredTemporaryImageFiles(fileURLs)
-                            }
-                        )
-                    },
                     insertText: { text in
                         MainActor.assumeIsolated {
                             callbackContext.terminalSurface?.hostedView.endImageTransferIndicator(
@@ -618,9 +578,6 @@ class GhosttyApp {
                             )
                         }
                         NSSound.beep()
-#if DEBUG
-                        cmuxDebugLog("terminal.remotePasteUpload.failed surface=\(callbackContext.surfaceId.uuidString.prefix(5))")
-#endif
                         completeClipboardRequest(with: "")
                     }
                 )
@@ -657,16 +614,8 @@ class GhosttyApp {
             self.logBackground(message)
         })
 
-    // Scroll lag tracking
+    // Scroll session tracking
     private(set) var isScrolling = false
-    private var scrollLagSampleCount = 0
-    private var scrollLagTotalMs: Double = 0
-    private var scrollLagMaxMs: Double = 0
-    private let scrollLagThresholdMs: Double = 40
-    private let scrollLagMinimumSamples = 8
-    private let scrollLagMinimumAverageMs: Double = 12
-    private let scrollLagReportCooldownSeconds: TimeInterval = 300
-    private var lastScrollLagReportUptime: TimeInterval?
     private var scrollEndTimer: DispatchWorkItem?
 
     func markScrollActivity(hasMomentum: Bool, momentumEnded: Bool) {
@@ -694,43 +643,6 @@ class GhosttyApp {
     private func endScrollSession() {
         guard isScrolling else { return }
         isScrolling = false
-
-        // Report accumulated lag stats if any exceeded threshold
-        if scrollLagSampleCount > 0 {
-            let avgLag = scrollLagTotalMs / Double(scrollLagSampleCount)
-            let maxLag = scrollLagMaxMs
-            let samples = scrollLagSampleCount
-            let threshold = scrollLagThresholdMs
-            let nowUptime = ProcessInfo.processInfo.systemUptime
-            if Self.shouldCaptureScrollLagEvent(
-                samples: samples,
-                averageMs: avgLag,
-                maxMs: maxLag,
-                thresholdMs: threshold,
-                minimumSamples: scrollLagMinimumSamples,
-                minimumAverageMs: scrollLagMinimumAverageMs,
-                nowUptime: nowUptime,
-                lastReportedUptime: lastScrollLagReportUptime,
-                cooldown: scrollLagReportCooldownSeconds
-            ) {
-                if TelemetrySettings.enabledForCurrentLaunch {
-                    SentrySDK.capture(message: "Scroll lag detected") { scope in
-                        scope.setLevel(.warning)
-                        scope.setContext(value: [
-                            "samples": samples,
-                            "avg_ms": String(format: "%.2f", avgLag),
-                            "max_ms": String(format: "%.2f", maxLag),
-                            "threshold_ms": threshold
-                        ], key: "scroll_lag")
-                    }
-                }
-                lastScrollLagReportUptime = nowUptime
-            }
-            // Reset stats
-            scrollLagSampleCount = 0
-            scrollLagTotalMs = 0
-            scrollLagMaxMs = 0
-        }
     }
 
     private init() {
@@ -776,12 +688,6 @@ class GhosttyApp {
         } else {
             initializationLogger.error("\(message, privacy: .public) \(String(describing: data), privacy: .public)")
         }
-        sentryCaptureError(
-            message,
-            category: "terminal",
-            data: data,
-            contextKey: "ghostty.initialization"
-        )
     }
 
     private func initializeGhostty() {
@@ -1606,29 +1512,6 @@ class GhosttyApp {
         return effectiveTerminalColorScheme
     }
 
-    static func shouldCaptureScrollLagEvent(
-        samples: Int,
-        averageMs: Double,
-        maxMs: Double,
-        thresholdMs: Double,
-        minimumSamples: Int = 8,
-        minimumAverageMs: Double = 12,
-        nowUptime: TimeInterval,
-        lastReportedUptime: TimeInterval?,
-        cooldown: TimeInterval = 300
-    ) -> Bool {
-        guard samples >= minimumSamples else { return false }
-        guard averageMs.isFinite, maxMs.isFinite, thresholdMs.isFinite, nowUptime.isFinite, cooldown.isFinite else {
-            return false
-        }
-        guard averageMs >= minimumAverageMs else { return false }
-        guard maxMs > thresholdMs else { return false }
-        if let lastReportedUptime, nowUptime - lastReportedUptime < cooldown {
-            return false
-        }
-        return true
-    }
-
     private func loadCmuxAppSupportGhosttyConfigIfNeeded(_ config: ghostty_config_t) {
         #if os(macOS)
         let fm = FileManager.default
@@ -1732,18 +1615,9 @@ class GhosttyApp {
 
         guard let app = app else { return }
 
-        let start = CACurrentMediaTime()
         ghostty_app_tick(app)
-        let elapsedMs = (CACurrentMediaTime() - start) * 1000
         if Self.tickNotificationDemand.isActive {
             NotificationCenter.default.post(name: .ghosttyDidTick, object: self)
-        }
-
-        // Track lag during scrolling
-        if isScrolling {
-            scrollLagSampleCount += 1
-            scrollLagTotalMs += elapsedMs
-            scrollLagMaxMs = max(scrollLagMaxMs, elapsedMs)
         }
     }
 
@@ -3045,8 +2919,7 @@ class GhosttyApp {
             if !trimmedUrlString.isEmpty {
                 let filePathResolution: (routed: Bool, fallbackPath: String?) = performOnMain {
                     guard let termSurface = surfaceView.terminalSurface,
-                          let workspace = termSurface.owningWorkspace(),
-                          !workspace.isRemoteTerminalSurface(termSurface.id) else {
+                          let workspace = termSurface.owningWorkspace() else {
                         return (false, nil)
                     }
                     let cwd = CommandClickFileOpenRouter.resolveWorkingDirectory(
@@ -3109,7 +2982,6 @@ class GhosttyApp {
                 let routed: Bool = performOnMain {
                     guard let termSurface = surfaceView.terminalSurface,
                           let workspace = termSurface.owningWorkspace(),
-                          !workspace.isRemoteTerminalSurface(termSurface.id),
                           CommandClickFileOpenRouter.shouldRouteInCmux(path: fileURL.path) else {
                         return false
                     }
@@ -3357,7 +3229,7 @@ private func recordAgentHibernationTerminalInput(workspaceId: UUID, panelId: UUI
 
 // TerminalSurface and its SearchState moved to the CmuxTerminal package
 // (Surface/TerminalSurface*.swift), with the legacy GhosttyApp /
-// TerminalController / MobileTerminalByteTee / RendererRealizationController /
+// TerminalController / RendererRealizationController /
 // AgentHibernationController reach-ups inverted through
 // TerminalSurfaceRuntimeDependencies (see TerminalSurfaceRuntimeWiring.swift).
 
@@ -6508,8 +6380,7 @@ class GhosttyNSView: NSView, NSUserInterfaceValidations {
         guard let surface = surface else { return nil }
 
         guard let termSurface = terminalSurface,
-              let workspace = termSurface.owningWorkspace(),
-              !workspace.isRemoteTerminalSurface(termSurface.id) else { return nil }
+              let workspace = termSurface.owningWorkspace() else { return nil }
 
         guard let cwd = resolvedWordPathWorkingDirectory(workspace: workspace, terminalSurface: termSurface) else {
             return nil
@@ -6918,7 +6789,6 @@ class GhosttyNSView: NSView, NSUserInterfaceValidations {
         // editor so the click never silently no-ops.
         if let termSurface = terminalSurface,
            let workspace = termSurface.owningWorkspace(),
-           !workspace.isRemoteTerminalSurface(termSurface.id),
            CommandClickFileOpenRouter.openInCmux(
                workspace: workspace,
                sourcePanelId: termSurface.id,
@@ -7254,11 +7124,6 @@ class GhosttyNSView: NSView, NSUserInterfaceValidations {
 
     private func canSplitCurrentSurface() -> Bool {
         guard let surfaceId = terminalSurface?.id else { return false }
-        // Mirror panes are not workspace panels, but their split command routes
-        // to tmux and the resulting layout change rebuilds the mirrored panes.
-        if AppDelegate.shared?.remoteTmuxController.isMirrorPaneSurface(surfaceId) == true {
-            return true
-        }
         guard let tabId,
               let app = AppDelegate.shared,
               let manager = app.tabManagerFor(tabId: tabId) ?? app.tabManager,
@@ -7279,12 +7144,6 @@ class GhosttyNSView: NSView, NSUserInterfaceValidations {
     @discardableResult
     private func splitCurrentSurface(direction: SplitDirection) -> Bool {
         guard let surfaceId = terminalSurface?.id else { return false }
-        // Remote tmux mirror pane: never fall through to a local split. The tmux
-        // command either reaches the live stream, or the action reports false.
-        if let controller = AppDelegate.shared?.remoteTmuxController,
-           controller.isMirrorPaneSurface(surfaceId) {
-            return controller.handleMirrorSplitRequested(surfaceId: surfaceId, vertical: !direction.isHorizontal)
-        }
         guard let tabId,
               let app = AppDelegate.shared,
               let manager = app.tabManagerFor(tabId: tabId) ?? app.tabManager else {
@@ -7507,75 +7366,37 @@ class GhosttyNSView: NSView, NSUserInterfaceValidations {
     }
 
     static func dropPlanForTesting(
-        pasteboard: NSPasteboard,
-        isRemoteTerminalSurface: Bool
+        pasteboard: NSPasteboard
     ) -> DropPlan {
-        let target: TerminalImageTransferTarget = isRemoteTerminalSurface ? .remote(.workspaceRemote) : .local
         switch TerminalImageTransferPlanner.plan(
             pasteboard: pasteboard,
             mode: .drop,
-            target: target
+            target: .local
         ) {
         case .insertText(let text):
             return .insertText(text)
         case .insertTextSegments(let segments, _):
             return .insertText(segments.joined())
-        case .uploadFiles(let fileURLs, _):
-            return .uploadFiles(fileURLs)
         case .reject:
             return .reject
-        }
-    }
-
-    static func performRemoteDropUploadForTesting(
-        upload: (@escaping (Result<[String], Error>) -> Void) -> Void,
-        sendText: @escaping (String) -> Void,
-        onFailure: @escaping () -> Void
-    ) {
-        upload { result in
-            switch result {
-            case .success(let remotePaths):
-                let content = remotePaths
-                    .map { Self.escapeDropForShell($0) }
-                    .joined(separator: " ")
-                guard !content.isEmpty else {
-                    onFailure()
-                    return
-                }
-                sendText(content)
-            case .failure:
-                onFailure()
-            }
         }
     }
 
     @discardableResult
     static func handleDropForTesting(
         pasteboard: NSPasteboard,
-        isRemoteTerminalSurface: Bool,
-        uploadRemote: ([URL], @escaping (Result<[String], Error>) -> Void) -> Void,
         sendText: @escaping (String) -> Void,
         onFailure: @escaping () -> Void
     ) -> Bool {
-        let target: TerminalImageTransferTarget = isRemoteTerminalSurface ? .remote(.workspaceRemote) : .local
         let plan = TerminalImageTransferPlanner.plan(
             pasteboard: pasteboard,
             mode: .drop,
-            target: target
+            target: .local
         )
         guard plan != .reject else { return false }
 
         TerminalImageTransferPlanner.execute(
             plan: plan,
-            uploadWorkspaceRemote: { urls, _, finish in
-                uploadRemote(urls) { result in
-                    finish(result)
-                    GhosttyApp.terminalPasteboard.cleanupTransferredTemporaryImageFiles(urls)
-                }
-            },
-            uploadDetectedSSH: { _, _, _, finish in
-                finish(.failure(NSError(domain: "cmux.remote.drop", code: 4)))
-            },
             insertText: sendText,
             onFailure: { _ in onFailure() }
         )
@@ -7589,12 +7410,7 @@ class GhosttyNSView: NSView, NSUserInterfaceValidations {
     ) -> Bool {
         guard plan != .reject else { return false }
 
-        let operation = operation ?? {
-            if case .uploadFiles = plan {
-                return TerminalImageTransferOperation()
-            }
-            return nil
-        }()
+        let operation = operation
 
         if let operation {
             terminalSurface?.hostedView.beginImageTransferIndicator(
@@ -7606,48 +7422,12 @@ class GhosttyNSView: NSView, NSUserInterfaceValidations {
         TerminalImageTransferPlanner.execute(
             plan: plan,
             operation: operation,
-            uploadWorkspaceRemote: { [weak self] fileURLs, operation, finish in
-                guard let workspace = MainActor.assumeIsolated({
-                    self?.terminalSurface?.owningWorkspace()
-                }) else {
-                    finish(.failure(NSError(domain: "cmux.remote.drop", code: 3)))
-                    GhosttyApp.terminalPasteboard.cleanupTransferredTemporaryImageFiles(fileURLs)
-                    return
-                }
-                workspace.uploadDroppedFilesForRemoteTerminal(
-                    fileURLs,
-                    operation: operation,
-                    completion: { result in
-                        finish(result)
-                        GhosttyApp.terminalPasteboard.cleanupTransferredTemporaryImageFiles(fileURLs)
-                    }
-                )
-            },
-            uploadDetectedSSH: { session, fileURLs, operation, finish in
-                session.uploadDroppedFiles(
-                    fileURLs,
-                    operation: operation,
-                    completion: { result in
-                        finish(result)
-                        GhosttyApp.terminalPasteboard.cleanupTransferredTemporaryImageFiles(fileURLs)
-                    }
-                )
-            },
             insertText: { [weak self] text in
                 let send = {
                     if let operation {
                         self?.terminalSurface?.hostedView.endImageTransferIndicator(for: operation)
                     }
                     guard let surface = self?.terminalSurface else { return }
-                    // Mirror panes need tmux paste-buffer so dropped image paths
-                    // arrive as a real bracketed paste in the remote pane.
-                    let handledByMirror = MainActor.assumeIsolated {
-                        AppDelegate.shared?.remoteTmuxController.pasteIntoMirror(
-                            surfaceId: surface.id,
-                            text: text
-                        ) ?? false
-                    }
-                    if handledByMirror { return }
                     // Use the text/paste path (ghostty_surface_text) instead of the key event
                     // path (ghostty_surface_key) so bracketed paste mode is triggered and the
                     // insertion is instant, matching upstream Ghostty behaviour.
@@ -7665,9 +7445,6 @@ class GhosttyNSView: NSView, NSUserInterfaceValidations {
                 }
                 DispatchQueue.main.async {
                     NSSound.beep()
-#if DEBUG
-                    cmuxDebugLog("terminal.remoteDropUpload.failed surface=\(self?.terminalSurface?.id.uuidString.prefix(5) ?? "nil")")
-#endif
                 }
             }
         )
@@ -7866,65 +7643,6 @@ private final class GhosttyFlashOverlayView: NSView {
     }
 }
 
-private final class TerminalViewportBorderOverlayView: NSView {
-    var effectiveSize: CGSize? {
-        didSet { needsDisplay = true }
-    }
-
-    var drawsVisibleAreaBorder = false {
-        didSet { needsDisplay = true }
-    }
-    var drawsVisibleAreaRightBorder = false {
-        didSet { needsDisplay = true }
-    }
-    var drawsVisibleAreaBottomBorder = false {
-        didSet { needsDisplay = true }
-    }
-
-    override var acceptsFirstResponder: Bool { false }
-    override var isFlipped: Bool { true }
-
-    override func hitTest(_ point: NSPoint) -> NSView? {
-        nil
-    }
-
-    override func draw(_ dirtyRect: NSRect) {
-        super.draw(dirtyRect)
-        guard drawsVisibleAreaBorder,
-              let effectiveSize,
-              effectiveSize.width > 1,
-              effectiveSize.height > 1 else {
-            return
-        }
-
-        let scale = window?.backingScaleFactor ?? NSScreen.main?.backingScaleFactor ?? 2
-        let lineWidth = 1 / max(1, scale)
-        let width = min(effectiveSize.width, bounds.width)
-        let height = min(effectiveSize.height, bounds.height)
-        guard width > lineWidth, height > lineWidth else { return }
-
-        let path = NSBezierPath()
-        path.lineWidth = lineWidth
-        let x = width - lineWidth / 2
-        let y = height - lineWidth / 2
-        if drawsVisibleAreaRightBorder {
-            path.move(to: NSPoint(x: x, y: 0))
-            path.line(to: NSPoint(x: x, y: y))
-        }
-        if drawsVisibleAreaBottomBorder {
-            path.move(to: NSPoint(x: 0, y: y))
-            path.line(to: NSPoint(x: x, y: y))
-        }
-        // Stroke the exact window-chrome separator color used by the pane outline,
-        // sidebar trailing edge, and tab-bar separators (one source of truth), so the
-        // iOS-connected viewport border is pixel-identical to every other border in the
-        // app instead of the previous hardcoded near-white separator stroke.
-        WindowChromeColorResolver()
-            .separatorColor(forChromeBackground: GhosttyBackgroundTheme.currentColor())
-            .setStroke()
-        path.stroke()
-    }
-}
 
 final class GhosttySurfaceScrollView: NSView {
     enum FlashStyle {
@@ -7961,7 +7679,6 @@ final class GhosttySurfaceScrollView: NSView {
     private let scrollView: GhosttyScrollView
     private let documentView: NSView
     private let surfaceView: GhosttyNSView
-    private let mobileViewportBorderOverlayView = TerminalViewportBorderOverlayView(frame: .zero)
     private let inactiveOverlayView: GhosttyFlashOverlayView
     private let dropZoneOverlayView: GhosttyFlashOverlayView
     private let paneDropTargetView = TerminalPaneDropTargetView(frame: .zero)
@@ -8255,8 +7972,6 @@ final class GhosttySurfaceScrollView: NSView {
         backgroundView.layer?.isOpaque = false
         addSubview(backgroundView)
         addSubview(scrollView)
-        mobileViewportBorderOverlayView.isHidden = true
-        addSubview(mobileViewportBorderOverlayView, positioned: .above, relativeTo: scrollView)
         paneDropTargetView.hostedView = self
         addSubview(paneDropTargetView, positioned: .above, relativeTo: nil)
         synchronizeScrollbarAppearance()
@@ -8686,7 +8401,6 @@ final class GhosttySurfaceScrollView: NSView {
             size: CGSize(width: scrollView.bounds.width, height: documentView.frame.height)
         )
         _ = setFrameIfNeeded(documentView, to: targetDocumentFrame)
-        _ = setFrameIfNeeded(mobileViewportBorderOverlayView, to: bounds)
         _ = setFrameIfNeeded(inactiveOverlayView, to: bounds)
         _ = setFrameIfNeeded(paneDropTargetView, to: bounds)
         if let zone = activeDropZone {
@@ -8729,14 +8443,6 @@ final class GhosttySurfaceScrollView: NSView {
         return !sizeApproximatelyEqual(previousSurfaceSize, targetSize) || didCoreSurfaceChange
     }
 
-    func setMobileViewportBorder(size: CGSize?, drawRight: Bool, drawBottom: Bool) {
-        let isVisible = drawRight || drawBottom
-        mobileViewportBorderOverlayView.effectiveSize = size
-        mobileViewportBorderOverlayView.drawsVisibleAreaBorder = isVisible
-        mobileViewportBorderOverlayView.drawsVisibleAreaRightBorder = drawRight
-        mobileViewportBorderOverlayView.drawsVisibleAreaBottomBorder = drawBottom
-        mobileViewportBorderOverlayView.isHidden = !isVisible
-    }
 
     @discardableResult
     private func setFrameIfNeeded(_ view: NSView, to frame: CGRect) -> Bool {
@@ -8956,12 +8662,6 @@ final class GhosttySurfaceScrollView: NSView {
         layer.backgroundColor = color.cgColor
         layer.isOpaque = color.alphaComponent >= 1.0
         CATransaction.commit()
-        // The viewport border strokes the window-chrome separator color, which tracks the
-        // terminal background/theme. Repaint it when the background changes (e.g. theme
-        // switch) so a connected iOS device's visible-area border stays in sync.
-        if !mobileViewportBorderOverlayView.isHidden {
-            mobileViewportBorderOverlayView.needsDisplay = true
-        }
     }
 
     /// Keeps the shared-backdrop cutout view present only while a pane-local fill needs it.

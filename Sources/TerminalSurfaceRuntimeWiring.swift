@@ -67,45 +67,6 @@ final class TerminalSurfaceSpawnPolicyBridge: TerminalSurfaceSpawnPolicyProvidin
     }
 }
 
-// MARK: Mobile byte tee
-
-/// Installs the libghostty PTY tee for `MobileTerminalByteTee` and keys
-/// drop/replay state by surface id (the legacy inline
-/// `ghostty_surface_set_pty_tee_cb` + `MobileTerminalByteTee.shared` calls).
-final class TerminalMobileByteTeeBridge: TerminalByteTeeBinding {
-    /// Wraps the retained tee userdata; `release()` runs exactly where the
-    /// surface released the legacy `Unmanaged` context.
-    /// @unchecked Sendable: the Unmanaged box is exclusively owned by this
-    /// lease from install until release, mirroring the teardown-request
-    /// transport.
-    final class Lease: TerminalByteTeeLease, @unchecked Sendable {
-        private let context: Unmanaged<MobileTerminalByteTeeUserdata>
-
-        init(context: Unmanaged<MobileTerminalByteTeeUserdata>) {
-            self.context = context
-        }
-
-        func release() {
-            context.release()
-        }
-    }
-
-    @MainActor
-    func installTee(on surface: ghostty_surface_t, surfaceID: UUID) -> any TerminalByteTeeLease {
-        let teeContext = Unmanaged.passRetained(MobileTerminalByteTeeUserdata(surfaceID: surfaceID))
-        ghostty_surface_set_pty_tee_cb(
-            surface,
-            cmuxMobileTerminalByteTeeCallback,
-            teeContext.toOpaque()
-        )
-        return Lease(context: teeContext)
-    }
-
-    @MainActor
-    func dropSurface(surfaceID: UUID) {
-        MobileTerminalByteTee.shared.dropSurface(surfaceID: surfaceID)
-    }
-}
 
 // MARK: Renderer reclamation
 

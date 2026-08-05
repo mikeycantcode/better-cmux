@@ -23,8 +23,6 @@ public struct ControlSurfaceCreateInputs: Sendable, Equatable {
     public let initialCommand: String?
     /// The trimmed-non-empty `tmux_start_command`, or `nil`.
     public let tmuxStartCommand: String?
-    /// The trimmed-non-empty `remote_pty_session_id`, or `nil`.
-    public let remotePTYSessionID: String?
     /// The startup environment (`startup_environment`/`initial_env`), `[:]` if none.
     public let startupEnvironment: [String: String]
     /// The requested target `pane_id`, or `nil` for the focused pane.
@@ -41,7 +39,6 @@ public struct ControlSurfaceCreateInputs: Sendable, Equatable {
         workingDirectory: String?,
         initialCommand: String?,
         tmuxStartCommand: String?,
-        remotePTYSessionID: String?,
         startupEnvironment: [String: String],
         requestedPaneID: UUID?,
         requestedFocus: Bool
@@ -53,7 +50,6 @@ public struct ControlSurfaceCreateInputs: Sendable, Equatable {
         self.workingDirectory = workingDirectory
         self.initialCommand = initialCommand
         self.tmuxStartCommand = tmuxStartCommand
-        self.remotePTYSessionID = remotePTYSessionID
         self.startupEnvironment = startupEnvironment
         self.requestedPaneID = requestedPaneID
         self.requestedFocus = requestedFocus

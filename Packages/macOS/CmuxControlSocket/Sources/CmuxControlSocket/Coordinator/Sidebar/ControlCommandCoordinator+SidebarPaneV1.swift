@@ -187,10 +187,6 @@ extension ControlCommandCoordinator {
         ) ?? .failed {
         case .created(let newPanelID):
             return "OK \(newPanelID.uuidString)"
-        case .routedToRemote:
-            return "OK routed-to-remote-tmux"
-        case .mirrorInsertFirstRejected:
-            return "ERROR: direction left/up is not supported in a remote tmux mirror workspace"
         case .failed:
             return "ERROR: Failed to create pane"
         }
@@ -235,8 +231,6 @@ extension ControlCommandCoordinator {
             return "ERROR: Pane not found"
         case .created(let id):
             return "OK \(id.uuidString)"
-        case .routedToRemote:
-            return "OK routed-to-remote-tmux"
         }
     }
 

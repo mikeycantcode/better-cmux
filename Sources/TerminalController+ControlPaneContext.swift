@@ -213,20 +213,6 @@ extension TerminalController: ControlPaneContext {
             return .noSourceSurface
         }
 
-        if ws.isRemoteTmuxMirror, panelType == .terminal {
-            let unsupported = mirrorRoutedUnsupportedOptions(
-                insertFirst: insertFirst,
-                workingDirectory: inputs.workingDirectory,
-                initialCommand: inputs.initialCommand,
-                tmuxStartCommand: inputs.tmuxStartCommand,
-                startupEnvironment: inputs.startupEnvironment,
-                initialDividerPosition: initialDividerPosition
-            )
-            if !unsupported.isEmpty {
-                return .mirrorUnsupportedOptions(unsupported)
-            }
-        }
-
         let newPanelId: UUID?
         let focus = v2FocusAllowed(requested: inputs.requestedFocus)
         if panelType == .browser {
@@ -253,12 +239,6 @@ extension TerminalController: ControlPaneContext {
             ) {
             case .created(let panel):
                 newPanelId = panel.id
-            case .routedToRemote:
-                return .routedToRemote(
-                    windowID: v2ResolveWindowId(tabManager: tabManager),
-                    workspaceID: ws.id,
-                    typeRawValue: panelType.rawValue
-                )
             case .failed:
                 newPanelId = nil
             }
@@ -588,7 +568,7 @@ extension TerminalController: ControlPaneContext {
 
     /// Runs the legacy `v2SurfaceMove` and bridges its Foundation-shaped
     /// `V2CallResult` to the typed `ControlCallResult` (the exact pattern
-    /// `bridgeMobileResult` uses), so `pane.join` forwards the surface-move
+    /// uses), so `pane.join` forwards the surface-move
     /// outcome byte-faithfully. `v2SurfaceMove` is currently `private`; the
     /// integrator must relax it to at least `internal` (it lives in
     /// `TerminalController.swift`, which this extension cannot reach while

@@ -53,28 +53,6 @@ public struct WorkspaceSessionRestorePolicyService<Binding: WorkspaceSurfaceResu
         !hasRestorableAgent && restorableTmuxStartCommand(tmuxStartCommand) == nil && !hasResumeStartupWork
     }
 
-    /// Returns whether a restored remote workspace should auto-connect.
-    public func shouldAutoConnectRestoredRemote<Snapshot: WorkspaceSessionRemoteRestoreSnapshot>(
-        foregroundAuthToken: String?,
-        snapshot: Snapshot,
-        isRunningUnderAutomatedTests overrideIsRunningUnderAutomatedTests: Bool? = nil
-    ) -> Bool {
-        let runningUnderTests = overrideIsRunningUnderAutomatedTests ?? isRunningUnderAutomatedTests()
-        guard !runningUnderTests else { return false }
-        let normalizedForegroundAuthToken = foregroundAuthToken?
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-        guard normalizedForegroundAuthToken?.isEmpty == false else { return true }
-        let hasTerminalThatWillAuthenticateReconnect = snapshot.panels.contains {
-            guard let terminal = $0.terminal else { return false }
-            if terminal.isRemoteTerminal != false {
-                return true
-            }
-            let remotePTYSessionID = terminal.remotePTYSessionID?
-                .trimmingCharacters(in: .whitespacesAndNewlines)
-            return remotePTYSessionID?.isEmpty == false
-        }
-        return !hasTerminalThatWillAuthenticateReconnect
-    }
 
     /// Returns startup input for an approved restored surface resume binding.
     public func surfaceResumeStartupInput(

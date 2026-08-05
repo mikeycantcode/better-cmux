@@ -221,17 +221,6 @@ public final class SocketControlServer {
         listenerStateSnapshot().socketPath
     }
 
-    /// The socket path remote-session restore should reconnect through, or
-    /// `nil` when no listener is active or reserved.
-    public nonisolated func currentSocketPathForRemoteRestore() -> String? {
-        let snapshot = listenerStateSnapshot()
-        if snapshot.isRunning || snapshot.acceptLoopAlive || snapshot.listenerStartInProgress
-            || snapshot.serverSocket >= 0 {
-            return snapshot.socketPath
-        }
-        return snapshot.reservedStartupSocketPath
-    }
-
     /// The path the listener is using (when active in any phase), the
     /// reserved startup path, or `preferredPath` when fully inactive.
     /// - Parameter preferredPath: The configured path to fall back to.

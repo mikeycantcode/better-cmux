@@ -47,9 +47,6 @@ extension TabManager {
 #if DEBUG
             maybeMutateSelectionDuringWorkspaceCreationForDev(snapshot: snapshot)
 #endif
-            let nextTabCount = snapshot.tabs.count + 1
-            sentryBreadcrumb("workspace.create.fromDetachedSurface", data: ["tabCount": nextTabCount])
-
             let inheritedConfig = workspaceCreationConfigTemplate(
                 inheritedTerminalFontPoints: snapshot.inheritedTerminalFontPoints
             )

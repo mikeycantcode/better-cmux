@@ -1042,7 +1042,6 @@ final class FilePreviewPanel: Panel, ObservableObject, FilePreviewTextEditingPan
     /// `true` when ``filePath`` is a remote-workspace file materialized into the
     /// local preview cache. Remote files stay on the native explicit-save editor
     /// (Monaco's auto-save would write only to the cache, never the remote host).
-    private let isRemotePreviewFile: Bool
     // Watches `filePath` so external edits reload the Monaco buffer. Only started
     // once text mode routes to Monaco; native-editor text mode keeps its existing
     // manual revert behavior.
@@ -1075,7 +1074,6 @@ final class FilePreviewPanel: Panel, ObservableObject, FilePreviewTextEditingPan
         self.filePath = filePath
         self.displayTitle = URL(fileURLWithPath: filePath).lastPathComponent
         self.textLoader = textLoader
-        self.isRemotePreviewFile = FileExplorerStore.isRemotePreviewCachePath(filePath)
         let fileURL = URL(fileURLWithPath: filePath)
         let initialPreviewMode = FilePreviewKindResolver.initialMode(for: fileURL)
         self.previewMode = initialPreviewMode
@@ -1228,7 +1226,7 @@ final class FilePreviewPanel: Panel, ObservableObject, FilePreviewTextEditingPan
             useMonacoForText = monacoDecision.shouldUseMonaco(
                 isTextMode: true,
                 loadedByteSize: onDiskFileByteSize(),
-                isRemote: isRemotePreviewFile
+                isRemote: false
             )
             loadTextContent(replacingDirtyContent: false)
         } else {
@@ -1315,7 +1313,7 @@ final class FilePreviewPanel: Panel, ObservableObject, FilePreviewTextEditingPan
             let routeToMonaco = monacoDecision.shouldUseMonaco(
                 isTextMode: true,
                 loadedByteSize: byteSize,
-                isRemote: isRemotePreviewFile
+                isRemote: false
             )
 
             if !replacingDirtyContent && isDirty {
@@ -1489,7 +1487,7 @@ final class FilePreviewPanel: Panel, ObservableObject, FilePreviewTextEditingPan
                     if self.monacoDecision.shouldUseMonaco(
                         isTextMode: true,
                         loadedByteSize: byteSize,
-                        isRemote: self.isRemotePreviewFile
+                        isRemote: false
                     ) {
                         self.createdMonacoController?.applyExternalChange(content)
                     } else {

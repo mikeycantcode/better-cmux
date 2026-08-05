@@ -1,4 +1,3 @@
-import CmuxCore
 import AppKit
 import CmuxFoundation
 import CmuxTerminalCore

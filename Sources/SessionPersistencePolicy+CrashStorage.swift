@@ -160,7 +160,6 @@ extension SessionPersistencePolicy {
         crashDirectoryComponents: [[String]],
         pathCache: inout [String: Bool]
     ) -> Bool {
-        guard workspace.remote == nil else { return false }
         guard !workspaceCarriesRestorableUserState(workspace) else { return false }
         if workspace.panels.isEmpty {
             return isCmuxCrashStoragePath(
@@ -202,9 +201,7 @@ extension SessionPersistencePolicy {
         guard terminal.agent == nil,
               terminal.hibernation == nil,
               terminal.resumeBinding == nil,
-              isNilOrBlank(terminal.tmuxStartCommand),
-              terminal.isRemoteTerminal != true,
-              isNilOrBlank(terminal.remotePTYSessionID) else {
+              isNilOrBlank(terminal.tmuxStartCommand) else {
             return false
         }
         return true

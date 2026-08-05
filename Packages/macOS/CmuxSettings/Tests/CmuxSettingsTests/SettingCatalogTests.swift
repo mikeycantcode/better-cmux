@@ -89,7 +89,6 @@ struct SettingCatalogTests {
         // `automation.socketPassword` must appear in `all`.
         let ids = Set(SettingCatalog().all.map(\.id))
         #expect(ids.contains("app.appearance"))
-        #expect(ids.contains("mobile.iOSPairingHost.enabled"))
         #expect(ids.contains("automation.socketControlMode"))
         #expect(ids.contains("automation.socketPassword"))
     }
@@ -99,7 +98,6 @@ struct SettingCatalogTests {
         // the convention that lets the JSON store use `id` as the JSON path.
         let catalog = SettingCatalog()
         for key in catalog.app.all { #expect(key.id.hasPrefix("app.")) }
-        for key in catalog.mobile.all { #expect(key.id.hasPrefix("mobile.")) }
         for key in catalog.automation.all { #expect(key.id.hasPrefix("automation.")) }
     }
 }

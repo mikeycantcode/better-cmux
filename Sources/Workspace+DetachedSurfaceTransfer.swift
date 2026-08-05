@@ -1,5 +1,4 @@
 import Foundation
-import CmuxCore
 import Darwin
 import CmuxNotifications
 import CmuxSidebar
@@ -33,38 +32,5 @@ extension Workspace {
         let restorableAgentResumeState: RestoredAgentResumeState?
         let resumeBinding: SurfaceResumeBindingSnapshot?
         let agentRuntime: DetachedAgentRuntimeState?
-        let isRemoteTerminal: Bool
-        let remoteRelayPort: Int?
-        let remotePTYSessionID: String?
-        let remoteCleanupConfiguration: WorkspaceRemoteConfiguration?
-
-        func withRemoteCleanupConfiguration(_ configuration: WorkspaceRemoteConfiguration?) -> Self {
-            Self(
-                sourceWorkspaceId: sourceWorkspaceId,
-                panelId: panelId,
-                panel: panel,
-                title: title,
-                icon: icon,
-                iconImageData: iconImageData,
-                kind: kind,
-                isLoading: isLoading,
-                isPinned: isPinned,
-                directory: directory,
-                ttyName: ttyName,
-                cachedTitle: cachedTitle,
-                customTitle: customTitle,
-                customTitleSource: customTitleSource,
-                manuallyUnread: manuallyUnread,
-                restoredUnreadIndicator: restoredUnreadIndicator,
-                restorableAgent: restorableAgent,
-                restorableAgentResumeState: restorableAgentResumeState,
-                resumeBinding: resumeBinding,
-                agentRuntime: agentRuntime,
-                isRemoteTerminal: isRemoteTerminal,
-                remoteRelayPort: remoteRelayPort,
-                remotePTYSessionID: remotePTYSessionID,
-                remoteCleanupConfiguration: configuration
-            )
-        }
     }
 }

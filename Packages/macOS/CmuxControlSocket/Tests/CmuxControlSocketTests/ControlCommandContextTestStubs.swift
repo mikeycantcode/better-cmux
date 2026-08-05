@@ -301,49 +301,6 @@ extension ControlWorkspaceContext {
         routing: ControlRoutingSelectors,
         orientationFilter: String?
     ) -> ControlWorkspaceEqualizeResolution { .tabManagerUnavailable }
-
-    func controlConfigureWorkspaceRemote(
-        params: [String: JSONValue],
-        workspaceID: UUID
-    ) -> ControlCallResult { .err(code: "unavailable", message: "", data: nil) }
-
-    func controlDisconnectWorkspaceRemote(
-        workspaceID: UUID,
-        clearConfiguration: Bool
-    ) -> ControlWorkspaceRemoteResolution { .notFound(workspaceID: workspaceID) }
-
-    func controlReconnectWorkspaceRemote(
-        workspaceID: UUID,
-        surfaceID: UUID?
-    ) -> ControlWorkspaceRemoteResolution {
-        .notFound(workspaceID: workspaceID)
-    }
-
-    func controlWorkspaceRemoteForegroundAuthReady(
-        workspaceID: UUID,
-        foregroundAuthToken: String?
-    ) -> ControlWorkspaceRemoteResolution { .notFound(workspaceID: workspaceID) }
-
-    func controlWorkspaceRemoteStatus(workspaceID: UUID) -> ControlWorkspaceRemoteResolution {
-        .notFound(workspaceID: workspaceID)
-    }
-
-    func controlResolveRemoteWorkspaceID(
-        routing: ControlRoutingSelectors,
-        requestedWorkspaceID: UUID?
-    ) -> UUID? { requestedWorkspaceID }
-
-    func controlWorkspaceRemotePTYAttachEnd(
-        workspaceID: UUID,
-        surfaceID: UUID,
-        sessionID: String
-    ) -> ControlWorkspaceRemotePTYAttachEndResolution { .notFound }
-
-    func controlWorkspaceRemoteTerminalSessionEnd(
-        workspaceID: UUID,
-        surfaceID: UUID,
-        relayPort: Int
-    ) -> ControlWorkspaceRemoteTerminalSessionEndResolution { .notFound }
 }
 
 extension ControlSurfaceContext {
@@ -484,21 +441,4 @@ extension ControlSurfaceContext {
     ) -> ControlSurfacePortsKickResolution { .workspaceNotFound }
 
     func controlDebugTerminals() -> JSONValue? { nil }
-}
-
-extension ControlMobileHostContext {
-    private var mobileHostStubResult: ControlCallResult {
-        .err(code: "unavailable", message: "", data: nil)
-    }
-
-    func controlMobileHostStatus(params: [String: JSONValue]) -> ControlCallResult { mobileHostStubResult }
-    func controlMobileWorkspaceList(params: [String: JSONValue]) -> ControlCallResult { mobileHostStubResult }
-    func controlMobileTerminalCreate(params: [String: JSONValue]) -> ControlCallResult { mobileHostStubResult }
-    func controlMobileTerminalInput(params: [String: JSONValue]) -> ControlCallResult { mobileHostStubResult }
-    func controlMobileTerminalReplay(params: [String: JSONValue]) -> ControlCallResult { mobileHostStubResult }
-    func controlMobileTerminalViewport(params: [String: JSONValue]) -> ControlCallResult { mobileHostStubResult }
-    func controlMobileTerminalScroll(params: [String: JSONValue]) -> ControlCallResult { mobileHostStubResult }
-    func controlMobileTerminalMouse(params: [String: JSONValue]) -> ControlCallResult { mobileHostStubResult }
-    func controlMobileTerminalPaste(params: [String: JSONValue]) -> ControlCallResult { mobileHostStubResult }
-    func controlMobileChatSessionsDump() -> ControlCallResult { mobileHostStubResult }
 }

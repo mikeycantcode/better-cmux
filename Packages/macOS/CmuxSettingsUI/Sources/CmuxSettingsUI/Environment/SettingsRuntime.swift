@@ -24,8 +24,6 @@ public struct SettingsRuntime: @unchecked Sendable {
     public let secretStore: SecretFileStore
     /// Rolling settings error log displayed as alerts.
     public let errorLog: SettingsErrorLog
-    /// Optional host-owned account flow actions.
-    public let accountFlow: AccountFlow?
     /// Host callbacks for actions the package cannot perform itself.
     public let hostActions: SettingsHostActions
 
@@ -37,7 +35,6 @@ public struct SettingsRuntime: @unchecked Sendable {
     ///   - jsonStore: cmux.json-backed settings store.
     ///   - secretStore: Secret-file-backed settings store.
     ///   - errorLog: Rolling settings error log displayed as alerts.
-    ///   - accountFlow: Optional host-owned account flow actions.
     ///   - hostActions: Host callbacks for actions the package cannot perform itself.
     ///   - searchIndex: Prebuilt search index to share across settings roots. When `nil`,
     ///     the runtime builds one index from `catalog` and keeps it for its own lifetime.
@@ -48,7 +45,6 @@ public struct SettingsRuntime: @unchecked Sendable {
         jsonStore: JSONConfigStore,
         secretStore: SecretFileStore,
         errorLog: SettingsErrorLog,
-        accountFlow: AccountFlow? = nil,
         hostActions: SettingsHostActions = NoopSettingsHostActions(),
         searchIndex: SettingsSearchIndex? = nil
     ) {
@@ -58,7 +54,6 @@ public struct SettingsRuntime: @unchecked Sendable {
         self.jsonStore = jsonStore
         self.secretStore = secretStore
         self.errorLog = errorLog
-        self.accountFlow = accountFlow
         self.hostActions = hostActions
     }
 }

@@ -1,10 +1,9 @@
 internal import Foundation
 
 /// The system/misc domain (`system.identify`, `system.tree`, `auth.login`,
-/// `session.restore_previous`, `settings.open`, `feedback.open`,
+/// `session.restore_previous`, `settings.open`,
 /// `extension.sidebar.snapshot`, `workspace.action`, `surface.action` /
-/// `tab.action`, `surface.drag_to_split` / `surface.split_off`, and the
-/// DEBUG-only `mobile.dev_stack_auth.configure`), lifted byte-faithfully from
+/// `tab.action`, `surface.drag_to_split` / `surface.split_off`), lifted byte-faithfully from
 /// the former `TerminalController` bodies.
 extension ControlCommandCoordinator {
     /// The system-domain slice of the seam. A typed view of ``context`` so the
@@ -29,8 +28,6 @@ extension ControlCommandCoordinator {
             return sessionRestorePrevious()
         case "settings.open":
             return settingsOpen(request.params)
-        case "feedback.open":
-            return feedbackOpen(request.params)
         case "extension.sidebar.snapshot":
             return extensionSidebarSnapshot(request.params)
         case "workspace.action":
@@ -39,10 +36,6 @@ extension ControlCommandCoordinator {
             return tabAction(request.params)
         case "surface.drag_to_split", "surface.split_off":
             return surfaceSplitOff(request.params)
-#if DEBUG
-        case "mobile.dev_stack_auth.configure":
-            return mobileDevStackAuthConfigure(request.params)
-#endif
         default:
             return nil
         }

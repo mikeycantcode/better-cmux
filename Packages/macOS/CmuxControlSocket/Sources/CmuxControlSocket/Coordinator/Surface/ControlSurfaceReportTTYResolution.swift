@@ -6,7 +6,7 @@ public import Foundation
 /// The coordinator validates the params (workspace required, surface-if-present
 /// must parse, tty_name required) and mints the workspace/surface refs; every case
 /// echoes the workspace id plus the requested-or-resolved surface id. The app
-/// records the TTY name (locally or against the remote workspace) and returns this.
+/// records the TTY name and returns this.
 public enum ControlSurfaceReportTTYResolution: Sendable, Equatable {
     /// The workspace did not resolve (legacy `not_found` / "Workspace not found",
     /// `data` echoes the workspace + requested surface).
@@ -14,7 +14,7 @@ public enum ControlSurfaceReportTTYResolution: Sendable, Equatable {
     /// The surface did not resolve (legacy `not_found` / "Surface not found",
     /// `data` echoes the workspace + requested surface).
     case surfaceNotFound
-    /// The workspace is a remote workspace with no surfaces yet, so the TTY was
+    /// The workspace has no surfaces yet, so the TTY was
     /// remembered (legacy `.ok` with `pending: true`, echoing the requested
     /// surface).
     case pending

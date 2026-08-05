@@ -18,11 +18,9 @@ enum SessionEntryResumeCoordinator {
         let selectedTab = tabManager.selectedTabId.flatMap { id in
             tabManager.tabs.first(where: { $0.id == id })
         }
-        let isRemoteSelection = selectedTab?.isRemoteWorkspace ?? false
         let workspaceCwd = selected?.currentDirectory
         let pwdMatches: Bool = {
-            guard !isRemoteSelection,
-                  let targetCwd, !targetCwd.isEmpty,
+            guard let targetCwd, !targetCwd.isEmpty,
                   let workspaceCwd, !workspaceCwd.isEmpty else { return false }
             let lhs = (targetCwd as NSString).standardizingPath
             let rhs = (workspaceCwd as NSString).standardizingPath

@@ -17,7 +17,6 @@ let package = Package(
         .package(path: "../CmuxTerminalCore"),
         .package(path: "../CMUXDebugLog"),
         .package(path: "../CMUXAgentLaunch"),
-        .package(path: "../../Shared/CMUXMobileCore"),
         .package(path: "../../../vendor/bonsplit"),
     ],
     targets: [
@@ -28,7 +27,6 @@ let package = Package(
                 .product(name: "CmuxGhosttyKit", package: "CmuxTerminalCore"),
                 .product(name: "CMUXDebugLog", package: "CMUXDebugLog"),
                 .product(name: "CMUXAgentLaunch", package: "CMUXAgentLaunch"),
-                .product(name: "CMUXMobileCore", package: "CMUXMobileCore"),
                 .product(name: "Bonsplit", package: "bonsplit"),
             ],
             swiftSettings: [

@@ -47,7 +47,7 @@ public protocol ControlWorkspaceContext: AnyObject {
     func controlWorkspaceCurrent(routing: ControlRoutingSelectors) -> ControlWorkspaceCurrentResolution
 
     /// Creates a workspace for `workspace.create`, forwarding to the shared
-    /// `v2WorkspaceCreate` body (also driven by the mobile data-plane create
+    /// `v2WorkspaceCreate` body (the shared create
     /// path) and bridging its Foundation payload — a single source of truth.
     ///
     /// - Parameter params: The raw command params; the body parses them and mints
@@ -186,100 +186,4 @@ public protocol ControlWorkspaceContext: AnyObject {
         routing: ControlRoutingSelectors,
         orientationFilter: String?
     ) -> ControlWorkspaceEqualizeResolution
-
-    /// Runs `workspace.remote.configure`. The body is app-typed end to end (it
-    /// validates ~40 params against `WorkspaceRemote*` app types and mutates the
-    /// workspace), so the coordinator passes the raw params and the resolved
-    /// workspace id through, and the app returns the fully shaped result.
-    ///
-    /// - Parameters:
-    ///   - params: The raw command params.
-    ///   - workspaceID: The resolved workspace id (explicit-or-selected
-    ///     fallback already applied by the coordinator).
-    /// - Returns: The fully shaped call result.
-    func controlConfigureWorkspaceRemote(
-        params: [String: JSONValue],
-        workspaceID: UUID
-    ) -> ControlCallResult
-
-    /// Disconnects a remote workspace for `workspace.remote.disconnect`.
-    ///
-    /// - Parameters:
-    ///   - workspaceID: The resolved workspace id.
-    ///   - clearConfiguration: Whether to clear the stored configuration.
-    /// - Returns: The remote resolution.
-    func controlDisconnectWorkspaceRemote(
-        workspaceID: UUID,
-        clearConfiguration: Bool
-    ) -> ControlWorkspaceRemoteResolution
-
-    /// Reconnects a remote workspace for `workspace.remote.reconnect`.
-    ///
-    /// - Parameters:
-    ///   - workspaceID: The resolved workspace id.
-    ///   - surfaceID: The optional reconnecting placeholder surface id.
-    /// - Returns: The remote resolution (may signal `notConfigured`).
-    func controlReconnectWorkspaceRemote(
-        workspaceID: UUID,
-        surfaceID: UUID?
-    ) -> ControlWorkspaceRemoteResolution
-
-    /// Notifies foreground-auth readiness for
-    /// `workspace.remote.foreground_auth_ready`.
-    ///
-    /// - Parameters:
-    ///   - workspaceID: The resolved workspace id.
-    ///   - foregroundAuthToken: The trimmed token, if any.
-    /// - Returns: The remote resolution.
-    func controlWorkspaceRemoteForegroundAuthReady(
-        workspaceID: UUID,
-        foregroundAuthToken: String?
-    ) -> ControlWorkspaceRemoteResolution
-
-    /// Reads remote status for `workspace.remote.status`.
-    ///
-    /// - Parameter workspaceID: The resolved workspace id.
-    /// - Returns: The remote resolution.
-    func controlWorkspaceRemoteStatus(workspaceID: UUID) -> ControlWorkspaceRemoteResolution
-
-    /// Resolves the workspace id for the remote methods that fall back to the
-    /// routed selected workspace when no explicit `workspace_id` was given,
-    /// mirroring `requestedWorkspaceId ?? fallbackTabManager?.selectedTabId`.
-    ///
-    /// - Parameters:
-    ///   - routing: The routing selectors used for the fallback TabManager.
-    ///   - requestedWorkspaceID: The explicit workspace id, if any.
-    /// - Returns: The resolved workspace id, or `nil` (legacy "Missing
-    ///   workspace_id").
-    func controlResolveRemoteWorkspaceID(
-        routing: ControlRoutingSelectors,
-        requestedWorkspaceID: UUID?
-    ) -> UUID?
-
-    /// Records a remote PTY attach-end for `workspace.remote.pty_attach_end`.
-    ///
-    /// - Parameters:
-    ///   - workspaceID: The requested workspace id.
-    ///   - surfaceID: The surface id.
-    ///   - sessionID: The (non-empty) session id.
-    /// - Returns: The attach-end resolution.
-    func controlWorkspaceRemotePTYAttachEnd(
-        workspaceID: UUID,
-        surfaceID: UUID,
-        sessionID: String
-    ) -> ControlWorkspaceRemotePTYAttachEndResolution
-
-    /// Records a remote terminal session-end for
-    /// `workspace.remote.terminal_session_end`.
-    ///
-    /// - Parameters:
-    ///   - workspaceID: The workspace id.
-    ///   - surfaceID: The surface id.
-    ///   - relayPort: The validated relay port.
-    /// - Returns: The session-end resolution.
-    func controlWorkspaceRemoteTerminalSessionEnd(
-        workspaceID: UUID,
-        surfaceID: UUID,
-        relayPort: Int
-    ) -> ControlWorkspaceRemoteTerminalSessionEndResolution
 }

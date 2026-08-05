@@ -1,9 +1,8 @@
 internal import Foundation
 
 /// The small system-domain bodies: `auth.login`, `session.restore_previous`,
-/// `settings.open`, `feedback.open`, `extension.sidebar.snapshot`, the
-/// `surface.split_off` / `surface.drag_to_split` bridge, and the DEBUG-only
-/// `mobile.dev_stack_auth.configure`.
+/// `settings.open`, `extension.sidebar.snapshot`, and the
+/// `surface.split_off` / `surface.drag_to_split` bridge.
 extension ControlCommandCoordinator {
     /// `auth.login` — the main-actor login acknowledgement (always ok; the
     /// password handshake itself happens before dispatch).
@@ -47,16 +46,6 @@ extension ControlCommandCoordinator {
                 "target": .string(target),
             ]))
         }
-    }
-
-    /// `feedback.open` — open the feedback composer (always ok).
-    func feedbackOpen(_ params: [String: JSONValue]) -> ControlCallResult {
-        systemContext?.controlFeedbackOpen(
-            workspaceID: uuid(params, "workspace_id"),
-            windowID: uuid(params, "window_id"),
-            requestedActivate: bool(params, "activate") ?? false
-        )
-        return .ok(.object(["opened": .bool(true)]))
     }
 
     /// `extension.sidebar.snapshot` — the sidebar extension's workspace feed.
@@ -120,37 +109,9 @@ extension ControlCommandCoordinator {
     }
 
     /// `workspace.action` — delegate to the shared app-side workspace-action
-    /// logic (also driven by the mobile host's gated `workspace.action` RPC,
-    /// so the body stays app-side; the app bridges the result byte-faithfully).
+    /// logic (the app bridges the result byte-faithfully).
     func workspaceAction(_ params: [String: JSONValue]) -> ControlCallResult {
         systemContext?.controlWorkspaceAction(params: params)
             ?? .err(code: "unavailable", message: "TabManager not available", data: nil)
     }
-
-#if DEBUG
-    /// `mobile.dev_stack_auth.configure` — DEBUG-only dev Stack auth token
-    /// configuration for the mobile host.
-    func mobileDevStackAuthConfigure(_ params: [String: JSONValue]) -> ControlCallResult {
-        let enabled = bool(params, "enabled")
-        let token = optionalTrimmedRawString(params, "token")
-        if enabled == false {
-            systemContext?.controlMobileDevStackAuthSetToken(nil)
-            return .ok(.object(["enabled": .bool(false)]))
-        }
-
-        guard let token else {
-            return .err(
-                code: "invalid_params",
-                message: "mobile.dev_stack_auth.configure requires params.token",
-                data: nil
-            )
-        }
-
-        systemContext?.controlMobileDevStackAuthSetToken(token)
-        return .ok(.object([
-            "enabled": .bool(true),
-            "token_prefix": .string(String(token.prefix(8))),
-        ]))
-    }
-#endif
 }

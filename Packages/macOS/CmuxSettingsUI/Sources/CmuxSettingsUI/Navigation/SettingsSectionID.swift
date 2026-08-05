@@ -10,12 +10,9 @@ import Foundation
 /// the `SettingsSectionID` extension below, and add a view file in
 /// `Sections/`.
 public enum SettingsSectionID: String, CaseIterable, Identifiable, Sendable, Hashable {
-    case account
     case app
     case terminal
     case textBox
-    /// Mobile pairing and sync settings.
-    case mobile
     case sidebarAppearance
     /// User/agent-authored custom sidebars: enable gate and renderer choice.
     case customSidebars
@@ -34,11 +31,9 @@ public enum SettingsSectionID: String, CaseIterable, Identifiable, Sendable, Has
     /// User-facing section title shown in the sidebar.
     public var title: String {
         switch self {
-        case .account: return "Account"
         case .app: return "App"
         case .terminal: return "Terminal"
         case .textBox: return String(localized: "settings.section.textBox", defaultValue: "TextBox (Beta)")
-        case .mobile: return String(localized: "settings.section.mobile", defaultValue: "Mobile")
         case .sidebarAppearance: return "Sidebar"
         case .customSidebars: return String(localized: "settings.section.customSidebars", defaultValue: "Custom Sidebars")
         case .betaFeatures: return "Beta Features"
@@ -56,11 +51,9 @@ public enum SettingsSectionID: String, CaseIterable, Identifiable, Sendable, Has
     /// SF Symbol shown alongside the title in the sidebar.
     public var symbolName: String {
         switch self {
-        case .account: return "person.crop.circle"
         case .app: return "gearshape"
         case .terminal: return "terminal"
         case .textBox: return "textformat"
-        case .mobile: return "iphone"
         case .sidebarAppearance: return "sidebar.left"
         case .customSidebars: return "sidebar.squares.left"
         case .betaFeatures: return "exclamationmark.triangle"
@@ -80,11 +73,9 @@ public enum SettingsSectionID: String, CaseIterable, Identifiable, Sendable, Has
     /// by capability rather than only by title.
     public var searchKeywords: String {
         switch self {
-        case .account: return "sign in team sync user profile"
         case .app: return "appearance language workspace notifications menu bar telemetry"
         case .terminal: return "scrollbar copy on select agent resume hibernation"
         case .textBox: return "textbox text box rich input prompt default new terminal workspace split tab focus show beta"
-        case .mobile: return "ios iphone ipad mobile pairing local network sync"
         case .sidebarAppearance: return "sidebar details branches material terminal background"
         case .customSidebars: return "custom sidebars vibe swift json interpreted renderer in-process remote worker isolated"
         case .betaFeatures: return "beta experimental unstable feed dock right sidebar"
