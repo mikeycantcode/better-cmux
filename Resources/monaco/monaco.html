@@ -52,10 +52,127 @@
         (err && err.moduleId ? " module=" + err.moduleId : ""));
     };
     require(["vs/editor/editor.main"], function () {
+      // cmux themes: derived from the app's default terminal theme
+      // (Resources/ghostty/themes/Apple System Colors) so the editor reads as the
+      // same product as the terminal instead of stock VS Code.
+      // Palette: 1 #cc372e  2 #26a439  3 #cdac08  4 #0869cb  5 #9647bf  6 #479ec2
+      //          7 #98989d  9 #ff453a 10 #32d74b 11 #ffd60a 12 #0a84ff 13 #bf5af2 14 #76d6ff
+      monaco.editor.defineTheme("cmux-dark", {
+        base: "vs-dark",
+        inherit: true,
+        rules: [
+          { token: "", foreground: "ffffff" },
+          { token: "comment", foreground: "98989d", fontStyle: "italic" },
+          { token: "keyword", foreground: "bf5af2" },
+          { token: "keyword.control", foreground: "bf5af2" },
+          { token: "operator", foreground: "98989d" },
+          { token: "delimiter", foreground: "98989d" },
+          { token: "string", foreground: "32d74b" },
+          { token: "string.escape", foreground: "76d6ff" },
+          { token: "regexp", foreground: "ff453a" },
+          { token: "number", foreground: "ffd60a" },
+          { token: "constant", foreground: "ffd60a" },
+          { token: "type", foreground: "76d6ff" },
+          { token: "type.identifier", foreground: "76d6ff" },
+          { token: "namespace", foreground: "76d6ff" },
+          { token: "struct", foreground: "76d6ff" },
+          { token: "class", foreground: "76d6ff" },
+          { token: "interface", foreground: "76d6ff" },
+          { token: "enum", foreground: "76d6ff" },
+          { token: "function", foreground: "0a84ff" },
+          { token: "identifier", foreground: "ffffff" },
+          { token: "variable", foreground: "ffffff" },
+          { token: "variable.predefined", foreground: "0a84ff" },
+          { token: "parameter", foreground: "ffffff" },
+          { token: "attribute.name", foreground: "0a84ff" },
+          { token: "attribute.value", foreground: "32d74b" },
+          { token: "tag", foreground: "bf5af2" },
+          { token: "metatag", foreground: "98989d" },
+          { token: "annotation", foreground: "cdac08" },
+          { token: "key", foreground: "0a84ff" },
+          { token: "invalid", foreground: "ff453a" }
+        ],
+        colors: {
+          "editor.background": "#1e1e1e",
+          "editor.foreground": "#ffffff",
+          "editor.lineHighlightBackground": "#2a2a2a",
+          "editor.selectionBackground": "#3f638b",
+          "editor.inactiveSelectionBackground": "#3f638b66",
+          "editorCursor.foreground": "#98989d",
+          "editorLineNumber.foreground": "#5a5a5e",
+          "editorLineNumber.activeForeground": "#98989d",
+          "editorIndentGuide.background1": "#2f2f2f",
+          "editorWhitespace.foreground": "#3a3a3a",
+          "editorGutter.background": "#1e1e1e",
+          "editorWidget.background": "#252525",
+          "editorWidget.border": "#3a3a3a",
+          "editorSuggestWidget.background": "#252525",
+          "editorSuggestWidget.selectedBackground": "#0a84ff44",
+          "editorHoverWidget.background": "#252525",
+          "editorBracketMatch.background": "#0a84ff33",
+          "editorBracketMatch.border": "#0a84ff",
+          "scrollbarSlider.background": "#4646467f",
+          "scrollbarSlider.hoverBackground": "#5a5a5ea0",
+          "minimap.background": "#1e1e1e",
+          "diffEditor.insertedTextBackground": "#32d74b22",
+          "diffEditor.removedTextBackground": "#ff453a22"
+        }
+      });
+      monaco.editor.defineTheme("cmux-light", {
+        base: "vs",
+        inherit: true,
+        rules: [
+          { token: "", foreground: "000000" },
+          { token: "comment", foreground: "6e6e73", fontStyle: "italic" },
+          { token: "keyword", foreground: "9647bf" },
+          { token: "keyword.control", foreground: "9647bf" },
+          { token: "operator", foreground: "3c3c43" },
+          { token: "delimiter", foreground: "3c3c43" },
+          { token: "string", foreground: "26a439" },
+          { token: "string.escape", foreground: "479ec2" },
+          { token: "regexp", foreground: "cc372e" },
+          { token: "number", foreground: "a67c00" },
+          { token: "constant", foreground: "a67c00" },
+          { token: "type", foreground: "0f7490" },
+          { token: "type.identifier", foreground: "0f7490" },
+          { token: "namespace", foreground: "0f7490" },
+          { token: "struct", foreground: "0f7490" },
+          { token: "class", foreground: "0f7490" },
+          { token: "interface", foreground: "0f7490" },
+          { token: "enum", foreground: "0f7490" },
+          { token: "function", foreground: "0869cb" },
+          { token: "identifier", foreground: "000000" },
+          { token: "variable", foreground: "000000" },
+          { token: "variable.predefined", foreground: "0869cb" },
+          { token: "parameter", foreground: "000000" },
+          { token: "attribute.name", foreground: "0869cb" },
+          { token: "attribute.value", foreground: "26a439" },
+          { token: "tag", foreground: "9647bf" },
+          { token: "metatag", foreground: "6e6e73" },
+          { token: "annotation", foreground: "a67c00" },
+          { token: "key", foreground: "0869cb" },
+          { token: "invalid", foreground: "cc372e" }
+        ],
+        colors: {
+          "editor.background": "#feffff",
+          "editor.foreground": "#000000",
+          "editor.lineHighlightBackground": "#f0f2f4",
+          "editor.selectionBackground": "#abd8ff",
+          "editorCursor.foreground": "#3c3c43",
+          "editorLineNumber.foreground": "#b0b0b5",
+          "editorLineNumber.activeForeground": "#3c3c43",
+          "editorBracketMatch.background": "#0869cb22",
+          "editorBracketMatch.border": "#0869cb",
+          "minimap.background": "#feffff",
+          "diffEditor.insertedTextBackground": "#26a43922",
+          "diffEditor.removedTextBackground": "#cc372e22"
+        }
+      });
+
       var editor = monaco.editor.create(document.getElementById("container"), {
         value: "",
         language: "plaintext",
-        theme: "vs-dark",
+        theme: "cmux-dark",
         automaticLayout: true,
         minimap: { enabled: true },
         scrollBeyondLastLine: false,

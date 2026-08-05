@@ -138,7 +138,7 @@ final class MonacoWebController: NSObject, WKNavigationDelegate, WKScriptMessage
         )
     }
 
-    /// Sets the Monaco theme (`"vs"` / `"vs-dark"`).
+    /// Sets the Monaco theme (`"cmux-light"` / `"cmux-dark"`).
     ///
     /// Idempotent: re-applying the theme already in effect is a no-op so SwiftUI's
     /// repeated `updateNSView` does not run `monaco.editor.setTheme` every keystroke.
@@ -231,7 +231,7 @@ final class MonacoWebController: NSObject, WKNavigationDelegate, WKScriptMessage
         // recovery reload clears `lastAppliedContent`, so the recovered editor
         // repopulates on `ready` without waiting for a SwiftUI `updateNSView`.
         if pendingLoad == nil, let last = lastAppliedContent {
-            pendingLoad = (last.text, last.language, lastAppliedTheme ?? "vs-dark")
+            pendingLoad = (last.text, last.language, lastAppliedTheme ?? "cmux-dark")
         }
         // Recover by reloading the shell; pendingLoad replays on `ready`.
         load(request: shellRequest())

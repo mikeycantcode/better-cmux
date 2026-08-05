@@ -15,7 +15,7 @@ struct MonacoDiffView: NSViewRepresentable {
     let modified: String
     /// The Monaco language id (see ``MonacoLanguageMap``).
     let language: String
-    /// Whether the cmux appearance is dark (selects the `vs-dark` theme).
+    /// Whether the cmux appearance is dark (selects the `cmux-dark` theme).
     let isDark: Bool
 
     func makeNSView(context: Context) -> WKWebView {
@@ -32,7 +32,7 @@ struct MonacoDiffView: NSViewRepresentable {
         controller.setTheme(theme)
     }
 
-    private var theme: String { isDark ? "vs-dark" : "vs" }
+    private var theme: String { isDark ? "cmux-dark" : "cmux-light" }
 
     private func applyAppearance(to webView: WKWebView) {
         let appearance = NSAppearance(named: isDark ? .darkAqua : .aqua)
