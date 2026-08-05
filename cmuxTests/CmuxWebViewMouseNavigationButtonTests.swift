@@ -62,13 +62,7 @@ struct CmuxWebViewMouseNavigationButtonTests {
     func replacementWebViewButtonThreeUsesPanelBackHistory() throws {
         let panel = BrowserPanel(workspaceId: UUID())
         defer { panel.close() }
-        panel.reattachToWorkspace(
-            UUID(),
-            isRemoteWorkspace: true,
-            remoteWebsiteDataStoreIdentifier: UUID(),
-            proxyEndpoint: nil,
-            remoteStatus: nil
-        )
+        panel.reattachToWorkspace(UUID())
         panel.restoreSessionNavigationHistory(
             backHistoryURLStrings: [
                 "https://example.com/a",

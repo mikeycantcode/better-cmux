@@ -308,8 +308,7 @@ final class BrowserPanelVisualAutomationRestoreHostTests: XCTestCase {
         let discardedAt = Date(timeIntervalSince1970: 400)
         let panel = BrowserPanel(
             workspaceId: UUID(),
-            initialURL: URL(string: "about:blank")!,
-            isRemoteWorkspace: false
+            initialURL: URL(string: "about:blank")!
         )
         defer { panel.close() }
 

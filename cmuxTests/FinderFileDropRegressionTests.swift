@@ -199,8 +199,7 @@ final class FinderFileDropRegressionTests: XCTestCase {
         )
 
         let plan = GhosttyNSView.dropPlanForTesting(
-            pasteboard: pasteboard,
-            isRemoteTerminalSurface: false
+            pasteboard: pasteboard
         )
 
         guard case .insertText(let text) = plan else {
@@ -226,8 +225,7 @@ final class FinderFileDropRegressionTests: XCTestCase {
         XCTAssertTrue(pasteboard.writeObjects([firstURL as NSURL, secondURL as NSURL]))
 
         let plan = GhosttyNSView.dropPlanForTesting(
-            pasteboard: pasteboard,
-            isRemoteTerminalSurface: false
+            pasteboard: pasteboard
         )
 
         guard case .insertText(let text) = plan else {
@@ -244,33 +242,6 @@ final class FinderFileDropRegressionTests: XCTestCase {
         XCTAssertFalse(text.contains("/clipboard-"))
     }
 
-    func testImageFileURLDropUploadsOriginalFilesForRemoteTerminal() throws {
-        let imageDirectory = FileManager.default.temporaryDirectory
-            .appendingPathComponent("cmux remote image file drop \(UUID().uuidString)")
-        try FileManager.default.createDirectory(at: imageDirectory, withIntermediateDirectories: true)
-        defer { try? FileManager.default.removeItem(at: imageDirectory) }
-
-        let firstURL = imageDirectory.appendingPathComponent("cmux ssh 2.png")
-        let secondURL = imageDirectory.appendingPathComponent("cmux ssh.png")
-        try make1x1PNG(color: .systemRed).write(to: firstURL)
-        try make1x1PNG(color: .systemGreen).write(to: secondURL)
-
-        let pasteboard = NSPasteboard(name: .init("cmux-test-remote-image-file-url-drop-\(UUID().uuidString)"))
-        pasteboard.clearContents()
-        XCTAssertTrue(pasteboard.writeObjects([firstURL as NSURL, secondURL as NSURL]))
-
-        let plan = GhosttyNSView.dropPlanForTesting(
-            pasteboard: pasteboard,
-            isRemoteTerminalSurface: true
-        )
-
-        guard case .uploadFiles(let urls) = plan else {
-            return XCTFail("expected remote upload plan, got \(plan)")
-        }
-
-        XCTAssertEqual(urls, [firstURL.standardizedFileURL, secondURL.standardizedFileURL])
-    }
-
     func testImagePasteboardDropMaterializesEveryImageForLocalInsertion() throws {
         let pasteboard = NSPasteboard(name: .init("cmux-test-multi-image-local-drop-\(UUID().uuidString)"))
         pasteboard.clearContents()
@@ -281,8 +252,7 @@ final class FinderFileDropRegressionTests: XCTestCase {
         XCTAssertTrue(pasteboard.writeObjects(items))
 
         let plan = GhosttyNSView.dropPlanForTesting(
-            pasteboard: pasteboard,
-            isRemoteTerminalSurface: false
+            pasteboard: pasteboard
         )
 
         guard case .insertText(let text) = plan else {
@@ -309,8 +279,7 @@ final class FinderFileDropRegressionTests: XCTestCase {
         XCTAssertTrue(pasteboard.writeObjects([try makeImagePasteboardItemWithRTFDAttachment(color: .systemRed)]))
 
         let plan = GhosttyNSView.dropPlanForTesting(
-            pasteboard: pasteboard,
-            isRemoteTerminalSurface: false
+            pasteboard: pasteboard
         )
 
         guard case .insertText(let text) = plan else {
@@ -339,8 +308,7 @@ final class FinderFileDropRegressionTests: XCTestCase {
         XCTAssertTrue(pasteboard.writeObjects([item]))
 
         let plan = GhosttyNSView.dropPlanForTesting(
-            pasteboard: pasteboard,
-            isRemoteTerminalSurface: false
+            pasteboard: pasteboard
         )
 
         guard case .insertText(let text) = plan else {
@@ -362,32 +330,6 @@ final class FinderFileDropRegressionTests: XCTestCase {
         let pngSignature = Data([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A])
         let materializedData = try Data(contentsOf: URL(fileURLWithPath: paths[0]))
         XCTAssertEqual(Data(materializedData.prefix(pngSignature.count)), pngSignature)
-    }
-
-    func testImagePasteboardDropMaterializesEveryImageForRemoteUpload() throws {
-        let pasteboard = NSPasteboard(name: .init("cmux-test-multi-image-remote-drop-\(UUID().uuidString)"))
-        pasteboard.clearContents()
-        let items = try [
-            makeImagePasteboardItem(color: .systemRed),
-            makeImagePasteboardItem(color: .systemGreen),
-        ]
-        XCTAssertTrue(pasteboard.writeObjects(items))
-
-        let plan = GhosttyNSView.dropPlanForTesting(
-            pasteboard: pasteboard,
-            isRemoteTerminalSurface: true
-        )
-
-        guard case .uploadFiles(let urls) = plan else {
-            return XCTFail("expected remote image upload plan, got \(plan)")
-        }
-        defer {
-            GhosttyApp.terminalPasteboard.cleanupTransferredTemporaryImageFiles(urls)
-        }
-
-        XCTAssertEqual(urls.count, 2)
-        XCTAssertTrue(urls.allSatisfy { $0.lastPathComponent.hasPrefix("clipboard-") && $0.pathExtension == "png" })
-        XCTAssertTrue(urls.allSatisfy { FileManager.default.fileExists(atPath: $0.path) })
     }
 
     func testFileExplorerPathInsertionEscapesMultiplePathsLikeTerminalDrop() {

@@ -50,24 +50,4 @@ final class WorkspaceSidebarObservationTests: XCTestCase {
             "A sidebar row that subscribes after immediate workspace fields already exist must still refresh from the current workspace state."
         )
     }
-
-    func testSidebarObservationPublisherIgnoresRemoteHeartbeatOnlyChanges() {
-        let workspace = Workspace()
-
-        var publishCount = 0
-        let cancellable = workspace.sidebarObservationPublisher.sink {
-            publishCount += 1
-        }
-        defer { cancellable.cancel() }
-        publishCount = 0
-
-        workspace.remoteHeartbeatCount = 1
-        workspace.remoteLastHeartbeatAt = Date()
-
-        XCTAssertEqual(
-            publishCount,
-            0,
-            "Expected non-visible remote heartbeat updates to avoid invalidating sidebar rows"
-        )
-    }
 }

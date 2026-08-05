@@ -63,8 +63,7 @@ struct WorkspaceTerminalTabWorkingDirectoryTests {
             statusEntries: [],
             logEntries: [],
             progress: nil,
-            gitBranch: nil,
-            remote: nil
+            gitBranch: nil
         )
 
         let restored = Workspace()
@@ -76,77 +75,6 @@ struct WorkspaceTerminalTabWorkingDirectoryTests {
 
         let createdPanel = try #require(restored.newTerminalSurfaceInFocusedPane(focus: false))
         #expect(createdPanel.requestedWorkingDirectory == workspaceDirectory)
-    }
-
-    @MainActor
-    @Test("remote restore keeps intentional nil terminal cwd")
-    func remoteRestoreDoesNotReplaceIntentionalNilTerminalWorkingDirectoryWithWorkspaceCurrentDirectory() throws {
-        let workspaceDirectory = "/tmp/cmux-remote-restore-\(UUID().uuidString)"
-        let remotePanelId = UUID()
-        let snapshot = SessionWorkspaceSnapshot(
-            workspaceId: UUID(),
-            processTitle: "Remote",
-            customTitle: nil,
-            customDescription: nil,
-            customColor: nil,
-            isPinned: false,
-            groupId: nil,
-            isManuallyUnread: false,
-            hasUnreadIndicator: false,
-            notifications: nil,
-            terminalScrollBarHidden: nil,
-            currentDirectory: workspaceDirectory,
-            focusedPanelId: remotePanelId,
-            layout: .pane(SessionPaneLayoutSnapshot(
-                panelIds: [remotePanelId],
-                selectedPanelId: remotePanelId
-            )),
-            panels: [
-                SessionPanelSnapshot(
-                    id: remotePanelId,
-                    type: .terminal,
-                    title: "Remote Shell",
-                    customTitle: nil,
-                    directory: "/home/dev/project",
-                    isPinned: false,
-                    isManuallyUnread: false,
-                    hasUnreadIndicator: false,
-                    restoredUnreadContributesToWorkspace: nil,
-                    notifications: nil,
-                    gitBranch: nil,
-                    listeningPorts: [],
-                    ttyName: nil,
-                    terminal: SessionTerminalPanelSnapshot(isRemoteTerminal: true),
-                    browser: nil,
-                    markdown: nil,
-                    filePreview: nil,
-                    rightSidebarTool: nil,
-                    agentSession: nil,
-                    project: nil
-                ),
-            ],
-            statusEntries: [],
-            logEntries: [],
-            progress: nil,
-            gitBranch: nil,
-            remote: SessionRemoteWorkspaceSnapshot(
-                transport: .ssh,
-                destination: "dev@example.com",
-                port: 2222,
-                identityFile: nil,
-                sshOptions: [],
-                preserveAfterTerminalExit: nil,
-                skipDaemonBootstrap: nil
-            )
-        )
-
-        let restored = Workspace()
-        let restoredIds = restored.restoreSessionSnapshot(snapshot)
-        let restoredRemotePanelId = try #require(restoredIds[remotePanelId])
-        let restoredPanel = try #require(restored.terminalPanel(for: restoredRemotePanelId))
-
-        #expect(restored.currentDirectory == workspaceDirectory)
-        #expect(restoredPanel.requestedWorkingDirectory == nil)
     }
 
     @MainActor

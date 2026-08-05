@@ -2019,8 +2019,7 @@ final class BrowserInsecureHTTPAlertPresentationTests: XCTestCase {
         let panel = BrowserPanel(
             workspaceId: UUID(),
             initialURL: URL(string: "about:blank")!,
-            preloadInitialNavigationInBackground: true,
-            isRemoteWorkspace: false
+            preloadInitialNavigationInBackground: true
         )
         defer {
             panel.resetInsecureHTTPAlertHooksForTesting()

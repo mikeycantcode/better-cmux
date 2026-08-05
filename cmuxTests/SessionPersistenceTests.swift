@@ -68,32 +68,6 @@ final class SessionPersistenceTests: XCTestCase {
     }
 
     @MainActor
-    func testSessionSnapshotSkipsTransientRemoteListeningPorts() throws {
-        let workspace = Workspace()
-        let panelId = try XCTUnwrap(workspace.focusedPanelId)
-        let configuration = WorkspaceRemoteConfiguration(
-            destination: "cmux-macmini",
-            port: nil,
-            identityFile: nil,
-            sshOptions: [],
-            localProxyPort: nil,
-            relayPort: 64001,
-            relayID: "relay-test",
-            relayToken: String(repeating: "c", count: 64),
-            localSocketPath: "/tmp/cmux-test.sock",
-            terminalStartupCommand: "ssh cmux-macmini"
-        )
-
-        workspace.configureRemoteConnection(configuration, autoConnect: false)
-        workspace.surfaceListeningPorts[panelId] = [6969]
-
-        let snapshot = workspace.sessionSnapshot(includeScrollback: false)
-        let panelSnapshot = try XCTUnwrap(snapshot.panels.first { $0.id == panelId })
-
-        XCTAssertTrue(panelSnapshot.listeningPorts.isEmpty)
-    }
-
-    @MainActor
     func testWorkspaceSessionSnapshotRestoresPaneNotificationsIntoStore() throws {
         let store = TerminalNotificationStore.shared
         let appDelegate = AppDelegate.shared ?? AppDelegate()
@@ -3138,81 +3112,6 @@ final class SocketListenerAcceptPolicyTests: XCTestCase {
         XCTAssertTrue(supportsFork)
     }
 
-    func testOpenCodeForkSupportSkipsLocalProbeForRemoteLikeContext() async {
-        let snapshot = SessionRestorableAgentSnapshot(
-            kind: .opencode,
-            sessionId: "opencode-session-remote",
-            workingDirectory: "/remote/cmux/project-\(UUID().uuidString)",
-            launchCommand: AgentLaunchCommandSnapshot(
-                launcher: "opencode",
-                executablePath: "/remote/bin/opencode",
-                arguments: ["/remote/bin/opencode"],
-                workingDirectory: "/remote/cmux/project-\(UUID().uuidString)",
-                environment: ["PATH": "/remote/bin:/usr/bin"],
-                capturedAt: 123,
-                source: "process"
-            )
-        )
-
-        let supportsFork = await AgentForkSupport.supportsFork(snapshot: snapshot)
-        XCTAssertTrue(supportsFork)
-    }
-
-    func testAgentForkSupportRejectsRemoteForksThatNeedLauncherScript() async {
-        let longPath = "/Users/cmux/" + String(repeating: "nested-project-", count: 120)
-        let snapshot = SessionRestorableAgentSnapshot(
-            kind: .codex,
-            sessionId: "019dad34-d218-7943-b81a-eddac5c87951",
-            workingDirectory: "/Users/cmux/project",
-            launchCommand: AgentLaunchCommandSnapshot(
-                launcher: "codex",
-                executablePath: "/Users/example/.bun/bin/codex",
-                arguments: [
-                    "/Users/example/.bun/bin/codex",
-                    "--model",
-                    "gpt-5.4",
-                    "--add-dir",
-                    longPath
-                ],
-                workingDirectory: "/Users/cmux/project",
-                environment: nil,
-                capturedAt: 123,
-                source: "process"
-            )
-        )
-
-        XCTAssertNotNil(snapshot.forkStartupInput(allowLauncherScript: true))
-        XCTAssertNil(snapshot.forkStartupInput(allowLauncherScript: false))
-        let supportsFork = await AgentForkSupport.supportsFork(
-            snapshot: snapshot,
-            isRemoteContext: true
-        )
-        XCTAssertFalse(supportsFork)
-    }
-
-    func testOpenCodeForkSupportRemoteContextBypassesLocalProbe() async {
-        let snapshot = SessionRestorableAgentSnapshot(
-            kind: .opencode,
-            sessionId: "opencode-session-remote-context",
-            workingDirectory: FileManager.default.temporaryDirectory.path,
-            launchCommand: AgentLaunchCommandSnapshot(
-                launcher: "opencode",
-                executablePath: "/bin/false",
-                arguments: ["/bin/false"],
-                workingDirectory: FileManager.default.temporaryDirectory.path,
-                environment: nil,
-                capturedAt: 123,
-                source: "process"
-            )
-        )
-
-        let supportsFork = await AgentForkSupport.supportsFork(
-            snapshot: snapshot,
-            isRemoteContext: true
-        )
-        XCTAssertTrue(supportsFork)
-    }
-
     func testOpenCodeForkSupportRejectsMissingLocalExecutable() async throws {
         let fileManager = FileManager.default
         let root = fileManager.temporaryDirectory
@@ -3654,45 +3553,6 @@ final class SocketListenerAcceptPolicyTests: XCTestCase {
                 latestSessionIdForSolePanel: nil,
                 sameWorkingDirectoryPanelCount: 1
             )
-        )
-    }
-
-    func testClaudeTeamsResumeCommandPreservesRemoteControlLauncher() {
-        let snapshot = SessionRestorableAgentSnapshot(
-            kind: .claude,
-            sessionId: "claude-team-session",
-            workingDirectory: "/tmp/team repo",
-            launchCommand: AgentLaunchCommandSnapshot(
-                launcher: "claudeTeams",
-                executablePath: "/Applications/cmux.app/Contents/Resources/bin/cmux",
-                arguments: [
-                    "/Applications/cmux.app/Contents/Resources/bin/cmux",
-                    "claude-teams",
-                    "--teammate-mode",
-                    "auto",
-                    "--model",
-                    "sonnet",
-                    "--remote-control-session-name-prefix",
-                    "cmux-team",
-                    "--tmux",
-                    "side effect should be dropped",
-                    "--permission-mode",
-                    "auto",
-                    "initial team prompt"
-                ],
-                workingDirectory: "/tmp/team repo",
-                environment: [
-                    "CMUX_CUSTOM_CLAUDE_PATH": "/opt/Claude Code/bin/claude",
-                    "PATH": "/opt/Claude Code/bin:/usr/bin"
-                ],
-                capturedAt: 123,
-                source: "environment"
-            )
-        )
-
-        XCTAssertEqual(
-            snapshot.resumeCommand,
-            "{ cd -- '/tmp/team repo' 2>/dev/null || [ ! -d '/tmp/team repo' ]; } && 'env' 'CMUX_CUSTOM_CLAUDE_PATH=/opt/Claude Code/bin/claude' '/Applications/cmux.app/Contents/Resources/bin/cmux' 'claude-teams' '--resume' 'claude-team-session' '--teammate-mode' 'auto' '--model' 'sonnet' '--remote-control-session-name-prefix' 'cmux-team' '--permission-mode' 'auto'"
         )
     }
 

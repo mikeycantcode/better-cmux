@@ -1141,53 +1141,6 @@ final class GhosttyConfigTests: XCTestCase {
         )
     }
 
-    func testScrollLagCaptureRequiresSustainedLag() {
-        let cases: [(samples: Int, averageMs: Double, maxMs: Double, expected: Bool)] = [
-            (4, 18, 85, false),
-            (10, 6, 85, false),
-            (10, 18, 35, false),
-            (10, 18, 85, true),
-        ]
-        for testCase in cases {
-            XCTAssertEqual(
-                GhosttyApp.shouldCaptureScrollLagEvent(
-                    samples: testCase.samples,
-                    averageMs: testCase.averageMs,
-                    maxMs: testCase.maxMs,
-                    thresholdMs: 40,
-                    nowUptime: 1000,
-                    lastReportedUptime: nil
-                ),
-                testCase.expected
-            )
-        }
-    }
-
-    func testScrollLagCaptureRespectsCooldownWindow() {
-        XCTAssertFalse(
-            GhosttyApp.shouldCaptureScrollLagEvent(
-                samples: 12,
-                averageMs: 22,
-                maxMs: 90,
-                thresholdMs: 40,
-                nowUptime: 1200,
-                lastReportedUptime: 1005,
-                cooldown: 300
-            )
-        )
-        XCTAssertTrue(
-            GhosttyApp.shouldCaptureScrollLagEvent(
-                samples: 12,
-                averageMs: 22,
-                maxMs: 90,
-                thresholdMs: 40,
-                nowUptime: 1406,
-                lastReportedUptime: 1005,
-                cooldown: 300
-            )
-        )
-    }
-
     func testClaudeCodeIntegrationDefaultsToEnabledWhenUnset() {
         let suiteName = "cmux.tests.claude-hooks.\(UUID().uuidString)"
         guard let defaults = UserDefaults(suiteName: suiteName) else {
@@ -1283,39 +1236,6 @@ final class GhosttyConfigTests: XCTestCase {
 
         defaults.set(false, forKey: IntegrationsCatalogSection().suppressSubagentNotifications.userDefaultsKey)
         XCTAssertFalse(AgentIntegrationSettingsStore(defaults: defaults).suppressesSubagentNotifications)
-    }
-
-    func testTelemetryDefaultsToEnabledWhenUnset() {
-        let suiteName = "cmux.tests.telemetry.\(UUID().uuidString)"
-        guard let defaults = UserDefaults(suiteName: suiteName) else {
-            XCTFail("Failed to create isolated user defaults suite")
-            return
-        }
-        defer {
-            defaults.removePersistentDomain(forName: suiteName)
-        }
-
-        let telemetry = AppCatalogSection().sendAnonymousTelemetry
-        defaults.removeObject(forKey: telemetry.userDefaultsKey)
-        XCTAssertTrue(telemetry.value(in: defaults))
-    }
-
-    func testTelemetryRespectsStoredPreference() {
-        let suiteName = "cmux.tests.telemetry.\(UUID().uuidString)"
-        guard let defaults = UserDefaults(suiteName: suiteName) else {
-            XCTFail("Failed to create isolated user defaults suite")
-            return
-        }
-        defer {
-            defaults.removePersistentDomain(forName: suiteName)
-        }
-
-        let telemetry = AppCatalogSection().sendAnonymousTelemetry
-        defaults.set(true, forKey: telemetry.userDefaultsKey)
-        XCTAssertTrue(telemetry.value(in: defaults))
-
-        defaults.set(false, forKey: telemetry.userDefaultsKey)
-        XCTAssertFalse(telemetry.value(in: defaults))
     }
 
     private func rgb255(_ color: NSColor) -> RGB {
@@ -1589,264 +1509,16 @@ final class WorkspaceChromeColorTests: XCTestCase {
 // the cmuxTests compile on the Swift 6 depot toolchain.
 
 final class WorkspaceRemoteDaemonManifestTests: XCTestCase {
-    func testParsesEmbeddedRemoteDaemonManifestJSON() throws {
-        let manifestJSON = """
-        {
-          "schemaVersion": 1,
-          "appVersion": "0.62.0",
-          "releaseTag": "v0.62.0",
-          "releaseURL": "https://github.com/manaflow-ai/cmux/releases/tag/v0.62.0",
-          "checksumsAssetName": "cmuxd-remote-checksums.txt",
-          "checksumsURL": "https://github.com/manaflow-ai/cmux/releases/download/v0.62.0/cmuxd-remote-checksums.txt",
-          "entries": [
-            {
-              "goOS": "linux",
-              "goArch": "amd64",
-              "assetName": "cmuxd-remote-linux-amd64",
-              "downloadURL": "https://github.com/manaflow-ai/cmux/releases/download/v0.62.0/cmuxd-remote-linux-amd64",
-              "sha256": "abc123"
-            }
-          ]
-        }
-        """
-
-        let manifest = WorkspaceRemoteDaemonManifest(infoDictionary: [
-            WorkspaceRemoteDaemonManifest.infoDictionaryKey: manifestJSON,
-        ])
-
-        XCTAssertEqual(manifest?.releaseTag, "v0.62.0")
-        XCTAssertEqual(manifest?.entry(goOS: "linux", goArch: "amd64")?.assetName, "cmuxd-remote-linux-amd64")
-    }
-
-    func testRemoteDaemonCachePathIsVersionedByPlatform() throws {
-        let repository = RemoteDaemonManifestRepository(
-            homeDirectory: FileManager.default.homeDirectoryForCurrentUser
-        )
-        let url = try repository.cachedBinaryURL(
-            version: "0.62.0",
-            goOS: "linux",
-            goArch: "arm64"
-        )
-
-        XCTAssertTrue(url.path.contains("/.local/state/cmux/remote-daemons/0.62.0/linux-arm64/"))
-        XCTAssertEqual(url.lastPathComponent, "cmuxd-remote")
-    }
 }
 
 final class RemoteLoopbackHTTPRequestRewriterTests: XCTestCase {
-    func testRewritesLoopbackAliasHostHeadersToLocalhost() {
-        let original = Data(
-            (
-                "GET /demo HTTP/1.1\r\n" +
-                "Host: cmux-loopback.localtest.me:3000\r\n" +
-                "Origin: http://cmux-loopback.localtest.me:3000\r\n" +
-                "Referer: http://cmux-loopback.localtest.me:3000/app\r\n" +
-                "\r\n"
-            ).utf8
-        )
-
-        let rewritten = RemoteLoopbackHTTPRequestRewriter.rewriteIfNeeded(
-            data: original,
-            aliasHost: "cmux-loopback.localtest.me"
-        )
-
-        let text = String(decoding: rewritten, as: UTF8.self)
-        XCTAssertTrue(text.contains("Host: localhost:3000"))
-        XCTAssertTrue(text.contains("Origin: http://localhost:3000"))
-        XCTAssertTrue(text.contains("Referer: http://localhost:3000/app"))
-        XCTAssertFalse(text.contains("cmux-loopback.localtest.me"))
-    }
-
-    func testRewritesLoopbackSubdomainAliasHostHeadersToOriginalLocalhostSubdomain() {
-        let original = Data(
-            (
-                "GET /demo HTTP/1.1\r\n" +
-                "Host: api.cmux-loopback.localtest.me:3000\r\n" +
-                "Origin: http://api.cmux-loopback.localtest.me:3000\r\n" +
-                "Referer: http://api.cmux-loopback.localtest.me:3000/app\r\n" +
-                "\r\n"
-            ).utf8
-        )
-
-        let rewritten = RemoteLoopbackHTTPRequestRewriter.rewriteIfNeeded(
-            data: original,
-            aliasHost: "cmux-loopback.localtest.me"
-        )
-
-        let text = String(decoding: rewritten, as: UTF8.self)
-        XCTAssertTrue(text.contains("Host: api.localhost:3000"))
-        XCTAssertTrue(text.contains("Origin: http://api.localhost:3000"))
-        XCTAssertTrue(text.contains("Referer: http://api.localhost:3000/app"))
-        XCTAssertFalse(text.contains("api.cmux-loopback.localtest.me"))
-    }
-
-    func testRewritesAbsoluteFormRequestLineForLoopbackAlias() {
-        let original = Data(
-            (
-                "GET http://cmux-loopback.localtest.me:3000/demo HTTP/1.1\r\n" +
-                "Host: cmux-loopback.localtest.me:3000\r\n" +
-                "\r\n"
-            ).utf8
-        )
-
-        let rewritten = RemoteLoopbackHTTPRequestRewriter.rewriteIfNeeded(
-            data: original,
-            aliasHost: "cmux-loopback.localtest.me"
-        )
-
-        let text = String(decoding: rewritten, as: UTF8.self)
-        XCTAssertTrue(text.hasPrefix("GET http://localhost:3000/demo HTTP/1.1\r\n"))
-        XCTAssertTrue(text.contains("Host: localhost:3000"))
-    }
-
-    func testLeavesNonHTTPPayloadUntouched() {
-        let original = Data([0x16, 0x03, 0x01, 0x00, 0x2a, 0x01, 0x00])
-        let rewritten = RemoteLoopbackHTTPRequestRewriter.rewriteIfNeeded(
-            data: original,
-            aliasHost: "cmux-loopback.localtest.me"
-        )
-        XCTAssertEqual(rewritten, original)
-    }
-
-    func testBuffersSplitLoopbackAliasHeadersUntilFullRequestArrives() {
-        var streamRewriter = RemoteLoopbackHTTPRequestStreamRewriter(
-            aliasHost: "cmux-loopback.localtest.me"
-        )
-
-        let firstChunk = Data(
-            (
-                "GET /demo HTTP/1.1\r\n" +
-                "Host: cmux-loop"
-            ).utf8
-        )
-        let secondChunk = Data(
-            (
-                "back.localtest.me:3000\r\n" +
-                "Origin: http://cmux-loopback.localtest.me:3000\r\n" +
-                "Referer: http://cmux-loopback.localtest.me:3000/app\r\n" +
-                "\r\n" +
-                "body=1"
-            ).utf8
-        )
-
-        let firstOutput = streamRewriter.rewriteNextChunk(firstChunk, eof: false)
-        let secondOutput = streamRewriter.rewriteNextChunk(secondChunk, eof: false)
-
-        XCTAssertTrue(firstOutput.isEmpty)
-
-        let text = String(decoding: secondOutput, as: UTF8.self)
-        XCTAssertTrue(text.contains("Host: localhost:3000"))
-        XCTAssertTrue(text.contains("Origin: http://localhost:3000"))
-        XCTAssertTrue(text.contains("Referer: http://localhost:3000/app"))
-        XCTAssertTrue(text.hasSuffix("\r\n\r\nbody=1"))
-        XCTAssertFalse(text.contains("cmux-loopback.localtest.me"))
-    }
-
-    func testFlushesBufferedLoopbackAliasHeadersOnEOFWhenHeadersRemainIncomplete() {
-        var streamRewriter = RemoteLoopbackHTTPRequestStreamRewriter(
-            aliasHost: "cmux-loopback.localtest.me"
-        )
-
-        let firstChunk = Data(
-            (
-                "GET /demo HTTP/1.1\r\n" +
-                "Host: cmux-loop"
-            ).utf8
-        )
-        let secondChunk = Data(
-            (
-                "back.localtest.me:3000\r\n" +
-                "Origin: http://cmux-loopback.localtest.me:3000\r\n" +
-                "Referer: http://cmux-loopback.localtest.me:3000/app\r\n" +
-                "body=1"
-            ).utf8
-        )
-
-        let firstOutput = streamRewriter.rewriteNextChunk(firstChunk, eof: false)
-        let secondOutput = streamRewriter.rewriteNextChunk(secondChunk, eof: true)
-        let thirdOutput = streamRewriter.rewriteNextChunk(Data(), eof: true)
-
-        XCTAssertTrue(firstOutput.isEmpty)
-
-        let text = String(decoding: secondOutput, as: UTF8.self)
-        XCTAssertTrue(text.contains("Host: localhost:3000"))
-        XCTAssertTrue(text.contains("Origin: http://localhost:3000"))
-        XCTAssertTrue(text.contains("Referer: http://localhost:3000/app"))
-        XCTAssertTrue(text.hasSuffix("\r\nbody=1"))
-        XCTAssertFalse(text.contains("cmux-loopback.localtest.me"))
-        XCTAssertTrue(thirdOutput.isEmpty)
-    }
-
-    func testRewritesLoopbackResponseHeadersBackToAlias() {
-        let original = Data(
-            (
-                "HTTP/1.1 302 Found\r\n" +
-                "Location: http://localhost:3000/login\r\n" +
-                "Access-Control-Allow-Origin: http://localhost:3000\r\n" +
-                "Set-Cookie: sid=1; Domain=localhost; Path=/\r\n" +
-                "\r\n"
-            ).utf8
-        )
-
-        let rewritten = RemoteLoopbackHTTPResponseRewriter.rewriteIfNeeded(
-            data: original,
-            aliasHost: "cmux-loopback.localtest.me"
-        )
-
-        let text = String(decoding: rewritten, as: UTF8.self)
-        XCTAssertTrue(text.contains("Location: http://cmux-loopback.localtest.me:3000/login"))
-        XCTAssertTrue(text.contains("Access-Control-Allow-Origin: http://cmux-loopback.localtest.me:3000"))
-        XCTAssertTrue(text.contains("Set-Cookie: sid=1; Domain=cmux-loopback.localtest.me; Path=/"))
-    }
-
-    func testRewritesLoopbackSubdomainResponseHeadersBackToAliasSubdomain() {
-        let original = Data(
-            (
-                "HTTP/1.1 302 Found\r\n" +
-                "Location: http://api.localhost:3000/login\r\n" +
-                "Access-Control-Allow-Origin: http://api.localhost:3000\r\n" +
-                "Set-Cookie: sid=1; Domain=api.localhost; Path=/\r\n" +
-                "\r\n"
-            ).utf8
-        )
-
-        let rewritten = RemoteLoopbackHTTPResponseRewriter.rewriteIfNeeded(
-            data: original,
-            aliasHost: "cmux-loopback.localtest.me"
-        )
-
-        let text = String(decoding: rewritten, as: UTF8.self)
-        XCTAssertTrue(text.contains("Location: http://api.cmux-loopback.localtest.me:3000/login"))
-        XCTAssertTrue(text.contains("Access-Control-Allow-Origin: http://api.cmux-loopback.localtest.me:3000"))
-        XCTAssertTrue(text.contains("Set-Cookie: sid=1; Domain=api.cmux-loopback.localtest.me; Path=/"))
-    }
-
-    func testRewritesLeadingDotLoopbackCookieDomainsBackToAliasDomains() {
-        let original = Data(
-            (
-                "HTTP/1.1 200 OK\r\n" +
-                "Set-Cookie: root=1; Domain=.localhost; Path=/\r\n" +
-                "Set-Cookie: api=1; Domain=.api.localhost; Path=/\r\n" +
-                "\r\n"
-            ).utf8
-        )
-
-        let rewritten = RemoteLoopbackHTTPResponseRewriter.rewriteIfNeeded(
-            data: original,
-            aliasHost: "cmux-loopback.localtest.me"
-        )
-
-        let text = String(decoding: rewritten, as: UTF8.self)
-        XCTAssertTrue(text.contains("Set-Cookie: root=1; Domain=.cmux-loopback.localtest.me; Path=/"))
-        XCTAssertTrue(text.contains("Set-Cookie: api=1; Domain=.api.cmux-loopback.localtest.me; Path=/"))
-    }
 }
 
 
 @MainActor
 final class BrowserPanelPopupContextTests: XCTestCase {
     func testFloatingPopupInheritsOpenerBrowserContext() throws {
-        let panel = BrowserPanel(workspaceId: UUID(), isRemoteWorkspace: false)
+        let panel = BrowserPanel(workspaceId: UUID())
         let popupWebView = try XCTUnwrap(
             panel.createFloatingPopup(
                 configuration: WKWebViewConfiguration(),
@@ -1858,27 +1530,6 @@ final class BrowserPanelPopupContextTests: XCTestCase {
         XCTAssertTrue(
             popupWebView.configuration.websiteDataStore === panel.webView.configuration.websiteDataStore
         )
-    }
-
-    func testFloatingPopupInheritsRemoteWorkspaceWebsiteDataStore() throws {
-        let remoteWorkspaceId = UUID()
-        let panel = BrowserPanel(
-            workspaceId: remoteWorkspaceId,
-            isRemoteWorkspace: true,
-            remoteWebsiteDataStoreIdentifier: remoteWorkspaceId
-        )
-        let popupWebView = try XCTUnwrap(
-            panel.createFloatingPopup(
-                configuration: WKWebViewConfiguration(),
-                windowFeatures: WKWindowFeatures()
-            )
-        )
-        defer { popupWebView.window?.close() }
-
-        XCTAssertTrue(
-            popupWebView.configuration.websiteDataStore === panel.webView.configuration.websiteDataStore
-        )
-        XCTAssertFalse(popupWebView.configuration.websiteDataStore === WKWebsiteDataStore.default())
     }
 }
 
@@ -1936,8 +1587,7 @@ final class BrowserPanelWebViewLifecycleTests: XCTestCase {
         let panel = BrowserPanel(
             workspaceId: UUID(),
             initialURL: URL(string: "https://example.test/")!,
-            renderInitialNavigation: false,
-            isRemoteWorkspace: false
+            renderInitialNavigation: false
         )
         defer { panel.close() }
 
@@ -1952,8 +1602,7 @@ final class BrowserPanelWebViewLifecycleTests: XCTestCase {
         let panel = BrowserPanel(
             workspaceId: UUID(),
             initialURL: URL(string: "about:blank")!,
-            preloadInitialNavigationInBackground: true,
-            isRemoteWorkspace: false
+            preloadInitialNavigationInBackground: true
         )
         defer { panel.close() }
 
@@ -1969,8 +1618,7 @@ final class BrowserPanelWebViewLifecycleTests: XCTestCase {
         let panel = BrowserPanel(
             workspaceId: UUID(),
             initialURL: URL(string: "about:blank")!,
-            preloadInitialNavigationInBackground: true,
-            isRemoteWorkspace: false
+            preloadInitialNavigationInBackground: true
         )
         defer { panel.close() }
 
@@ -1983,8 +1631,7 @@ final class BrowserPanelWebViewLifecycleTests: XCTestCase {
         let panel = BrowserPanel(
             workspaceId: UUID(),
             initialURL: URL(string: "about:blank")!,
-            preloadInitialNavigationInBackground: true,
-            isRemoteWorkspace: false
+            preloadInitialNavigationInBackground: true
         )
         defer { panel.close() }
 
@@ -2002,8 +1649,7 @@ final class BrowserPanelWebViewLifecycleTests: XCTestCase {
         let panel = BrowserPanel(
             workspaceId: UUID(),
             initialURL: URL(string: "about:blank")!,
-            preloadInitialNavigationInBackground: true,
-            isRemoteWorkspace: false
+            preloadInitialNavigationInBackground: true
         )
         defer { panel.close() }
 
@@ -2042,8 +1688,7 @@ final class BrowserPanelWebViewLifecycleTests: XCTestCase {
         let now = hiddenAt.addingTimeInterval(11.25)
         let panel = BrowserPanel(
             workspaceId: UUID(),
-            initialURL: URL(string: "https://example.test/")!,
-            isRemoteWorkspace: false
+            initialURL: URL(string: "https://example.test/")!
         )
 
         XCTAssertEqual(panel.webViewLifecycleState, .liveHidden)
@@ -2075,8 +1720,7 @@ final class BrowserPanelWebViewLifecycleTests: XCTestCase {
         let discardedAt = Date(timeIntervalSince1970: 200)
         let panel = BrowserPanel(
             workspaceId: UUID(),
-            initialURL: URL(string: "about:blank")!,
-            isRemoteWorkspace: false
+            initialURL: URL(string: "about:blank")!
         )
         defer { panel.close() }
 
@@ -2124,8 +1768,7 @@ final class BrowserPanelWebViewLifecycleTests: XCTestCase {
     func testRedundantVisibleNotificationsDoNotChurnLiveWebView() {
         let panel = BrowserPanel(
             workspaceId: UUID(),
-            initialURL: URL(string: "about:blank")!,
-            isRemoteWorkspace: false
+            initialURL: URL(string: "about:blank")!
         )
         defer { panel.close() }
 
@@ -2171,8 +1814,7 @@ final class BrowserPanelWebViewLifecycleTests: XCTestCase {
         let discardedAt = Date(timeIntervalSince1970: 300)
         let panel = BrowserPanel(
             workspaceId: UUID(),
-            initialURL: URL(string: "about:blank")!,
-            isRemoteWorkspace: false
+            initialURL: URL(string: "about:blank")!
         )
         defer { panel.close() }
 
@@ -2261,169 +1903,10 @@ final class BrowserDefaultsNormalizationTests: XCTestCase {
 }
 
 final class BrowserNewTabNavigationSeedTests: XCTestCase {
-    func testPreservesOriginalRequestHeadersMethodBodyAndBypassHost() throws {
-        let url = try XCTUnwrap(URL(string: "https://www.linkedin.com/redir/redirect?url=https%3A%2F%2Fexample.com"))
-        let body = Data("payload=1".utf8)
-        var request = URLRequest(url: url, cachePolicy: .reloadIgnoringLocalCacheData)
-        request.httpMethod = "POST"
-        request.httpBody = body
-        request.setValue("https://www.linkedin.com/feed/", forHTTPHeaderField: "Referer")
-        request.setValue("keep-me", forHTTPHeaderField: "X-Cmux-Test")
-
-        let seed = try XCTUnwrap(
-            browserNewTabNavigationSeed(
-                from: request,
-                bypassInsecureHTTPHostOnce: "www.linkedin.com"
-            )
-        )
-
-        // This covers the pure seeding helper only. WebKit may still rewrite
-        // programmatic loads when the request is replayed in the destination tab.
-        XCTAssertEqual(seed.url, url)
-        XCTAssertEqual(seed.bypassInsecureHTTPHostOnce, "www.linkedin.com")
-        XCTAssertEqual(seed.initialRequest.httpMethod, "POST")
-        XCTAssertEqual(seed.initialRequest.httpBody, body)
-        XCTAssertEqual(
-            seed.initialRequest.value(forHTTPHeaderField: "Referer"),
-            "https://www.linkedin.com/feed/"
-        )
-        XCTAssertEqual(
-            seed.initialRequest.value(forHTTPHeaderField: "X-Cmux-Test"),
-            "keep-me"
-        )
-        XCTAssertEqual(seed.initialRequest.cachePolicy, .reloadIgnoringLocalCacheData)
-    }
 }
 
 @MainActor
 final class BrowserPanelRemoteStoreTests: XCTestCase {
-    func testRemoteWorkspacePanelsShareWorkspaceScopedWebsiteDataStore() {
-        let localPanel = BrowserPanel(workspaceId: UUID(), isRemoteWorkspace: false)
-        let remoteWorkspaceId = UUID()
-        let firstRemotePanel = BrowserPanel(
-            workspaceId: remoteWorkspaceId,
-            isRemoteWorkspace: true,
-            remoteWebsiteDataStoreIdentifier: remoteWorkspaceId
-        )
-        let secondRemotePanel = BrowserPanel(
-            workspaceId: remoteWorkspaceId,
-            isRemoteWorkspace: true,
-            remoteWebsiteDataStoreIdentifier: remoteWorkspaceId
-        )
-
-        XCTAssertTrue(localPanel.webView.configuration.websiteDataStore === WKWebsiteDataStore.default())
-        XCTAssertFalse(firstRemotePanel.webView.configuration.websiteDataStore === WKWebsiteDataStore.default())
-        XCTAssertTrue(
-            firstRemotePanel.webView.configuration.websiteDataStore ===
-                secondRemotePanel.webView.configuration.websiteDataStore
-        )
-    }
-
-    func testRemoteWorkspaceDefersInitialNavigationUntilProxyEndpointIsReady() {
-        let remoteWorkspaceId = UUID()
-        let url = URL(string: "http://localhost:3000/demo")!
-        let panel = BrowserPanel(
-            workspaceId: remoteWorkspaceId,
-            initialURL: url,
-            isRemoteWorkspace: true,
-            remoteWebsiteDataStoreIdentifier: remoteWorkspaceId
-        )
-
-        XCTAssertEqual(panel.preferredURLStringForOmnibar(), url.absoluteString)
-        XCTAssertNil(panel.webView.url)
-
-        panel.setRemoteProxyEndpoint(BrowserProxyEndpoint(host: "127.0.0.1", port: 9876))
-
-        let deadline = Date().addingTimeInterval(1.0)
-        while panel.webView.url == nil, RunLoop.main.run(mode: .default, before: deadline), Date() < deadline {}
-
-        XCTAssertEqual(panel.preferredURLStringForOmnibar(), url.absoluteString)
-        XCTAssertEqual(panel.webView.url?.host, "cmux-loopback.localtest.me")
-    }
-
-    func testRemoteWorkspacePreservesLocalhostSubdomainWhenAliasingLoopbackURL() {
-        let remoteWorkspaceId = UUID()
-        let url = URL(string: "http://api.localhost:3000/demo")!
-        let panel = BrowserPanel(
-            workspaceId: remoteWorkspaceId,
-            initialURL: url,
-            isRemoteWorkspace: true,
-            remoteWebsiteDataStoreIdentifier: remoteWorkspaceId
-        )
-
-        XCTAssertEqual(panel.preferredURLStringForOmnibar(), url.absoluteString)
-        XCTAssertNil(panel.webView.url)
-
-        panel.setRemoteProxyEndpoint(BrowserProxyEndpoint(host: "127.0.0.1", port: 9876))
-
-        let deadline = Date().addingTimeInterval(1.0)
-        while panel.webView.url == nil, RunLoop.main.run(mode: .default, before: deadline), Date() < deadline {}
-
-        XCTAssertEqual(panel.preferredURLStringForOmnibar(), url.absoluteString)
-        XCTAssertEqual(panel.webView.url?.host, "api.cmux-loopback.localtest.me")
-    }
-
-    func testRemoteWorkspaceRuntimeBridgeAliasesMultipleLoopbackPortsFromSamePage() async throws {
-        let remoteWorkspaceId = UUID()
-        let panel = BrowserPanel(
-            workspaceId: remoteWorkspaceId,
-            isRemoteWorkspace: true,
-            remoteWebsiteDataStoreIdentifier: remoteWorkspaceId
-        )
-        let baseURL = try XCTUnwrap(URL(string: "http://cmux-loopback.localtest.me:3000/"))
-
-        panel.webView.loadHTMLString(
-            "<!doctype html><html><body>remote loopback bridge</body></html>",
-            baseURL: baseURL
-        )
-        try await waitForBrowserWebViewLoad(panel.webView)
-
-        let result = try await panel.evaluateJavaScript(
-            """
-            (() => {
-              const rewrite = window.__cmuxRewriteRemoteLoopbackURL;
-              if (typeof rewrite !== 'function') {
-                return 'missing bridge';
-              }
-              return JSON.stringify([
-                rewrite('http://localhost:3000/frontend'),
-                rewrite('http://localhost:8000/api'),
-                rewrite('http://api.localhost:8000/v1'),
-                rewrite('ws://localhost:5173/hmr'),
-                rewrite('wss://localhost:5173/hmr'),
-                rewrite('https://localhost:9443/secure')
-              ]);
-            })()
-            """
-        ) as? String
-
-        XCTAssertEqual(
-            result,
-            #"["http://cmux-loopback.localtest.me:3000/frontend","http://cmux-loopback.localtest.me:8000/api","http://api.cmux-loopback.localtest.me:8000/v1","ws://cmux-loopback.localtest.me:5173/hmr","wss://localhost:5173/hmr","https://localhost:9443/secure"]"#
-        )
-    }
-
-    func testRemoteWorkspaceKeepsHTTPSLoopbackUnaliased() {
-        let remoteWorkspaceId = UUID()
-        let url = URL(string: "https://localhost:3443/demo")!
-        let panel = BrowserPanel(
-            workspaceId: remoteWorkspaceId,
-            initialURL: url,
-            isRemoteWorkspace: true,
-            remoteWebsiteDataStoreIdentifier: remoteWorkspaceId
-        )
-
-        XCTAssertEqual(panel.preferredURLStringForOmnibar(), url.absoluteString)
-        XCTAssertNil(panel.webView.url)
-
-        panel.setRemoteProxyEndpoint(BrowserProxyEndpoint(host: "127.0.0.1", port: 9876))
-
-        let deadline = Date().addingTimeInterval(1.0)
-        while panel.webView.url == nil, RunLoop.main.run(mode: .default, before: deadline), Date() < deadline {}
-
-        XCTAssertEqual(panel.preferredURLStringForOmnibar(), url.absoluteString)
-        XCTAssertEqual(panel.webView.url?.host, "localhost")
-    }
 
     private func waitForBrowserWebViewLoad(_ webView: WKWebView, timeout: TimeInterval = 2.0) async throws {
         let deadline = Date().addingTimeInterval(timeout)
@@ -2435,375 +1918,12 @@ final class BrowserPanelRemoteStoreTests: XCTestCase {
             try await Task.sleep(nanoseconds: 10_000_000)
         }
     }
-
-    func testBrowserMoveIntoRemoteWorkspaceRebuildsWebsiteDataStoreScope() throws {
-        let source = Workspace()
-        let sourcePaneId = try XCTUnwrap(source.bonsplitController.allPaneIds.first)
-        let sourceBrowser = try XCTUnwrap(source.newBrowserSurface(inPane: sourcePaneId, focus: false))
-        let localStore = sourceBrowser.webView.configuration.websiteDataStore
-        XCTAssertTrue(localStore === WKWebsiteDataStore.default())
-
-        let destination = Workspace()
-        destination.configureRemoteConnection(
-            WorkspaceRemoteConfiguration(
-                destination: "cmux-macmini",
-                port: 22,
-                identityFile: nil,
-                sshOptions: [],
-                localProxyPort: nil,
-                relayPort: 64001,
-                relayID: "relay-store-dest",
-                relayToken: String(repeating: "a", count: 64),
-                localSocketPath: "/tmp/cmux-store-dest.sock",
-                terminalStartupCommand: "ssh cmux-macmini"
-            ),
-            autoConnect: false
-        )
-        let destinationPaneId = try XCTUnwrap(destination.bonsplitController.allPaneIds.first)
-        let destinationBrowser = try XCTUnwrap(destination.newBrowserSurface(inPane: destinationPaneId, focus: false))
-        let destinationStore = destinationBrowser.webView.configuration.websiteDataStore
-        XCTAssertFalse(destinationStore === WKWebsiteDataStore.default())
-
-        let detached = try XCTUnwrap(source.detachSurface(panelId: sourceBrowser.id))
-        let attachedPanelId = try XCTUnwrap(
-            destination.attachDetachedSurface(detached, inPane: destinationPaneId, focus: false)
-        )
-        let movedBrowser = try XCTUnwrap(destination.panels[attachedPanelId] as? BrowserPanel)
-
-        XCTAssertTrue(movedBrowser.webView.configuration.websiteDataStore === destinationStore)
-        XCTAssertFalse(movedBrowser.webView.configuration.websiteDataStore === localStore)
-    }
-
-    func testBrowserMoveOutOfRemoteWorkspaceRestoresDefaultWebsiteDataStore() throws {
-        let source = Workspace()
-        source.configureRemoteConnection(
-            WorkspaceRemoteConfiguration(
-                destination: "cmux-macmini",
-                port: 22,
-                identityFile: nil,
-                sshOptions: [],
-                localProxyPort: nil,
-                relayPort: 64002,
-                relayID: "relay-store-source",
-                relayToken: String(repeating: "b", count: 64),
-                localSocketPath: "/tmp/cmux-store-source.sock",
-                terminalStartupCommand: "ssh cmux-macmini"
-            ),
-            autoConnect: false
-        )
-        let sourcePaneId = try XCTUnwrap(source.bonsplitController.allPaneIds.first)
-        let movedBrowser = try XCTUnwrap(source.newBrowserSurface(inPane: sourcePaneId, focus: false))
-        let remainingRemoteBrowser = try XCTUnwrap(source.newBrowserSurface(inPane: sourcePaneId, focus: false))
-        let remoteStore = remainingRemoteBrowser.webView.configuration.websiteDataStore
-        XCTAssertFalse(remoteStore === WKWebsiteDataStore.default())
-
-        let destination = Workspace()
-        let destinationPaneId = try XCTUnwrap(destination.bonsplitController.allPaneIds.first)
-        let detached = try XCTUnwrap(source.detachSurface(panelId: movedBrowser.id))
-        let attachedPanelId = try XCTUnwrap(
-            destination.attachDetachedSurface(detached, inPane: destinationPaneId, focus: false)
-        )
-        let attachedBrowser = try XCTUnwrap(destination.panels[attachedPanelId] as? BrowserPanel)
-
-        XCTAssertTrue(attachedBrowser.webView.configuration.websiteDataStore === WKWebsiteDataStore.default())
-        XCTAssertTrue(remainingRemoteBrowser.webView.configuration.websiteDataStore === remoteStore)
-        XCTAssertFalse(remainingRemoteBrowser.webView.configuration.websiteDataStore === attachedBrowser.webView.configuration.websiteDataStore)
-    }
-
-    func testNewTerminalSurfaceStaysRemoteWhileBrowserPanelsKeepWorkspaceRemote() throws {
-        let workspace = Workspace()
-        let paneId = try XCTUnwrap(workspace.bonsplitController.allPaneIds.first)
-        let initialTerminalId = try XCTUnwrap(workspace.focusedPanelId)
-        let configuration = WorkspaceRemoteConfiguration(
-            destination: "cmux-macmini",
-            port: nil,
-            identityFile: nil,
-            sshOptions: [],
-            localProxyPort: nil,
-            relayPort: 64000,
-            relayID: "relay-test",
-            relayToken: String(repeating: "a", count: 64),
-            localSocketPath: "/tmp/cmux-test.sock",
-            terminalStartupCommand: "ssh cmux-macmini"
-        )
-
-        workspace.configureRemoteConnection(configuration, autoConnect: false)
-        _ = workspace.newBrowserSurface(inPane: paneId, url: URL(string: "https://example.com"), focus: false)
-
-        workspace.markRemoteTerminalSessionEnded(surfaceId: initialTerminalId, relayPort: configuration.relayPort)
-
-        XCTAssertTrue(workspace.isRemoteWorkspace)
-        XCTAssertEqual(workspace.activeRemoteTerminalSessionCount, 0)
-
-        _ = try XCTUnwrap(workspace.newTerminalSurface(inPane: paneId, focus: false))
-
-        XCTAssertTrue(workspace.isRemoteWorkspace)
-        XCTAssertEqual(workspace.activeRemoteTerminalSessionCount, 1)
-    }
 }
 
 final class WorkspaceRemoteConfigurationTransportKeyTests: XCTestCase {
-    func testProxyBrokerTransportKeyIgnoresControlPath() {
-        let first = WorkspaceRemoteConfiguration(
-            destination: "cmux-macmini",
-            port: 22,
-            identityFile: "~/.ssh/id_ed25519",
-            sshOptions: [
-                "Compression=yes",
-                "ControlMaster=auto",
-                "ControlPath=/tmp/cmux-ssh-501-64000-%C",
-            ],
-            localProxyPort: 9000,
-            relayPort: 64000,
-            relayID: "relay-a",
-            relayToken: "token-a",
-            localSocketPath: "/tmp/cmux-a.sock",
-            terminalStartupCommand: "ssh cmux-macmini"
-        )
-        let second = WorkspaceRemoteConfiguration(
-            destination: "cmux-macmini",
-            port: 22,
-            identityFile: "~/.ssh/id_ed25519",
-            sshOptions: [
-                "Compression=yes",
-                "ControlMaster=auto",
-                "ControlPath=/tmp/cmux-ssh-501-64001-%C",
-            ],
-            localProxyPort: 9000,
-            relayPort: 64001,
-            relayID: "relay-b",
-            relayToken: "token-b",
-            localSocketPath: "/tmp/cmux-b.sock",
-            terminalStartupCommand: "ssh cmux-macmini"
-        )
-
-        XCTAssertEqual(first.proxyBrokerTransportKey, second.proxyBrokerTransportKey)
-    }
-
-    func testProxyBrokerTransportKeyIgnoresEphemeralAgentSocketPath() {
-        let first = WorkspaceRemoteConfiguration(
-            destination: "cmux-macmini",
-            port: 22,
-            identityFile: "~/.ssh/id_ed25519",
-            sshOptions: [
-                "ForwardAgent=yes",
-                "ControlMaster=auto",
-            ],
-            localProxyPort: 9000,
-            relayPort: 64000,
-            relayID: "relay-a",
-            relayToken: "token-a",
-            localSocketPath: "/tmp/cmux-a.sock",
-            terminalStartupCommand: "ssh cmux-macmini",
-            agentSocketPath: "/tmp/cmux-agent-a.sock"
-        )
-        let second = WorkspaceRemoteConfiguration(
-            destination: "cmux-macmini",
-            port: 22,
-            identityFile: "~/.ssh/id_ed25519",
-            sshOptions: [
-                "ForwardAgent=yes",
-                "ControlMaster=auto",
-            ],
-            localProxyPort: 9000,
-            relayPort: 64000,
-            relayID: "relay-b",
-            relayToken: "token-b",
-            localSocketPath: "/tmp/cmux-b.sock",
-            terminalStartupCommand: "ssh cmux-macmini",
-            agentSocketPath: "/tmp/cmux-agent-b.sock"
-        )
-
-        XCTAssertEqual(first.proxyBrokerTransportKey, second.proxyBrokerTransportKey)
-    }
-
-    func testPersistentPTYIdentityRequiresSameRelayPort() {
-        let first = WorkspaceRemoteConfiguration(
-            destination: "cmux-macmini",
-            port: 22,
-            identityFile: "~/.ssh/id_ed25519",
-            sshOptions: [
-                "Compression=yes",
-                "ControlMaster=auto",
-                "ControlPath=/tmp/cmux-ssh-501-64000-%C",
-            ],
-            localProxyPort: nil,
-            relayPort: 64000,
-            relayID: "relay-a",
-            relayToken: "token-a",
-            localSocketPath: "/tmp/cmux-a.sock",
-            terminalStartupCommand: "ssh cmux-macmini",
-            preserveAfterTerminalExit: true,
-            persistentDaemonSlot: "ssh-test-slot"
-        )
-        let second = WorkspaceRemoteConfiguration(
-            destination: "cmux-macmini",
-            port: 22,
-            identityFile: "~/.ssh/id_ed25519",
-            sshOptions: [
-                "Compression=yes",
-                "ControlMaster=auto",
-                "ControlPath=/tmp/cmux-ssh-501-64001-%C",
-            ],
-            localProxyPort: nil,
-            relayPort: 64001,
-            relayID: "relay-b",
-            relayToken: "token-b",
-            localSocketPath: "/tmp/cmux-b.sock",
-            terminalStartupCommand: "ssh cmux-macmini",
-            preserveAfterTerminalExit: true,
-            persistentDaemonSlot: "ssh-test-slot"
-        )
-
-        XCTAssertFalse(first.hasSamePersistentPTYIdentity(as: second))
-        XCTAssertFalse(second.hasSamePersistentPTYIdentity(as: first))
-    }
-
-    func testPersistentPTYIdentityIgnoresEphemeralAgentSocketPath() {
-        let first = WorkspaceRemoteConfiguration(
-            destination: "cmux-macmini",
-            port: 22,
-            identityFile: "~/.ssh/id_ed25519",
-            sshOptions: [
-                "ForwardAgent=yes",
-                "ControlMaster=auto",
-            ],
-            localProxyPort: nil,
-            relayPort: 64000,
-            relayID: "relay-a",
-            relayToken: "token-a",
-            localSocketPath: "/tmp/cmux-a.sock",
-            terminalStartupCommand: "ssh cmux-macmini",
-            agentSocketPath: "/tmp/cmux-agent-a.sock",
-            preserveAfterTerminalExit: true,
-            persistentDaemonSlot: "ssh-test-slot"
-        )
-        let second = WorkspaceRemoteConfiguration(
-            destination: "cmux-macmini",
-            port: 22,
-            identityFile: "~/.ssh/id_ed25519",
-            sshOptions: [
-                "ForwardAgent=yes",
-                "ControlMaster=auto",
-            ],
-            localProxyPort: nil,
-            relayPort: 64000,
-            relayID: "relay-b",
-            relayToken: "token-b",
-            localSocketPath: "/tmp/cmux-b.sock",
-            terminalStartupCommand: "ssh cmux-macmini",
-            agentSocketPath: "/tmp/cmux-agent-b.sock",
-            preserveAfterTerminalExit: true,
-            persistentDaemonSlot: "ssh-test-slot"
-        )
-
-        XCTAssertTrue(first.hasSamePersistentPTYIdentity(as: second))
-        XCTAssertTrue(second.hasSamePersistentPTYIdentity(as: first))
-    }
 }
 
 final class WorkspaceRemoteSSHCleanupTests: XCTestCase {
-    func testOrphanedCMUXRemoteSSHPIDsMatchesOnlyParentOneRelayAndDaemonTransports() {
-        let psOutput = """
-          101 1 /usr/bin/ssh -N -T -S none -o ControlPath=/tmp/cmux-ssh-501-56080-%C -R 127.0.0.1:56080:127.0.0.1:64048 cmux-macmini
-          102 1 /usr/bin/ssh -T -S none -o RequestTTY=no cmux-macmini sh -c 'exec .cmux/bin/cmuxd-remote/0.63.1/darwin-arm64/cmuxd-remote serve --stdio'
-          107 1 /usr/bin/ssh -T -S none -o RequestTTY=no cmux-macmini sh -c 'exec .cmux/bin/cmuxd-remote/0.63.1/darwin-arm64/cmuxd-remote 'serve' '--stdio' '--persistent' '--slot' 'ssh-test''
-          103 999 /usr/bin/ssh -N -T -S none -R 127.0.0.1:56081:127.0.0.1:64049 cmux-macmini
-          104 1 /usr/bin/ssh -tt cmux-macmini
-          105 1 /usr/bin/ssh -N -T -S none -R 127.0.0.1:56082:127.0.0.1:64050 other-host
-          106 1 /usr/bin/ssh -T -S none cmux-macmini /bin/sh
-        """
-
-        XCTAssertEqual(
-            RemoteSessionCoordinator.orphanedCMUXRemoteSSHPIDs(
-                psOutput: psOutput,
-                destination: "cmux-macmini"
-            ),
-            [101, 102, 107]
-        )
-    }
-
-    func testOrphanedCMUXRemoteSSHPIDsCanRestrictCleanupToSpecificRelayPort() {
-        let psOutput = """
-          201 1 /usr/bin/ssh -N -T -S none -R 127.0.0.1:56080:127.0.0.1:64048 cmux-macmini
-          202 1 /usr/bin/ssh -N -T -S none -R 127.0.0.1:56081:127.0.0.1:64049 cmux-macmini
-          203 1 /usr/bin/ssh -T -S none -o RequestTTY=no cmux-macmini sh -c 'exec .cmux/bin/cmuxd-remote/0.63.1/darwin-arm64/cmuxd-remote serve --stdio'
-          204 1 /usr/bin/ssh -T -S none -o RequestTTY=no cmux-macmini sh -c 'exec .cmux/bin/cmuxd-remote/0.63.1/darwin-arm64/cmuxd-remote 'serve' '--stdio' '--persistent' '--slot' 'ssh-test''
-          205 1 /usr/bin/ssh -T -S none -o RequestTTY=no cmux-macmini sh -c 'exec .cmux/bin/cmuxd-remote/0.63.1/darwin-arm64/cmuxd-remote 'serve' '--stdio' '--persistent' '--slot' 'ssh-other''
-        """
-
-        XCTAssertEqual(
-            RemoteSessionCoordinator.orphanedCMUXRemoteSSHPIDs(
-                psOutput: psOutput,
-                destination: "cmux-macmini",
-                relayPort: 56081,
-                persistentDaemonSlot: "ssh-test"
-            ),
-            [202, 204]
-        )
-
-        XCTAssertEqual(
-            RemoteSessionCoordinator.orphanedCMUXRemoteSSHPIDs(
-                psOutput: psOutput,
-                destination: "cmux-macmini",
-                relayPort: 56081
-            ),
-            [202]
-        )
-    }
-
-    func testOrphanedCMUXRemoteSSHPIDsMatchesBackslashEscapedPersistentDaemonSlot() {
-        let psOutput = """
-          211 1 /usr/bin/ssh -T -S none -o RequestTTY=no cmux-macmini sh -c 'exec '\''.cmux/bin/cmuxd-remote/0.63.1/darwin-arm64/cmuxd-remote'\'' '\''serve'\'' '\''--stdio'\'' '\''--persistent'\'' '\''--slot'\'' '\''ssh-test'\'''
-          212 1 /usr/bin/ssh -T -S none -o RequestTTY=no cmux-macmini sh -c 'exec '\''.cmux/bin/cmuxd-remote/0.63.1/darwin-arm64/cmuxd-remote'\'' '\''serve'\'' '\''--stdio'\'' '\''--persistent'\'' '\''--slot'\'' '\''ssh-other'\'''
-        """
-
-        XCTAssertEqual(
-            RemoteSessionCoordinator.orphanedCMUXRemoteSSHPIDs(
-                psOutput: psOutput,
-                destination: "cmux-macmini",
-                relayPort: 56081,
-                persistentDaemonSlot: "ssh-test"
-            ),
-            [211]
-        )
-    }
-
-    func testOrphanedCMUXRemoteSSHPIDsMatchesEqualsQuotedPersistentDaemonSlot() {
-        let psOutput = """
-          221 1 /usr/bin/ssh -T -S none -o RequestTTY=no cmux-macmini sh -c 'exec .cmux/bin/cmuxd-remote serve --stdio --persistent --slot='ssh-test''
-          222 1 /usr/bin/ssh -T -S none -o RequestTTY=no cmux-macmini sh -c 'exec .cmux/bin/cmuxd-remote serve --stdio --persistent --slot="ssh-other"'
-        """
-
-        XCTAssertEqual(
-            RemoteSessionCoordinator.orphanedCMUXRemoteSSHPIDs(
-                psOutput: psOutput,
-                destination: "cmux-macmini",
-                relayPort: 56081,
-                persistentDaemonSlot: "ssh-test"
-            ),
-            [221]
-        )
-    }
-
-    func testOrphanedCMUXRemoteSSHPIDsWithSlotAndNoRelayKeepsGenericCleanup() {
-        let psOutput = """
-          301 1 /usr/bin/ssh -N -T -S none -R 127.0.0.1:56080:127.0.0.1:64048 cmux-macmini
-          302 1 /usr/bin/ssh -T -S none -o RequestTTY=no cmux-macmini sh -c 'exec .cmux/bin/cmuxd-remote/0.63.1/darwin-arm64/cmuxd-remote serve --stdio'
-          303 1 /usr/bin/ssh -T -S none -o RequestTTY=no cmux-macmini sh -c 'exec .cmux/bin/cmuxd-remote/0.63.1/darwin-arm64/cmuxd-remote 'serve' '--stdio' '--persistent' '--slot' 'ssh-test''
-          304 1 /usr/bin/ssh -T -S none -o RequestTTY=no cmux-macmini sh -c 'exec .cmux/bin/cmuxd-remote/0.63.1/darwin-arm64/cmuxd-remote 'serve' '--stdio' '--persistent' '--slot' 'ssh-other''
-          305 1 /usr/bin/ssh -T -S none -o RequestTTY=no other-host sh -c 'exec .cmux/bin/cmuxd-remote/0.63.1/darwin-arm64/cmuxd-remote serve --stdio'
-        """
-
-        XCTAssertEqual(
-            RemoteSessionCoordinator.orphanedCMUXRemoteSSHPIDs(
-                psOutput: psOutput,
-                destination: "cmux-macmini",
-                persistentDaemonSlot: "ssh-test"
-            ),
-            [301, 302, 303]
-        )
-    }
 }
 
 final class TitlebarDoubleClickPreferenceTests: XCTestCase {
@@ -2852,59 +1972,6 @@ final class TitlebarDoubleClickPreferenceTests: XCTestCase {
 }
 
 final class WorkspaceRemoteDaemonPendingCallRegistryTests: XCTestCase {
-    func testSupportsMultiplePendingCallsResolvedOutOfOrder() {
-        let registry = RemoteDaemonPendingCallRegistry()
-        let first = registry.register()
-        let second = registry.register()
-
-        XCTAssertTrue(registry.resolve(id: second.id, payload: [
-            "ok": true,
-            "result": ["stream_id": "second"],
-        ]))
-
-        switch registry.wait(for: second, timeout: 0.1) {
-        case .response(let response):
-            XCTAssertEqual(response["ok"] as? Bool, true)
-            XCTAssertEqual((response["result"] as? [String: String])?["stream_id"], "second")
-        default:
-            XCTFail("second pending call should complete independently")
-        }
-
-        XCTAssertTrue(registry.resolve(id: first.id, payload: [
-            "ok": true,
-            "result": ["stream_id": "first"],
-        ]))
-
-        switch registry.wait(for: first, timeout: 0.1) {
-        case .response(let response):
-            XCTAssertEqual(response["ok"] as? Bool, true)
-            XCTAssertEqual((response["result"] as? [String: String])?["stream_id"], "first")
-        default:
-            XCTFail("first pending call should remain pending until its own response arrives")
-        }
-    }
-
-    func testFailAllSignalsEveryPendingCall() {
-        let registry = RemoteDaemonPendingCallRegistry()
-        let first = registry.register()
-        let second = registry.register()
-
-        registry.failAll("daemon transport stopped")
-
-        switch registry.wait(for: first, timeout: 0.1) {
-        case .failure(let message):
-            XCTAssertEqual(message, "daemon transport stopped")
-        default:
-            XCTFail("first pending call should receive shared failure")
-        }
-
-        switch registry.wait(for: second, timeout: 0.1) {
-        case .failure(let message):
-            XCTAssertEqual(message, "daemon transport stopped")
-        default:
-            XCTFail("second pending call should receive shared failure")
-        }
-    }
 }
 
 final class WindowBackgroundSelectionGateTests: XCTestCase {

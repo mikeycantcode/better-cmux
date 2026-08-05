@@ -16,7 +16,6 @@ import Testing
             title: "lmao",
             isPinned: false,
             customColorHex: nil,
-            remoteConnectionStatusText: "Connected",
             latestConversationMessage: "old message",
             listeningPorts: [3000],
             finderDirectoryPath: "/old"
@@ -25,7 +24,6 @@ import Testing
             title: "lmao",
             isPinned: true,
             customColorHex: nil,
-            remoteConnectionStatusText: "Disconnected",
             latestConversationMessage: "new message",
             listeningPorts: [3000, 4000],
             finderDirectoryPath: nil
@@ -42,7 +40,6 @@ import Testing
         expectedDisplayed = expectedDisplayed.applyingContextMenuImmediateFields(from: next)
         #expect(decision.workspaceSnapshotStorage == expectedDisplayed)
         #expect(decision.workspaceSnapshotStorage?.isPinned == true)
-        #expect(decision.workspaceSnapshotStorage?.remoteConnectionStatusText == "Connected")
         #expect(decision.workspaceSnapshotStorage?.latestConversationMessage == "old message")
         #expect(decision.workspaceSnapshotStorage?.listeningPorts == [3000])
         #expect(decision.workspaceSnapshotStorage?.finderDirectoryPath == nil)
@@ -80,13 +77,11 @@ import Testing
 
     @Test func contextMenuMediaActivityChangeUpdatesDisplayedGlyphImmediately() {
         let current = Self.snapshot(
-            remoteConnectionStatusText: "Connected",
             latestConversationMessage: "old message",
             listeningPorts: [3000],
             mediaActivity: BrowserMediaActivity(isPlayingAudio: true)
         )
         let next = Self.snapshot(
-            remoteConnectionStatusText: "Disconnected",
             latestConversationMessage: "new message",
             listeningPorts: [3000, 4000],
             mediaActivity: BrowserMediaActivity(isPlayingAudio: false)
@@ -100,7 +95,6 @@ import Testing
         )
 
         #expect(decision.workspaceSnapshotStorage?.mediaActivity.isPlayingAudio == false)
-        #expect(decision.workspaceSnapshotStorage?.remoteConnectionStatusText == "Connected")
         #expect(decision.workspaceSnapshotStorage?.latestConversationMessage == "old message")
         #expect(decision.workspaceSnapshotStorage?.listeningPorts == [3000])
         #expect(decision.pendingWorkspaceSnapshot == next)
@@ -129,7 +123,6 @@ import Testing
         customDescription: String? = nil,
         isPinned: Bool = false,
         customColorHex: String? = nil,
-        remoteConnectionStatusText: String = "Disconnected",
         latestConversationMessage: String? = nil,
         listeningPorts: [Int] = [],
         finderDirectoryPath: String? = nil,
@@ -141,11 +134,6 @@ import Testing
             customDescription: customDescription,
             isPinned: isPinned,
             customColorHex: customColorHex,
-            remoteWorkspaceSidebarText: nil,
-            remoteConnectionStatusText: remoteConnectionStatusText,
-            remoteStateHelpText: "",
-            showsRemoteReconnectAffordance: false,
-            copyableSidebarSSHError: nil,
             latestConversationMessage: latestConversationMessage,
             metadataEntries: [],
             metadataBlocks: [],
