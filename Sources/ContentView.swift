@@ -2167,12 +2167,15 @@ struct ContentView: View {
         // which is additionally pushed right past the traffic lights. Fullscreen hides
         // the traffic lights, so the offset is zero there and the SwiftUI cluster sits at
         // `edgePadding`.
+        // The base is the traffic-light inset AppKit places the `.left` accessory after
+        // (~78pt); `leadingOffset` only adds the debug delta on top (0 at defaults).
         let leadingClusterOrigin = isFullScreen
             ? edgePadding
-            : TitlebarControlsLayoutMetrics.leadingOffset(
-                trafficLightFrame: nil,
-                debugSnapshot: titlebarDebugChromeSnapshot
-            )
+            : CGFloat(titlebarDebugChromeSnapshot.trafficLightTitlebarLeadingInset)
+                + TitlebarControlsLayoutMetrics.leadingOffset(
+                    trafficLightFrame: nil,
+                    debugSnapshot: titlebarDebugChromeSnapshot
+                )
         // 8pt breathing room between the widest cluster and the title. The clearance is
         // symmetric (max of both edges) so the title stays centered on the band; only the
         // usable title width shrinks.
