@@ -13,15 +13,62 @@ struct GitPanelView: View {
     /// nil until Task 8 lands `GitChangesPanel`; the affordance stays hidden.
     let openChanges: (() -> Void)?
 
+    /// Exactly one confirmation can be pending. Two stacked
+    /// `.confirmationDialog` modifiers on the same view silently present only
+    /// one on macOS, so the second dialog is modelled as another case here
+    /// rather than as another modifier.
+    enum PendingConfirm: Identifiable {
+        case discardEntries([GitStatusEntry])
+        case discardFile(GitStatusEntry)
+
+        var id: String {
+            switch self {
+            case .discardEntries(let entries): return "all:" + entries.map(\.path).joined(separator: "\u{1}")
+            case .discardFile(let entry): return "file:" + entry.path
+            }
+        }
+
+        var entries: [GitStatusEntry] {
+            switch self {
+            case .discardEntries(let entries): return entries
+            case .discardFile(let entry): return [entry]
+            }
+        }
+
+        var isBatch: Bool {
+            if case .discardEntries = self { return true }
+            return false
+        }
+    }
+
     @State private var commitMessage: String = ""
-    @State private var confirmDiscardAll = false
-    @State private var pendingDiscard: GitStatusEntry?
+    @State private var pendingConfirm: PendingConfirm?
 
     /// Absolute path for a repo-relative git entry path.
     static func absolutePath(root: String, relative: String) -> String {
         guard !root.isEmpty else { return relative }
         if relative.hasPrefix("/") { return relative }
         return root.hasSuffix("/") ? root + relative : root + "/" + relative
+    }
+
+    /// Commit is available only with something staged, a non-blank message, and
+    /// no git command in flight.
+    static func isCommitEnabled(stagedCount: Int, message: String, isBusy: Bool) -> Bool {
+        stagedCount > 0
+            && !message.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            && !isBusy
+    }
+
+    /// Push is a no-op when an upstream exists and nothing is ahead; with no
+    /// upstream the button always publishes the branch.
+    static func isPushEnabled(hasUpstream: Bool, publishCount: Int, isBusy: Bool) -> Bool {
+        !isBusy && !(hasUpstream && publishCount == 0)
+    }
+
+    static func pushButtonLabel(hasUpstream: Bool, publishCount: Int) -> String {
+        hasUpstream
+            ? String(localized: "gitPanel.push", defaultValue: "Push (\(publishCount))")
+            : String(localized: "gitPanel.publishBranch", defaultValue: "Publish Branch (\(publishCount))")
     }
 
     var body: some View {
@@ -46,35 +93,29 @@ struct GitPanelView: View {
             commitBox
         }
         .confirmationDialog(
-            String(
-                localized: "gitPanel.discardAll.confirm",
-                defaultValue: "Discard all changes? This cannot be undone."
-            ),
-            isPresented: $confirmDiscardAll
-        ) {
-            Button(
-                String(localized: "gitPanel.discardAll.confirmButton", defaultValue: "Discard All"),
-                role: .destructive
-            ) {
-                Task { await model.discardAll() }
-            }
-        }
-        .confirmationDialog(
-            String(
-                localized: "gitPanel.discardFile.confirm",
-                defaultValue: "Discard changes to this file? This cannot be undone."
-            ),
+            pendingConfirm?.isBatch == true
+                ? String(
+                    localized: "gitPanel.discardAll.confirm",
+                    defaultValue: "Discard all changes? This cannot be undone."
+                )
+                : String(
+                    localized: "gitPanel.discardFile.confirm",
+                    defaultValue: "Discard changes to this file? This cannot be undone."
+                ),
             isPresented: Binding(
-                get: { pendingDiscard != nil },
-                set: { if !$0 { pendingDiscard = nil } }
+                get: { pendingConfirm != nil },
+                set: { if !$0 { pendingConfirm = nil } }
             ),
-            presenting: pendingDiscard
-        ) { entry in
+            presenting: pendingConfirm
+        ) { pending in
             Button(
-                String(localized: "gitPanel.discardFile.confirmButton", defaultValue: "Discard"),
+                pending.isBatch
+                    ? String(localized: "gitPanel.discardAll.confirmButton", defaultValue: "Discard All")
+                    : String(localized: "gitPanel.discardFile.confirmButton", defaultValue: "Discard"),
                 role: .destructive
             ) {
-                Task { await model.discardFile(entry) }
+                let entries = pending.entries
+                Task { for entry in entries { await model.discardFile(entry) } }
             }
         }
         .task { await model.refresh() }
@@ -153,10 +194,17 @@ struct GitPanelView: View {
                 HStack(spacing: 10) {
                     sectionAction(
                         String(localized: "gitPanel.action.discardAll", defaultValue: "Discard All")
-                    ) { confirmDiscardAll = true }
+                    ) {
+                        // Scoped to this section: `model.discardAll()` would also
+                        // `git clean` the untracked files listed below.
+                        pendingConfirm = .discardEntries(model.status.modified)
+                    }
                     sectionAction(
                         String(localized: "gitPanel.action.stageAll", defaultValue: "Stage All")
-                    ) { Task { await model.stageAll() } }
+                    ) {
+                        let paths = model.status.modified.map(\.path)
+                        Task { for path in paths { await model.stageFile(path) } }
+                    }
                 }
             ),
             perRow: { entry in
@@ -178,7 +226,12 @@ struct GitPanelView: View {
             trailing: AnyView(
                 sectionAction(
                     String(localized: "gitPanel.action.stageAll", defaultValue: "Stage All")
-                ) { Task { await model.stageAll() } }
+                ) {
+                    // Scoped to this section: `model.stageAll()` runs `add -A`,
+                    // which would also stage the MODIFIED files listed above.
+                    let paths = model.status.untracked.map(\.path)
+                    Task { for path in paths { await model.stageFile(path) } }
+                }
             ),
             perRow: { entry in
                 rowActions(
@@ -235,7 +288,7 @@ struct GitPanelView: View {
                 }
                 .buttonStyle(.plain)
                 .help(primaryHelp)
-                Button { pendingDiscard = entry } label: {
+                Button { pendingConfirm = .discardFile(entry) } label: {
                     Image(systemName: "arrow.uturn.backward").font(.system(size: 10))
                 }
                 .buttonStyle(.plain)
@@ -268,30 +321,36 @@ struct GitPanelView: View {
                 }
                 .buttonStyle(.borderedProminent)
                 .disabled(
-                    model.isBusy
-                    || model.status.staged.isEmpty
-                    || commitMessage.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                    !Self.isCommitEnabled(
+                        stagedCount: model.status.staged.count,
+                        message: commitMessage,
+                        isBusy: model.isBusy
+                    )
                 )
                 Button {
                     Task { await model.push() }
                 } label: {
-                    Text(pushButtonLabel)
-                        .frame(maxWidth: .infinity)
+                    Text(
+                        Self.pushButtonLabel(
+                            hasUpstream: model.hasUpstream,
+                            publishCount: model.publishCount
+                        )
+                    )
+                    .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.borderedProminent)
                 .tint(.green)
-                .disabled(model.isBusy || (model.publishCount == 0 && model.hasUpstream))
+                .disabled(
+                    !Self.isPushEnabled(
+                        hasUpstream: model.hasUpstream,
+                        publishCount: model.publishCount,
+                        isBusy: model.isBusy
+                    )
+                )
             }
             .controlSize(.small)
         }
         .padding(12)
-    }
-
-    private var pushButtonLabel: String {
-        let count = model.publishCount
-        return model.hasUpstream
-            ? String(localized: "gitPanel.push", defaultValue: "Push (\(count))")
-            : String(localized: "gitPanel.publishBranch", defaultValue: "Publish Branch (\(count))")
     }
 }
 
