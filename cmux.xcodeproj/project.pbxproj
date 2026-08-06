@@ -386,7 +386,6 @@
 		FEED0000000000000000F011 /* FeedPanelViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEED0000000000000000F010 /* FeedPanelViewModel.swift */; };
 		FEED0000000000000000F013 /* FeedPermissionActionPolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEED0000000000000000F012 /* FeedPermissionActionPolicy.swift */; };
 		FEED0000000000000000F00B /* FeedPreviewWindowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEED0000000000000000F00A /* FeedPreviewWindowController.swift */; };
-		FEED0000000000000000F009 /* FeedSidebarUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEED0000000000000000F008 /* FeedSidebarUITests.swift */; };
 		FEED0000000000000000F00F /* FeedTextEditorDebugWindowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEED0000000000000000F00E /* FeedTextEditorDebugWindowController.swift */; };
 		D0B1001AA1B2C3D4E5F60001 /* FileDropHintBadgeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0B1001BA1B2C3D4E5F60001 /* FileDropHintBadgeView.swift */; };
 		D0B10020A1B2C3D4E5F60001 /* FileDropOverlayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0B10021A1B2C3D4E5F60001 /* FileDropOverlayView.swift */; };
@@ -705,7 +704,6 @@
 		A50019B0 /* SettingsSearchAliases.swift in Sources */ = {isa = PBXBuildFile; fileRef = A50019B1 /* SettingsSearchAliases.swift */; };
 		A50019B2 /* SettingsSearchIndexTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A50019B3 /* SettingsSearchIndexTests.swift */; };
 		D10000000000000000A0001C /* SettingsShortcutsBehaviorUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D10000000000000000A0001D /* SettingsShortcutsBehaviorUITests.swift */; };
-		D10000000000000000A00016 /* SettingsSidebarBetaBehaviorUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D10000000000000000A00017 /* SettingsSidebarBetaBehaviorUITests.swift */; };
 		D10000000000000000A00014 /* SettingsTerminalBehaviorUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D10000000000000000A00015 /* SettingsTerminalBehaviorUITests.swift */; };
 		D10000000000000000A00010 /* SettingsUITestSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = D10000000000000000A00011 /* SettingsUITestSupport.swift */; };
 		D36090030000000000000001 /* SettingsWindowOpenOutcome.swift in Sources */ = {isa = PBXBuildFile; fileRef = D36090030000000000000002 /* SettingsWindowOpenOutcome.swift */; };
@@ -1373,7 +1371,6 @@
 		FEED0000000000000000F010 /* FeedPanelViewModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = FeedPanelViewModel.swift; sourceTree = "<group>"; };
 		FEED0000000000000000F012 /* FeedPermissionActionPolicy.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = FeedPermissionActionPolicy.swift; sourceTree = "<group>"; };
 		FEED0000000000000000F00A /* FeedPreviewWindowController.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = FeedPreviewWindowController.swift; sourceTree = "<group>"; };
-		FEED0000000000000000F008 /* FeedSidebarUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeedSidebarUITests.swift; sourceTree = "<group>"; };
 		FEED0000000000000000F00E /* FeedTextEditorDebugWindowController.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = FeedTextEditorDebugWindowController.swift; sourceTree = "<group>"; };
 		D0B1001BA1B2C3D4E5F60001 /* FileDropHintBadgeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileDropHintBadgeView.swift; sourceTree = "<group>"; };
 		D0B10021A1B2C3D4E5F60001 /* FileDropOverlayView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileDropOverlayView.swift; sourceTree = "<group>"; };
@@ -1691,7 +1688,6 @@
 		A50019B1 /* SettingsSearchAliases.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsSearchAliases.swift; sourceTree = "<group>"; };
 		A50019B3 /* SettingsSearchIndexTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsSearchIndexTests.swift; sourceTree = "<group>"; };
 		D10000000000000000A0001D /* SettingsShortcutsBehaviorUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsShortcutsBehaviorUITests.swift; sourceTree = "<group>"; };
-		D10000000000000000A00017 /* SettingsSidebarBetaBehaviorUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsSidebarBetaBehaviorUITests.swift; sourceTree = "<group>"; };
 		D10000000000000000A00015 /* SettingsTerminalBehaviorUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsTerminalBehaviorUITests.swift; sourceTree = "<group>"; };
 		D10000000000000000A00011 /* SettingsUITestSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsUITestSupport.swift; sourceTree = "<group>"; };
 		D36090030000000000000002 /* SettingsWindowOpenOutcome.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = App/SettingsWindowOpenOutcome.swift; sourceTree = "<group>"; };
@@ -2078,7 +2074,6 @@
 			isa = PBXGroup;
 			children = (
 				B9000011A1B2C3D4E5F60719 /* AutomationSocketUITests.swift */,
-				FEED0000000000000000F008 /* FeedSidebarUITests.swift */,
 				B9000013A1B2C3D4E5F60719 /* JumpToUnreadUITests.swift */,
 				B9000022A1B2C3D4E5F60719 /* CloseWorkspaceCmdDUITests.swift */,
 				B9000019A1B2C3D4E5F60719 /* CloseWorkspaceConfirmDialogUITests.swift */,
@@ -2106,7 +2101,6 @@
 				D10000000000000000B00001 /* ControlSocketReadinessUITestSupport.swift */,
 				D10000000000000000A00013 /* SettingsAppBehaviorUITests.swift */,
 				D10000000000000000A00015 /* SettingsTerminalBehaviorUITests.swift */,
-				D10000000000000000A00017 /* SettingsSidebarBetaBehaviorUITests.swift */,
 				D10000000000000000A00019 /* SettingsAutomationBehaviorUITests.swift */,
 				D10000000000000000A0001B /* SettingsBrowserBehaviorUITests.swift */,
 				D10000000000000000A0001D /* SettingsShortcutsBehaviorUITests.swift */,
@@ -4072,7 +4066,6 @@
 				C0DE32470000000000000005 /* CommandPaletteIdentifierClipboardUITests.swift in Sources */,
 				D10000000000000000B00000 /* ControlSocketReadinessUITestSupport.swift in Sources */,
 				B8F266266A1A3D9A45BD840F /* DisplayResolutionRegressionUITests.swift in Sources */,
-				FEED0000000000000000F009 /* FeedSidebarUITests.swift in Sources */,
 				D0E0F0B4A1B2C3D4E5F60718 /* FindSelectionShortcutUITests.swift in Sources */,
 				C0DE34020000000000000005 /* HelpMenuUITests.swift in Sources */,
 				B9000014A1B2C3D4E5F60719 /* JumpToUnreadUITests.swift in Sources */,
@@ -4085,7 +4078,6 @@
 				D10000000000000000A00018 /* SettingsAutomationBehaviorUITests.swift in Sources */,
 				D10000000000000000A0001A /* SettingsBrowserBehaviorUITests.swift in Sources */,
 				D10000000000000000A0001C /* SettingsShortcutsBehaviorUITests.swift in Sources */,
-				D10000000000000000A00016 /* SettingsSidebarBetaBehaviorUITests.swift in Sources */,
 				D10000000000000000A00014 /* SettingsTerminalBehaviorUITests.swift in Sources */,
 				D10000000000000000A00010 /* SettingsUITestSupport.swift in Sources */,
 				D10000000000000000A0001E /* SettingsWorkspaceColorsBehaviorUITests.swift in Sources */,
