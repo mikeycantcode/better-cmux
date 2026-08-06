@@ -327,6 +327,42 @@ struct FileExplorerStoreTests {
         store.expand(node: node)
         #expect(!(store.isExpanded(node)))
     }
+
+    // MARK: - Gitignore dimming
+
+    @Test
+    func testMarksGitignoredChildrenAsIgnored() async throws {
+        let base = NSTemporaryDirectory() + "cmux-ignore-" + UUID().uuidString
+        try FileManager.default.createDirectory(atPath: base + "/.venv", withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(atPath: base) }
+        // git resolves the worktree through symlinks (/var -> /private/var on macOS),
+        // so absolute child paths must be given in resolved form or git reports them
+        // as outside the repository.
+        let dir = URL(fileURLWithPath: base).resolvingSymlinksInPath().path
+
+        try "x\n".write(toFile: dir + "/kept.txt", atomically: true, encoding: .utf8)
+        try ".venv/\ncalibration.json\n".write(toFile: dir + "/.gitignore", atomically: true, encoding: .utf8)
+        try "{}\n".write(toFile: dir + "/calibration.json", atomically: true, encoding: .utf8)
+
+        let git = Process()
+        git.executableURL = URL(fileURLWithPath: "/usr/bin/git")
+        git.currentDirectoryURL = URL(fileURLWithPath: dir)
+        git.arguments = ["init"]
+        git.standardOutput = Pipe()
+        git.standardError = Pipe()
+        try git.run()
+        git.waitUntilExit()
+
+        let store = FileExplorerStore()
+        store.showHiddenFiles = true
+        store.setProviderForTesting(LocalFileExplorerProvider())
+        store.setRootPath(dir)
+
+        try await waitFor("gitignored children marked") { store.isIgnored(dir + "/calibration.json") }
+        #expect(store.isIgnored(dir + "/.venv"))
+        #expect(store.isIgnored(dir + "/calibration.json"))
+        #expect(!store.isIgnored(dir + "/kept.txt"))
+    }
 }
 
 @MainActor

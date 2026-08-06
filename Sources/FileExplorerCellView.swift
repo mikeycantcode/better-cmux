@@ -79,7 +79,7 @@ final class FileExplorerCellView: NSTableCellView {
         nameLabelTrailingToLoadingConstraint.isActive = false
     }
 
-    func configure(with node: FileExplorerNode, gitStatus: GitFileStatus? = nil) {
+    func configure(with node: FileExplorerNode, gitStatus: GitFileStatus? = nil, isIgnored: Bool = false) {
         assert(Thread.isMainThread, "AppKit image updates must run on the main thread")
         let style = FileExplorerStyle.current
         nameLabel.stringValue = node.name
@@ -156,6 +156,10 @@ final class FileExplorerCellView: NSTableCellView {
             nameLabel.textColor = .labelColor
             nameLabel.toolTip = node.path
         }
+
+        let ignoredAlpha: CGFloat = isIgnored ? 0.4 : 1.0
+        iconView.alphaValue = ignoredAlpha
+        nameLabel.alphaValue = ignoredAlpha
     }
 
     override func updateTrackingAreas() {

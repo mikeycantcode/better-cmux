@@ -342,6 +342,8 @@ final class FileExplorerStore: ObservableObject {
     @Published var rootNodes: [FileExplorerNode] = []
     @Published private(set) var isRootLoading: Bool = false
     @Published private(set) var gitStatusByPath: [String: GitFileStatus] = [:]
+    /// Absolute paths that git reports as ignored. Populated lazily as directories load.
+    @Published private(set) var ignoredPaths: Set<String> = []
     @Published private(set) var contentRevision = 0
     @Published private(set) var rootStatusMessage: String?
     private(set) var workspaceRootIdentity: UUID?
@@ -419,14 +421,18 @@ final class FileExplorerStore: ObservableObject {
             pendingDescendIntoFirstChildPath = nil
         }
         rootPath = path
+        ignoredPaths = []
         reload()
         refreshGitStatus()
         updateDirectoryWatcher()
     }
 
+    func isIgnored(_ path: String) -> Bool { ignoredPaths.contains(path) }
+
     func refreshGitStatus() {
         guard !rootPath.isEmpty else {
             gitStatusByPath = [:]
+            ignoredPaths = []
             return
         }
         let path = rootPath
@@ -436,6 +442,42 @@ final class FileExplorerStore: ObservableObject {
                 self?.gitStatusByPath = status
             }
         }
+    }
+
+    /// Batches a `git check-ignore` query for freshly loaded children and folds the
+    /// ignored subset into `ignoredPaths` on the main thread.
+    private func refreshIgnoredStatus(forChildPaths paths: [String]) {
+        guard provider is LocalFileExplorerProvider, !paths.isEmpty, !rootPath.isEmpty else { return }
+        let root = rootPath
+        DispatchQueue.global(qos: .utility).async {
+            let ignored = Self.checkIgnored(paths: paths, repoRoot: root)
+            guard !ignored.isEmpty else { return }
+            DispatchQueue.main.async { [weak self] in
+                guard let self, self.rootPath == root else { return }
+                self.ignoredPaths.formUnion(ignored)
+            }
+        }
+    }
+
+    /// Feeds paths to `git check-ignore --stdin -z`; returns the subset git reports ignored.
+    private static func checkIgnored(paths: [String], repoRoot: String) -> Set<String> {
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/usr/bin/git")
+        process.currentDirectoryURL = URL(fileURLWithPath: repoRoot)
+        process.arguments = ["check-ignore", "--stdin", "-z"]
+        let stdin = Pipe(), stdout = Pipe()
+        process.standardInput = stdin
+        process.standardOutput = stdout
+        process.standardError = Pipe()
+        guard (try? process.run()) != nil else { return [] }
+        let payload = paths.joined(separator: "\0") + "\0"
+        stdin.fileHandleForWriting.write(payload.data(using: .utf8) ?? Data())
+        try? stdin.fileHandleForWriting.close()
+        let data = stdout.fileHandleForReading.readDataToEndOfFile()
+        process.waitUntilExit()
+        // exit 0 = some ignored, 1 = none, others = error
+        guard process.terminationStatus == 0, let text = String(data: data, encoding: .utf8) else { return [] }
+        return Set(text.split(separator: "\0").map(String.init))
     }
 
     private func updateDirectoryWatcher() {
@@ -637,6 +679,8 @@ final class FileExplorerStore: ObservableObject {
             loadingPaths.remove(path)
             loadTasks.removeValue(forKey: path)
             objectWillChange.send()
+
+            refreshIgnoredStatus(forChildPaths: children.map(\.path))
 
             // Auto-expand children that were previously expanded
             for child in children where child.isDirectory && expandedPaths.contains(child.path) {

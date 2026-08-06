@@ -268,7 +268,7 @@ struct FileExplorerPanelView: NSViewRepresentable {
             }
 
             let gitStatus = store.gitStatusByPath[node.path]
-            cellView.configure(with: node, gitStatus: gitStatus)
+            cellView.configure(with: node, gitStatus: gitStatus, isIgnored: store.isIgnored(node.path))
             cellView.onHover = { [weak self] isHovering in
                 guard let self else { return }
                 if isHovering {
