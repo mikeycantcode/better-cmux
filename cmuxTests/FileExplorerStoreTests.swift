@@ -425,9 +425,11 @@ struct FileExplorerStoreTests {
         #expect(store.visibleChildren(of: nil).count == 2)
 
         store.filterText = "bp"
+        store.flushPendingFilterRecompute()
         #expect(store.visibleChildren(of: nil).map(\.path) == ["/p/bus.py"])
 
         store.filterText = ""
+        store.flushPendingFilterRecompute()
         #expect(store.visibleChildren(of: nil).count == 2)
     }
 
@@ -442,10 +444,49 @@ struct FileExplorerStoreTests {
         store.rootNodes = [dir, empty]
 
         store.filterText = "bus"
+        store.flushPendingFilterRecompute()
         #expect(store.visibleChildren(of: nil).map(\.path) == ["/p/src"])
         #expect(store.visibleChildren(of: dir).map(\.path) == ["/p/src/bus.py"])
         #expect(store.subtreeContainsFilterMatch(dir))
         #expect(!store.subtreeContainsFilterMatch(empty))
+    }
+
+    @Test
+    func testFilterKeepsUnloadedDirectoriesVisible() {
+        let store = FileExplorerStore()
+        // Never expanded: children == nil, so its contents cannot be searched yet.
+        let unloaded = FileExplorerNode(name: "vendor", path: "/p/vendor", isDirectory: true)
+        let loadedEmpty = FileExplorerNode(name: "docs", path: "/p/docs", isDirectory: true)
+        loadedEmpty.children = []
+        let file = FileExplorerNode(name: "readme.md", path: "/p/readme.md", isDirectory: false)
+        store.rootNodes = [unloaded, loadedEmpty, file]
+
+        store.filterText = "bus"
+        store.flushPendingFilterRecompute()
+
+        // The unexplored directory survives so the user can still drill into it;
+        // the loaded non-matching directory and file do not.
+        #expect(store.visibleChildren(of: nil).map(\.path) == ["/p/vendor"])
+        // ...but it is not auto-expanded, since no match is known inside it.
+        #expect(!store.subtreeContainsFilterMatch(unloaded))
+    }
+
+    @Test
+    func testFilterRecomputeIsDebounced() {
+        let store = FileExplorerStore()
+        let match = FileExplorerNode(name: "bus.py", path: "/p/bus.py", isDirectory: false)
+        let other = FileExplorerNode(name: "readme.md", path: "/p/readme.md", isDirectory: false)
+        store.rootNodes = [match, other]
+
+        store.filterText = "b"
+        store.filterText = "bu"
+        store.filterText = "bus"
+        // Nothing recomputed yet: the outline has not been told to reload.
+        #expect(store.filterRevision == 0)
+
+        store.flushPendingFilterRecompute()
+        #expect(store.filterRevision == 1)
+        #expect(store.visibleChildren(of: nil).map(\.path) == ["/p/bus.py"])
     }
 }
 

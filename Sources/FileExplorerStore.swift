@@ -365,14 +365,16 @@ final class FileExplorerStore: ObservableObject {
     @Published var filterText: String = "" {
         didSet {
             guard oldValue != filterText else { return }
-            recomputeFilterMatches()
-            filterRevision &+= 1
+            scheduleFilterRecompute()
         }
     }
     /// Bumped whenever the filter result set changes so the outline can do a full reload.
     @Published private(set) var filterRevision = 0
     /// path -> whether the node (or any loaded descendant) matches `filterText`.
     private var filterSubtreeMatch: [String: Bool] = [:]
+    /// Coalesces keystrokes: one recompute + outline reload per typing burst.
+    private var filterRecomputeWorkItem: DispatchWorkItem?
+    static let filterRecomputeDebounceSeconds: TimeInterval = 0.15
     private(set) var workspaceRootIdentity: UUID?
 
     var provider: FileExplorerProvider?
@@ -469,6 +471,35 @@ final class FileExplorerStore: ObservableObject {
         return remainder.isEmpty
     }
 
+    /// Debounces the (potentially tree-wide) recompute so a burst of keystrokes triggers
+    /// one cache rebuild and one outline reload instead of one per character.
+    private func scheduleFilterRecompute() {
+        filterRecomputeWorkItem?.cancel()
+        let workItem = DispatchWorkItem { [weak self] in
+            guard let self else { return }
+            self.filterRecomputeWorkItem = nil
+            self.applyFilterRecompute()
+        }
+        filterRecomputeWorkItem = workItem
+        DispatchQueue.main.asyncAfter(
+            deadline: .now() + Self.filterRecomputeDebounceSeconds,
+            execute: workItem
+        )
+    }
+
+    private func applyFilterRecompute() {
+        recomputeFilterMatches()
+        filterRevision &+= 1
+    }
+
+    /// Applies any pending debounced filter recompute immediately.
+    func flushPendingFilterRecompute() {
+        guard let workItem = filterRecomputeWorkItem else { return }
+        workItem.cancel()
+        filterRecomputeWorkItem = nil
+        applyFilterRecompute()
+    }
+
     /// Recomputes the per-path match cache for the currently loaded tree.
     /// Never call from a view body or an outline data-source callback.
     private func recomputeFilterMatches() {
@@ -487,6 +518,12 @@ final class FileExplorerStore: ObservableObject {
         return matches
     }
 
+    /// A directory whose children were never loaded can't be searched, so it stays visible
+    /// while filtering — otherwise the filter would delete the only path to its own matches.
+    private static func isUnexploredDirectory(_ node: FileExplorerNode) -> Bool {
+        node.isDirectory && node.children == nil
+    }
+
     /// Children of `node` (or the roots when nil) that survive the current filter.
     func visibleChildren(of node: FileExplorerNode?) -> [FileExplorerNode] {
         let children: [FileExplorerNode]
@@ -496,7 +533,7 @@ final class FileExplorerStore: ObservableObject {
             children = rootNodes
         }
         guard !filterText.isEmpty else { return children }
-        return children.filter { filterSubtreeMatch[$0.path] == true }
+        return children.filter { filterSubtreeMatch[$0.path] == true || Self.isUnexploredDirectory($0) }
     }
 
     /// True when a filter is active and `node`'s subtree contains a match (so it should auto-expand).

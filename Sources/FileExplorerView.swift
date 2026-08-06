@@ -238,11 +238,12 @@ struct FileExplorerPanelView: NSViewRepresentable {
             lastRootNodeCount = -1
         }
 
-        /// Scrolls the tree back to the current selection, expanding its ancestors.
+        /// Scrolls the tree back to the current selection. No-op when nothing is selected:
+        /// revealing must never create a selection the user did not make.
         func revealCurrentFile() {
-            guard let outlineView else { return }
+            guard let outlineView, store.selectedPath != nil else { return }
             withProgrammaticOutlineUpdate {
-                applyStoredSelection(in: outlineView, fallbackToFirstVisible: true, scroll: true)
+                applyStoredSelection(in: outlineView, fallbackToFirstVisible: false, scroll: true)
             }
         }
 
