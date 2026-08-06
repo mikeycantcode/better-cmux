@@ -2085,6 +2085,11 @@ final class Workspace: Identifiable, ObservableObject {
             let oldDirectory = oldValue.trimmingCharacters(in: .whitespacesAndNewlines)
             let newDirectory = currentDirectory.trimmingCharacters(in: .whitespacesAndNewlines)
             guard oldDirectory != newDirectory else { return }
+            // Keep the per-workspace git model pointed at this workspace's root.
+            // Only when one already exists: creating it here would spawn a
+            // `git status` for every `cd` in every workspace that never opened
+            // any git UI.
+            gitWorkingTreeModelStorage?.repoPath = newDirectory
             scheduleExtensionSidebarProjectRootRefresh(for: currentDirectory)
             // Notify the sidebar so anchor-cwd-driven group config (color,
             // icon, context menu, newWorkspacePlacement) refreshes even
@@ -2214,6 +2219,8 @@ final class Workspace: Identifiable, ObservableObject {
     /// Callback used by TabManager to capture recently closed browser panels for Cmd+Shift+T restore.
     var onClosedBrowserPanel: ((ClosedBrowserPanelRestoreSnapshot) -> Void)?
     weak var owningTabManager: TabManager?
+    /// Backing storage for ``gitWorkingTreeModel``; see that property.
+    private var gitWorkingTreeModelStorage: GitWorkingTreeModel?
 
     // Closing tabs mutates split layout immediately; terminal views handle their own AppKit
     // layout/size synchronization.
@@ -6386,13 +6393,37 @@ final class Workspace: Identifiable, ObservableObject {
         panels.values.compactMap { $0 as? GitChangesPanel }.first
     }
 
+    /// The one git model for this workspace's repo.
+    ///
+    /// Per-workspace on purpose: a window-level model retargeted on workspace
+    /// switch made a background workspace's Changes tab repaint with — and stage
+    /// into — the newly selected workspace's repo. The model is owned by the
+    /// workspace, so it dies with the workspace and every git surface for this
+    /// workspace (right sidebar, Files pane, Changes panel) shares one status.
+    ///
+    /// Created on first use so workspaces that never open git UI never pay for a
+    /// `git status`; call it from non-body code (selection sync, panel attach),
+    /// not from a view body.
+    var gitWorkingTreeModel: GitWorkingTreeModel {
+        if let model = gitWorkingTreeModelStorage { return model }
+        let model = GitWorkingTreeModel(
+            repoPath: currentDirectory.trimmingCharacters(in: .whitespacesAndNewlines)
+        )
+        gitWorkingTreeModelStorage = model
+        return model
+    }
+
+    /// The git model only if one was already created — used by watcher plumbing
+    /// that must not force-create it.
+    var existingGitWorkingTreeModel: GitWorkingTreeModel? { gitWorkingTreeModelStorage }
+
     /// Focuses the existing Changes panel or creates one in the focused pane.
     ///
-    /// Takes the caller's ``GitWorkingTreeModel`` rather than creating its own so
-    /// staging from the Changes panel and from the Git sidebar tab converge on one
-    /// model (and one status refresh).
+    /// Always uses this workspace's own ``gitWorkingTreeModel`` so staging from
+    /// the Changes panel, the Files pane, and the Git sidebar tab converge on one
+    /// model (and one status refresh) — for this workspace's repo only.
     @discardableResult
-    func openGitChangesPanel(model: GitWorkingTreeModel) -> GitChangesPanel? {
+    func openGitChangesPanel() -> GitChangesPanel? {
         if let existing = gitChangesPanel {
             focusPanel(existing.id)
             existing.scheduleReload()
@@ -6401,7 +6432,7 @@ final class Workspace: Identifiable, ObservableObject {
         guard let paneId = bonsplitController.focusedPaneId ?? bonsplitController.allPaneIds.first else {
             return nil
         }
-        return newGitChangesSurface(inPane: paneId, model: model, focus: true)
+        return newGitChangesSurface(inPane: paneId, focus: true)
     }
 
     /// Reveals `relativePath` in the open Changes panel. Returns `false` when no
@@ -6418,7 +6449,6 @@ final class Workspace: Identifiable, ObservableObject {
     @discardableResult
     func newGitChangesSurface(
         inPane paneId: PaneID,
-        model: GitWorkingTreeModel,
         focus: Bool? = nil,
         targetIndex: Int? = nil
     ) -> GitChangesPanel? {
@@ -6426,7 +6456,7 @@ final class Workspace: Identifiable, ObservableObject {
         let previousFocusedPanelId = focusedPanelId
         let previousHostedView = focusedTerminalPanel?.hostedView
 
-        let changesPanel = GitChangesPanel(workspace: self, model: model)
+        let changesPanel = GitChangesPanel(workspace: self, model: gitWorkingTreeModel)
         panels[changesPanel.id] = changesPanel
         panelTitles[changesPanel.id] = changesPanel.displayTitle
 

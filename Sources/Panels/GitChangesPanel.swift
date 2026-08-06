@@ -366,7 +366,11 @@ final class GitChangesPanel: Panel, ObservableObject {
         guard entry.status != .untracked, entry.status != .added else { return "" }
         let headPath = entry.originalPath ?? entry.path
         switch await GitWorkingTreeModel.runGit(["show", "HEAD:\(headPath)"], in: root) {
-        case .success(let output): return output
+        // Oversized blobs take the same "too large" path as the working-tree
+        // side: empty contents, so the card renders the placeholder instead of
+        // shipping megabytes into Monaco.
+        case .success(let output):
+            return output.utf8.count <= maxFileByteCount ? output : ""
         // A path with no HEAD blob (e.g. added-then-modified) diffs against empty.
         case .failure: return ""
         }

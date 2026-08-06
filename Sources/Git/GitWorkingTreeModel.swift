@@ -58,7 +58,8 @@ final class GitWorkingTreeModel: ObservableObject {
 
     func discardFile(_ entry: GitStatusEntry) async {
         if entry.status == .untracked {
-            await runAction(["clean", "-f", "--", entry.path])
+            // `-d` so untracked *directories* discard too (matches `discardAll`).
+            await runAction(["clean", "-fd", "--", entry.path])
         } else {
             await runAction(["checkout", "--", entry.path])
         }
@@ -92,7 +93,7 @@ final class GitWorkingTreeModel: ObservableObject {
         let untracked = entries.filter { $0.status == .untracked }.map(\.path)
         var commands: [[String]] = []
         if !tracked.isEmpty { commands.append(["checkout", "--"] + tracked) }
-        if !untracked.isEmpty { commands.append(["clean", "-f", "--"] + untracked) }
+        if !untracked.isEmpty { commands.append(["clean", "-fd", "--"] + untracked) }
         await runActions(commands)
     }
 

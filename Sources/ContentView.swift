@@ -956,7 +956,6 @@ struct ContentView: View {
     @State private var sidebarRenderWorkerClient: RenderWorkerClient?
     @StateObject private var fullscreenControlsViewModel = TitlebarControlsViewModel()
     @StateObject private var fileExplorerStore = FileExplorerStore()
-    @StateObject private var gitWorkingTreeModel = GitWorkingTreeModel(repoPath: "")
     @StateObject private var sessionIndexStore = SessionIndexStore()
     @StateObject private var leftFileExplorerStore = FileExplorerStore()
     @StateObject private var leftFileExplorerState = FileExplorerState(persistenceKeyPrefix: "sidebar.fileExplorer", defaultVisible: true)
@@ -1969,56 +1968,59 @@ struct ContentView: View {
         return panel
     }
 
+    @ViewBuilder
     private var rightSidebarPanel: some View {
-        return RightSidebarPanelView(
-            fileExplorerStore: fileExplorerStore,
-            fileExplorerState: fileExplorerState,
-            gitModel: gitWorkingTreeModel,
-            titlebarHeight: RightSidebarChromeMetrics.titlebarHeight,
-            onOpenFilePreview: { filePath in
-                openFilePreviewFromSidebar(filePath: filePath)
-            },
-            onOpenAsPane: {
-                openRightSidebarToolPane()
-            },
-            onClose: {
-                #if DEBUG
-                cmuxDebugLog("rightSidebar.closeButton")
-                #endif
-                _ = AppDelegate.shared?.closeRightSidebarInActiveMainWindow(preferredWindow: observedWindow)
-            },
-            onOpenChanges: {
-                openGitChangesFromSidebar()
-            },
-            onRevealInChanges: { relativePath in
-                guard let workspace = tabManager.selectedWorkspace else { return false }
-                return workspace.revealInGitChangesPanel(relativePath: relativePath)
-            }
-        )
-        .frame(width: rightSidebarWidth)
-        .clipped()
-        .allowsHitTesting(rightSidebarVisible)
-        .accessibilityHidden(!rightSidebarVisible)
-        .transaction { $0.animation = nil }
-        .onAppear {
-            let sanitized = normalizedRightSidebarWidth(fileExplorerState.width)
-            fileExplorerWidth = sanitized
-            if abs(fileExplorerState.width - sanitized) > 0.5 {
-                DispatchQueue.main.async {
-                    fileExplorerState.width = sanitized
+        if let gitModel = sidebarGitModel {
+            RightSidebarPanelView(
+                fileExplorerStore: fileExplorerStore,
+                fileExplorerState: fileExplorerState,
+                gitModel: gitModel,
+                titlebarHeight: RightSidebarChromeMetrics.titlebarHeight,
+                onOpenFilePreview: { filePath in
+                    openFilePreviewFromSidebar(filePath: filePath)
+                },
+                onOpenAsPane: {
+                    openRightSidebarToolPane()
+                },
+                onClose: {
+                    #if DEBUG
+                    cmuxDebugLog("rightSidebar.closeButton")
+                    #endif
+                    _ = AppDelegate.shared?.closeRightSidebarInActiveMainWindow(preferredWindow: observedWindow)
+                },
+                onOpenChanges: {
+                    openGitChangesFromSidebar()
+                },
+                onRevealInChanges: { relativePath in
+                    guard let workspace = tabManager.selectedWorkspace else { return false }
+                    return workspace.revealInGitChangesPanel(relativePath: relativePath)
                 }
-            }
-        }
-        .onChange(of: fileExplorerState.width) { newValue in
-            if fileExplorerDragStartWidth == nil {
-                let sanitized = normalizedRightSidebarWidth(newValue)
-                if abs(newValue - sanitized) > 0.5 {
+            )
+            .frame(width: rightSidebarWidth)
+            .clipped()
+            .allowsHitTesting(rightSidebarVisible)
+            .accessibilityHidden(!rightSidebarVisible)
+            .transaction { $0.animation = nil }
+            .onAppear {
+                let sanitized = normalizedRightSidebarWidth(fileExplorerState.width)
+                fileExplorerWidth = sanitized
+                if abs(fileExplorerState.width - sanitized) > 0.5 {
                     DispatchQueue.main.async {
                         fileExplorerState.width = sanitized
                     }
-                    return
                 }
-                fileExplorerWidth = sanitized
+            }
+            .onChange(of: fileExplorerState.width) { newValue in
+                if fileExplorerDragStartWidth == nil {
+                    let sanitized = normalizedRightSidebarWidth(newValue)
+                    if abs(newValue - sanitized) > 0.5 {
+                        DispatchQueue.main.async {
+                            fileExplorerState.width = sanitized
+                        }
+                        return
+                    }
+                    fileExplorerWidth = sanitized
+                }
             }
         }
     }
@@ -2366,7 +2368,7 @@ struct ContentView: View {
     private func openGitChangesFromSidebar() {
         guard let workspace = tabManager.selectedWorkspace else { return }
         sidebarSelectionState.selection = .tabs
-        workspace.openGitChangesPanel(model: gitWorkingTreeModel)
+        workspace.openGitChangesPanel()
     }
 
     private func openFilePreviewFromSidebar(filePath: String) {
@@ -2384,8 +2386,28 @@ struct ContentView: View {
         )
     }
 
+    /// The selected workspace's git model — the docked right sidebar renders the
+    /// selected workspace, so it borrows that workspace's model instead of owning
+    /// a window-level one that would be retargeted across workspaces (and would
+    /// then repaint/stage a background workspace's Changes tab into the newly
+    /// selected repo).
+    private var sidebarGitModel: GitWorkingTreeModel? {
+        tabManager.selectedWorkspace?.gitWorkingTreeModel
+    }
+
     private func syncFileExplorerDirectory() {
         leftFileExplorerStore.showHiddenFiles = true
+        // Bind the sidebar explorer's watcher to the selected workspace's model
+        // (created here, outside any view body). Never force-creates a model for
+        // a workspace with no git surface.
+        if let selectedWorkspace = tabManager.selectedWorkspace {
+            _ = selectedWorkspace.gitWorkingTreeModel
+            fileExplorerStore.onDirectoryDidChange = { [weak selectedWorkspace] in
+                selectedWorkspace?.existingGitWorkingTreeModel?.scheduleDebouncedRefresh()
+            }
+        } else {
+            fileExplorerStore.onDirectoryDidChange = nil
+        }
         defer { syncLeftFileExplorerDirectory() }
         guard let selectedId = tabManager.selectedTabId,
               let tab = tabManager.tabs.first(where: { $0.id == selectedId }) else {
@@ -2393,7 +2415,6 @@ struct ContentView: View {
             // sessions panel doesn't keep filtering by a stale previous tab.
             sessionIndexStore.setCurrentDirectoryIfChanged(nil)
             fileExplorerStore.applyWorkspaceRoot(.none)
-            gitWorkingTreeModel.repoPath = ""
             return
         }
 
@@ -2403,18 +2424,15 @@ struct ContentView: View {
         guard !dir.isEmpty else {
             sessionIndexStore.setCurrentDirectoryIfChanged(nil)
             fileExplorerStore.applyWorkspaceRoot(.none)
-            gitWorkingTreeModel.repoPath = ""
             return
         }
 
         sessionIndexStore.setCurrentDirectoryIfChanged(dir)
         guard shouldSyncFileExplorerStore else {
             fileExplorerStore.applyWorkspaceRoot(.none)
-            gitWorkingTreeModel.repoPath = ""
             return
         }
         fileExplorerStore.applyWorkspaceRoot(.local(workspaceId: tab.id, path: dir))
-        gitWorkingTreeModel.repoPath = dir
     }
 
     /// Mirrors the active workspace directory onto the left-sidebar explorer

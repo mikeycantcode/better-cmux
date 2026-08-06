@@ -384,6 +384,10 @@ final class FileExplorerStore: ObservableObject {
 
     /// Watches the root directory for filesystem changes (local only).
     private var directoryWatcher: FileWatcher?
+    /// Called on the main actor for each (already throttled) directory-watch
+    /// event. Owners use it to nudge a git model's debounced refresh so the Git
+    /// tab and Changes panel track edits and commits without a manual refresh.
+    var onDirectoryDidChange: (@MainActor () -> Void)?
     private var directoryWatchTask: Task<Void, Never>?
     private var directoryWatchPath: String?
 
@@ -652,6 +656,7 @@ final class FileExplorerStore: ObservableObject {
                     guard let self else { break }
                     self.reload()
                     self.refreshGitStatus()
+                    self.onDirectoryDidChange?()
                 }
             }
         } else {

@@ -29,6 +29,11 @@ final class RightSidebarToolPanel: Panel, ObservableObject {
         if let store = fileExplorerStoreStorage { return store }
         let store = FileExplorerStore()
         store.showHiddenFiles = true
+        // Watcher events keep the Git tab and Changes panel current without a
+        // manual refresh. Never force-creates a git model.
+        store.onDirectoryDidChange = { [weak self] in
+            self?.workspace?.existingGitWorkingTreeModel?.scheduleDebouncedRefresh()
+        }
         fileExplorerStoreStorage = store
         if let workspace {
             syncFileExplorerRoot(from: workspace, store: store)
@@ -36,12 +41,14 @@ final class RightSidebarToolPanel: Panel, ObservableObject {
         return store
     }
 
-    /// Created on first use so panes that never show the Files shell never spawn a
-    /// git watcher. Seeded from the store's already-synced root, since
-    /// `syncFileExplorerRoot` may have run before this model existed.
+    /// The workspace's git model, not a pane-private one: a second model would
+    /// diverge from the sidebar's status and stage against a separately-refreshed
+    /// snapshot. Captured strongly at `reattach` so the pane keeps rendering the
+    /// workspace it belongs to.
     var gitWorkingTreeModel: GitWorkingTreeModel {
         if let model = gitWorkingTreeModelStorage { return model }
-        let model = GitWorkingTreeModel(repoPath: fileExplorerStore.rootPath)
+        let model = workspace?.gitWorkingTreeModel
+            ?? GitWorkingTreeModel(repoPath: fileExplorerStore.rootPath)
         gitWorkingTreeModelStorage = model
         return model
     }
@@ -58,6 +65,8 @@ final class RightSidebarToolPanel: Panel, ObservableObject {
 
     func reattach(to workspace: Workspace) {
         self.workspace = workspace
+        // Bind to the new workspace's model (created outside any view body).
+        gitWorkingTreeModelStorage = workspace.gitWorkingTreeModel
         observeWorkspaceRootChanges(workspace)
         syncWorkspaceRoot(from: workspace)
     }
@@ -86,7 +95,7 @@ final class RightSidebarToolPanel: Panel, ObservableObject {
 
     /// Opens (or focuses) the workspace's Changes panel on this pane's git model.
     func openGitChangesPanel() {
-        workspace?.openGitChangesPanel(model: gitWorkingTreeModel)
+        workspace?.openGitChangesPanel()
     }
 
     /// Reveals a repo-relative path in an already-open Changes panel.
@@ -138,15 +147,15 @@ final class RightSidebarToolPanel: Panel, ObservableObject {
     private func syncFileExplorerRoot(from workspace: Workspace, store: FileExplorerStore) {
         store.showHiddenFiles = true
 
+        // `repoPath` follows `workspace.currentDirectory` from the workspace
+        // itself, so it is deliberately not written here.
         let directory = workspace.currentDirectory.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !directory.isEmpty else {
             store.applyWorkspaceRoot(.none)
-            gitWorkingTreeModelStorage?.repoPath = ""
             return
         }
 
         store.applyWorkspaceRoot(.local(workspaceId: workspace.id, path: directory))
-        gitWorkingTreeModelStorage?.repoPath = directory
     }
 
 }
