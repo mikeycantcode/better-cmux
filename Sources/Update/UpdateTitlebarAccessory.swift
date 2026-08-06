@@ -843,6 +843,8 @@ struct TitlebarControlsView: View {
     let onNewTab: () -> Void
     let onFocusHistoryBack: () -> Void
     let onFocusHistoryForward: () -> Void
+    let onToggleRightSidebar: () -> Void
+    let cluster: TitlebarControlsCluster
     let visibilityMode: TitlebarControlsVisibilityMode
     @ObservedObject private var popoverVisibilityState = NotificationsPopoverVisibilityState.shared
     @AppStorage("titlebarControlsStyle") private var styleRawValue = TitlebarControlsStyle.classic.rawValue
@@ -901,7 +903,7 @@ struct TitlebarControlsView: View {
         let style = TitlebarControlsStyle(rawValue: styleRawValue) ?? .classic
         let config = style.config
         let contentSize = TitlebarControlsLayoutMetrics.contentSize(
-            cluster: .leading,
+            cluster: cluster,
             config: config,
             titlebarShortcutHintXOffset: titlebarShortcutHintXOffset
         )
@@ -976,6 +978,82 @@ struct TitlebarControlsView: View {
         let focusHistoryAvailability = focusHistoryNavigationAvailabilitySnapshot
         let badgeBaseFontSize = titlebarNotificationBadgeFontSize(for: config) / max(1, GlobalFontMagnification.scale(for: globalFontPercent))
         let content = HStack(spacing: config.spacing) {
+            ForEach(cluster.slots, id: \.self) { slot in
+                button(
+                    for: slot,
+                    config: config,
+                    foregroundColor: foregroundColor,
+                    focusHistoryAvailability: focusHistoryAvailability,
+                    badgeBaseFontSize: badgeBaseFontSize
+                )
+            }
+        }
+
+        let paddedContent = content.padding(config.groupPadding)
+
+        if config.groupBackground {
+            paddedContent
+                .background(
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .fill(Color(nsColor: .controlBackgroundColor))
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .stroke(Color(nsColor: .separatorColor).opacity(0.6), lineWidth: 1)
+                )
+                .overlay(alignment: .topLeading) {
+                    titlebarShortcutHintOverlay(items: hintLayoutItems, config: config)
+                }
+        } else {
+            paddedContent
+                .overlay(alignment: .topLeading) {
+                    titlebarShortcutHintOverlay(items: hintLayoutItems, config: config)
+                }
+        }
+    }
+
+    @MainActor
+    @ViewBuilder
+    private func button(
+        for slot: TitlebarShortcutHintActionSlot,
+        config: TitlebarControlsStyleConfig,
+        foregroundColor: Color,
+        focusHistoryAvailability: FocusHistoryNavigationAvailability,
+        badgeBaseFontSize: CGFloat
+    ) -> some View {
+        switch slot {
+        case .toggleSidebar:
+            toggleSidebarButton(config: config, foregroundColor: foregroundColor)
+        case .showNotifications:
+            notificationsButton(
+                config: config,
+                foregroundColor: foregroundColor,
+                badgeBaseFontSize: badgeBaseFontSize
+            )
+        case .newTab:
+            newTabButton(config: config, foregroundColor: foregroundColor)
+        case .focusHistoryBack:
+            backButton(
+                config: config,
+                foregroundColor: foregroundColor,
+                focusHistoryAvailability: focusHistoryAvailability
+            )
+        case .focusHistoryForward:
+            forwardButton(
+                config: config,
+                foregroundColor: foregroundColor,
+                focusHistoryAvailability: focusHistoryAvailability
+            )
+        case .toggleRightSidebar:
+            toggleRightSidebarButton(config: config, foregroundColor: foregroundColor)
+        }
+    }
+
+    @MainActor
+    private func toggleSidebarButton(
+        config: TitlebarControlsStyleConfig,
+        foregroundColor: Color
+    ) -> some View {
             TitlebarControlButton(
                 config: config,
                 foregroundColor: foregroundColor,
@@ -993,7 +1071,35 @@ struct TitlebarControlsView: View {
                 sidebarIconLabel(config: config, iconGeometryKeyPrefix: "titlebarControl_toggleSidebarIcon")
             }
             .safeHelp(KeyboardShortcutSettings.Action.toggleSidebar.tooltip(String(localized: "titlebar.sidebar.tooltip", defaultValue: "Show or hide the sidebar")))
+    }
 
+    @MainActor
+    private func toggleRightSidebarButton(
+        config: TitlebarControlsStyleConfig,
+        foregroundColor: Color
+    ) -> some View {
+        TitlebarControlButton(
+            config: config,
+            foregroundColor: foregroundColor,
+            accessibilityIdentifier: "titlebarControl.toggleRightSidebar",
+            accessibilityLabel: String(localized: "titlebar.rightSidebar.accessibilityLabel", defaultValue: "Toggle Right Sidebar"),
+            action: {
+                #if DEBUG
+                cmuxDebugLog("titlebar.toggleRightSidebar")
+                #endif
+                onToggleRightSidebar()
+            }) {
+            iconLabel(systemName: "sidebar.right", config: config, iconGeometryKeyPrefix: "titlebarControl_toggleRightSidebarIcon")
+        }
+        .safeHelp(KeyboardShortcutSettings.Action.toggleRightSidebar.tooltip(String(localized: "titlebar.rightSidebar.tooltip", defaultValue: "Show or hide the right sidebar")))
+    }
+
+    @MainActor
+    private func notificationsButton(
+        config: TitlebarControlsStyleConfig,
+        foregroundColor: Color,
+        badgeBaseFontSize: CGFloat
+    ) -> some View {
             TitlebarControlButton(
                 config: config,
                 foregroundColor: foregroundColor,
@@ -1026,7 +1132,13 @@ struct TitlebarControlsView: View {
             }
             .background(NotificationsAnchorView { viewModel.notificationsAnchorView = $0 })
             .safeHelp(KeyboardShortcutSettings.Action.showNotifications.tooltip(String(localized: "titlebar.notifications.tooltip", defaultValue: "Show notifications")))
+    }
 
+    @MainActor
+    private func newTabButton(
+        config: TitlebarControlsStyleConfig,
+        foregroundColor: Color
+    ) -> some View {
             TitlebarControlButton(
                 config: config,
                 foregroundColor: foregroundColor,
@@ -1044,7 +1156,14 @@ struct TitlebarControlsView: View {
                 iconLabel(systemName: "plus", config: config, iconGeometryKeyPrefix: "titlebarControl_newTabIcon")
             }
             .safeHelp(KeyboardShortcutSettings.Action.newTab.tooltip(String(localized: "titlebar.newWorkspace.tooltip", defaultValue: "New workspace")))
+    }
 
+    @MainActor
+    private func backButton(
+        config: TitlebarControlsStyleConfig,
+        foregroundColor: Color,
+        focusHistoryAvailability: FocusHistoryNavigationAvailability
+    ) -> some View {
             TitlebarControlButton(
                 config: config,
                 foregroundColor: foregroundColor,
@@ -1059,7 +1178,14 @@ struct TitlebarControlsView: View {
                 iconLabel(systemName: "arrow.left", config: config, iconGeometryKeyPrefix: "titlebarControl_focusHistoryBackIcon")
             }
             .safeHelp(KeyboardShortcutSettings.Action.focusHistoryBack.tooltip(String(localized: "menu.history.focusBack", defaultValue: "Focus Back")))
+    }
 
+    @MainActor
+    private func forwardButton(
+        config: TitlebarControlsStyleConfig,
+        foregroundColor: Color,
+        focusHistoryAvailability: FocusHistoryNavigationAvailability
+    ) -> some View {
             TitlebarControlButton(
                 config: config,
                 foregroundColor: foregroundColor,
@@ -1074,30 +1200,6 @@ struct TitlebarControlsView: View {
                 iconLabel(systemName: "arrow.right", config: config, iconGeometryKeyPrefix: "titlebarControl_focusHistoryForwardIcon")
             }
             .safeHelp(KeyboardShortcutSettings.Action.focusHistoryForward.tooltip(String(localized: "menu.history.focusForward", defaultValue: "Focus Forward")))
-
-        }
-
-        let paddedContent = content.padding(config.groupPadding)
-
-        if config.groupBackground {
-            paddedContent
-                .background(
-                    RoundedRectangle(cornerRadius: 12, style: .continuous)
-                        .fill(Color(nsColor: .controlBackgroundColor))
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: 12, style: .continuous)
-                        .stroke(Color(nsColor: .separatorColor).opacity(0.6), lineWidth: 1)
-                )
-                .overlay(alignment: .topLeading) {
-                    titlebarShortcutHintOverlay(items: hintLayoutItems, config: config)
-                }
-        } else {
-            paddedContent
-                .overlay(alignment: .topLeading) {
-                    titlebarShortcutHintOverlay(items: hintLayoutItems, config: config)
-                }
-        }
     }
 
     @MainActor
@@ -1141,7 +1243,7 @@ struct TitlebarControlsView: View {
     ) -> [(action: KeyboardShortcutSettings.Action, shortcut: StoredShortcut, width: CGFloat, interval: ClosedRange<CGFloat>)] {
         guard shouldShowTitlebarShortcutHints else { return [] }
 
-        return TitlebarShortcutHintActionSlot.allCases.compactMap { slot in
+        return cluster.slots.compactMap { slot in
             let shortcut = KeyboardShortcutSettings.shortcut(for: slot.action)
             guard ShortcutHintTitlebarPolicy.shouldShow(
                 shortcut: shortcut,
@@ -1153,7 +1255,7 @@ struct TitlebarControlsView: View {
             let width = titlebarHintWidth(for: shortcut, config: config)
             let interval = TitlebarControlsLayoutMetrics.hintInterval(
                 for: slot,
-                cluster: .leading,
+                cluster: cluster,
                 width: width,
                 config: config,
                 xOffset: xOffset
@@ -1422,6 +1524,8 @@ struct HiddenTitlebarSidebarControlsView: View {
                 onNewTab: onNewTab,
                 onFocusHistoryBack: onFocusHistoryBack,
                 onFocusHistoryForward: onFocusHistoryForward,
+                onToggleRightSidebar: {},
+                cluster: .leading,
                 visibilityMode: .alwaysVisible
             )
             .frame(
@@ -1800,6 +1904,8 @@ final class TitlebarControlsAccessoryViewController: NSTitlebarAccessoryViewCont
             onNewTab: newTab,
             onFocusHistoryBack: focusHistoryBack,
             onFocusHistoryForward: focusHistoryForward,
+            onToggleRightSidebar: {},
+            cluster: .leading,
             visibilityMode: .alwaysVisible
         )
         hostingView = NonDraggableHostingView(
