@@ -95066,6 +95066,40 @@
         }
       }
     },
+    "filesGitPanel.tab.files": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Files"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ファイル"
+          }
+        }
+      }
+    },
+    "filesGitPanel.tab.git": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Git"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Git"
+          }
+        }
+      }
+    },
     "filesPanel.collapseAll.tooltip": {
       "extractionState": "manual",
       "localizations": {

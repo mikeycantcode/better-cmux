@@ -661,6 +661,7 @@
 		C3408A000000000000000003 /* RightSidebarCommandPaletteTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C3408A000000000000000004 /* RightSidebarCommandPaletteTests.swift */; };
 		B37A00000000000000000003 /* RightSidebarMode+Availability.swift in Sources */ = {isa = PBXBuildFile; fileRef = B37A00000000000000000004 /* RightSidebarMode+Availability.swift */; };
 		FE003103 /* RightSidebarPanelView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE003003 /* RightSidebarPanelView.swift */; };
+		G17A00000000000000000012 /* FilesGitPanelView.swift in Sources */ = {isa = PBXBuildFile; fileRef = G17A00000000000000000011 /* FilesGitPanelView.swift */; };
 		C57570010000000000000002 /* RightSidebarPanelViewTestSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = C57570010000000000000001 /* RightSidebarPanelViewTestSupport.swift */; };
 		FE0031A3 /* RightSidebarToolPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE0030A3 /* RightSidebarToolPanel.swift */; };
 		C46790000000000000000005 /* RosettaNativeRelaunch.swift in Sources */ = {isa = PBXBuildFile; fileRef = C46790000000000000000006 /* RosettaNativeRelaunch.swift */; };
@@ -789,6 +790,7 @@
 		C06552030000000000000001 /* TabManagerTitleUpdateStalenessTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C06552030000000000000002 /* TabManagerTitleUpdateStalenessTests.swift */; };
 		C06552020000000000000001 /* TabManagerTitleUpdateTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C06552020000000000000002 /* TabManagerTitleUpdateTests.swift */; };
 		B6BF3DC98DB1495E57900199 /* TabManagerUnitTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 42092CDB2109E250F7F2A76E /* TabManagerUnitTests.swift */; };
+		G17A00000000000000000022 /* FilesGitPanelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = G17A00000000000000000021 /* FilesGitPanelTests.swift */; };
 		G17A00000000000000000004 /* GitPorcelainStatusTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = G17A00000000000000000003 /* GitPorcelainStatusTests.swift */; };
 		G17A00000000000000000008 /* GitWorkingTreeModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = G17A00000000000000000007 /* GitWorkingTreeModelTests.swift */; };
 		C7A507000000000000000002 /* TaskManagerResourcesTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C7A507000000000000000001 /* TaskManagerResourcesTests.swift */; };
@@ -1644,6 +1646,7 @@
 		C3408A000000000000000004 /* RightSidebarCommandPaletteTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RightSidebarCommandPaletteTests.swift; sourceTree = "<group>"; };
 		B37A00000000000000000004 /* RightSidebarMode+Availability.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "RightSidebarMode+Availability.swift"; sourceTree = "<group>"; };
 		FE003003 /* RightSidebarPanelView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RightSidebarPanelView.swift; sourceTree = "<group>"; };
+		G17A00000000000000000011 /* FilesGitPanelView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilesGitPanelView.swift; sourceTree = "<group>"; };
 		C57570010000000000000001 /* RightSidebarPanelViewTestSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RightSidebarPanelViewTestSupport.swift; sourceTree = "<group>"; };
 		FE0030A3 /* RightSidebarToolPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RightSidebarToolPanel.swift; sourceTree = "<group>"; };
 		C46790000000000000000006 /* RosettaNativeRelaunch.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = App/RosettaNativeRelaunch.swift; sourceTree = "<group>"; };
@@ -1771,6 +1774,7 @@
 		C06552030000000000000002 /* TabManagerTitleUpdateStalenessTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TabManagerTitleUpdateStalenessTests.swift; sourceTree = "<group>"; };
 		C06552020000000000000002 /* TabManagerTitleUpdateTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TabManagerTitleUpdateTests.swift; sourceTree = "<group>"; };
 		42092CDB2109E250F7F2A76E /* TabManagerUnitTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TabManagerUnitTests.swift; sourceTree = "<group>"; };
+		G17A00000000000000000021 /* FilesGitPanelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilesGitPanelTests.swift; sourceTree = "<group>"; };
 		G17A00000000000000000003 /* GitPorcelainStatusTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GitPorcelainStatusTests.swift; sourceTree = "<group>"; };
 		G17A00000000000000000007 /* GitWorkingTreeModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GitWorkingTreeModelTests.swift; sourceTree = "<group>"; };
 		C7A507000000000000000001 /* TaskManagerResourcesTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskManagerResourcesTests.swift; sourceTree = "<group>"; };
@@ -2637,6 +2641,7 @@
 				B7F9A603B7F9A603B7F9A603 /* WindowChromeMetrics.swift */,
 				B37A00000000000000000004 /* RightSidebarMode+Availability.swift */,
 				FE003003 /* RightSidebarPanelView.swift */,
+				G17A00000000000000000011 /* FilesGitPanelView.swift */,
 				FE0030A3 /* RightSidebarToolPanel.swift */,
 				D0C0D0C0D0C0D0C0D0C0D002 /* DockPanelView.swift */,
 				D0C0D0C0D0C0D0C0D0C0D004 /* DockEmptyView.swift */,
@@ -2953,6 +2958,7 @@
 				C06552030000000000000002 /* TabManagerTitleUpdateStalenessTests.swift */,
 				C06552020000000000000002 /* TabManagerTitleUpdateTests.swift */,
 				42092CDB2109E250F7F2A76E /* TabManagerUnitTests.swift */,
+				G17A00000000000000000021 /* FilesGitPanelTests.swift */,
 				G17A00000000000000000003 /* GitPorcelainStatusTests.swift */,
 				G17A00000000000000000007 /* GitWorkingTreeModelTests.swift */,
 				5F5553CB5553CB5553CB0002 /* RightSidebarRemoteCommandTests.swift */,
@@ -3800,6 +3806,7 @@
 				B7F9A604B7F9A604B7F9A604 /* RightSidebarChromeStyle.swift in Sources */,
 				B37A00000000000000000003 /* RightSidebarMode+Availability.swift in Sources */,
 				FE003103 /* RightSidebarPanelView.swift in Sources */,
+				G17A00000000000000000012 /* FilesGitPanelView.swift in Sources */,
 				FE0031A3 /* RightSidebarToolPanel.swift in Sources */,
 				C46790000000000000000005 /* RosettaNativeRelaunch.swift in Sources */,
 				FE003105 /* RovoDevIndex.swift in Sources */,
@@ -4316,6 +4323,7 @@
 				C06552030000000000000001 /* TabManagerTitleUpdateStalenessTests.swift in Sources */,
 				C06552020000000000000001 /* TabManagerTitleUpdateTests.swift in Sources */,
 				B6BF3DC98DB1495E57900199 /* TabManagerUnitTests.swift in Sources */,
+				G17A00000000000000000022 /* FilesGitPanelTests.swift in Sources */,
 				G17A00000000000000000004 /* GitPorcelainStatusTests.swift in Sources */,
 				G17A00000000000000000008 /* GitWorkingTreeModelTests.swift in Sources */,
 				5F5553CB5553CB5553CB0001 /* RightSidebarRemoteCommandTests.swift in Sources */,

@@ -956,6 +956,7 @@ struct ContentView: View {
     @State private var sidebarRenderWorkerClient: RenderWorkerClient?
     @StateObject private var fullscreenControlsViewModel = TitlebarControlsViewModel()
     @StateObject private var fileExplorerStore = FileExplorerStore()
+    @StateObject private var gitWorkingTreeModel = GitWorkingTreeModel(repoPath: "")
     @StateObject private var sessionIndexStore = SessionIndexStore()
     @StateObject private var leftFileExplorerStore = FileExplorerStore()
     @StateObject private var leftFileExplorerState = FileExplorerState(persistenceKeyPrefix: "sidebar.fileExplorer", defaultVisible: true)
@@ -1974,6 +1975,7 @@ struct ContentView: View {
             fileExplorerStore: fileExplorerStore,
             fileExplorerState: fileExplorerState,
             sessionIndexStore: sessionIndexStore,
+            gitModel: gitWorkingTreeModel,
             titlebarHeight: RightSidebarChromeMetrics.titlebarHeight,
             workspaceId: tabManager.selectedTabId,
             onResumeSession: { entry in
@@ -2388,6 +2390,7 @@ struct ContentView: View {
             // sessions panel doesn't keep filtering by a stale previous tab.
             sessionIndexStore.setCurrentDirectoryIfChanged(nil)
             fileExplorerStore.applyWorkspaceRoot(.none)
+            gitWorkingTreeModel.repoPath = ""
             return
         }
 
@@ -2397,15 +2400,18 @@ struct ContentView: View {
         guard !dir.isEmpty else {
             sessionIndexStore.setCurrentDirectoryIfChanged(nil)
             fileExplorerStore.applyWorkspaceRoot(.none)
+            gitWorkingTreeModel.repoPath = ""
             return
         }
 
         sessionIndexStore.setCurrentDirectoryIfChanged(dir)
         guard shouldSyncFileExplorerStore else {
             fileExplorerStore.applyWorkspaceRoot(.none)
+            gitWorkingTreeModel.repoPath = ""
             return
         }
         fileExplorerStore.applyWorkspaceRoot(.local(workspaceId: tab.id, path: dir))
+        gitWorkingTreeModel.repoPath = dir
     }
 
     /// Mirrors the active workspace directory onto the left-sidebar explorer

@@ -66,6 +66,7 @@ struct HiddenRightSidebarContentMountingTests {
             fileExplorerStore: FileExplorerStore(),
             fileExplorerState: fileExplorerState,
             sessionIndexStore: SessionIndexStore(),
+            gitModel: GitWorkingTreeModel(repoPath: ""),
             titlebarHeight: 36,
             workspaceId: nil,
             onResumeSession: nil,

@@ -120,6 +120,9 @@ struct RightSidebarPanelView: View {
     @ObservedObject var fileExplorerStore: FileExplorerStore
     @ObservedObject var fileExplorerState: FileExplorerState
     @ObservedObject var sessionIndexStore: SessionIndexStore
+    /// Not `@ObservedObject` here on purpose: `FilesGitPanelView` observes it, so
+    /// git status churn must not invalidate the whole right-sidebar body.
+    let gitModel: GitWorkingTreeModel
     let titlebarHeight: CGFloat
     let workspaceId: UUID?
     let onResumeSession: ((SessionEntry) -> Void)?
@@ -401,11 +404,22 @@ struct RightSidebarPanelView: View {
         if RightSidebarContentMountPolicy.shouldMountContent(isRightSidebarVisible: fileExplorerState.isVisible, hasMountedContent: hasMountedRightSidebarContent) {
             switch fileExplorerState.mode {
             case .files:
-                FileExplorerPanelView(
-                    store: fileExplorerStore,
-                    state: fileExplorerState,
-                    onOpenFilePreview: onOpenFilePreview,
-                    presentation: .files
+                FilesGitPanelView(
+                    explorerState: fileExplorerState,
+                    gitModel: gitModel,
+                    rootPath: fileExplorerStore.rootPath,
+                    filesContent: AnyView(
+                        FileExplorerPanelView(
+                            store: fileExplorerStore,
+                            state: fileExplorerState,
+                            onOpenFilePreview: onOpenFilePreview,
+                            presentation: .files
+                        )
+                    ),
+                    // Task 6 replaces this placeholder with GitPanelView.
+                    gitContent: AnyView(
+                        Color.clear.frame(maxWidth: .infinity, maxHeight: .infinity)
+                    )
                 )
             case .find:
                 FileExplorerPanelView(

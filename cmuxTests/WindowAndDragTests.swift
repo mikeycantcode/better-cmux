@@ -1835,6 +1835,7 @@ final class WindowDragHandleHitTests: XCTestCase {
             fileExplorerStore: FileExplorerStore(),
             fileExplorerState: FileExplorerState(),
             sessionIndexStore: SessionIndexStore(),
+            gitModel: GitWorkingTreeModel(repoPath: ""),
             titlebarHeight: 36,
             workspaceId: nil,
             onResumeSession: nil,
