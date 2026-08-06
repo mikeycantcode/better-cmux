@@ -1870,6 +1870,7 @@ enum TitlebarWindowGeometryNotifications {
 }
 
 final class TitlebarControlsAccessoryViewController: NSTitlebarAccessoryViewController, NSPopoverDelegate {
+    let cluster: TitlebarControlsCluster
     private let hostingView: NonDraggableHostingView<AnyView>
     private let containerView: NSView
     private let notificationStore: TerminalNotificationStore
@@ -1886,8 +1887,13 @@ final class TitlebarControlsAccessoryViewController: NSTitlebarAccessoryViewCont
     var popoverIsShownForTesting: Bool { notificationsPopover.isShown }
     private var showsWorkspaceTitlebar: Bool { !WorkspacePresentationModeSettings.isMinimal() }
 
-    init(notificationStore: TerminalNotificationStore, settingsRuntime: SettingsRuntime?) {
+    init(
+        cluster: TitlebarControlsCluster,
+        notificationStore: TerminalNotificationStore,
+        settingsRuntime: SettingsRuntime?
+    ) {
         let containerView = TitlebarAccessoryContainerView()
+        self.cluster = cluster
         self.containerView = containerView
         self.notificationStore = notificationStore
         let toggleSidebar = { [weak containerView] in
@@ -1903,6 +1909,9 @@ final class TitlebarControlsAccessoryViewController: NSTitlebarAccessoryViewCont
         let focusHistoryForward = { [weak containerView] in
             _ = AppDelegate.shared?.activeTabManagerForCommands(preferredWindow: containerView?.window)?.navigateForward()
         }
+        let toggleRightSidebar = { [weak containerView] in
+            _ = AppDelegate.shared?.toggleRightSidebarInActiveMainWindow(preferredWindow: containerView?.window)
+        }
         let rootView = TitlebarControlsView(
             notificationStore: notificationStore,
             viewModel: viewModel,
@@ -1911,8 +1920,8 @@ final class TitlebarControlsAccessoryViewController: NSTitlebarAccessoryViewCont
             onNewTab: newTab,
             onFocusHistoryBack: focusHistoryBack,
             onFocusHistoryForward: focusHistoryForward,
-            onToggleRightSidebar: {},
-            cluster: .leading,
+            onToggleRightSidebar: toggleRightSidebar,
+            cluster: cluster,
             visibilityMode: .alwaysVisible
         )
         hostingView = NonDraggableHostingView(
@@ -2038,7 +2047,7 @@ final class TitlebarControlsAccessoryViewController: NSTitlebarAccessoryViewCont
         guard showsWorkspaceTitlebar else { return }
         let styleRawValue = UserDefaults.standard.integer(forKey: "titlebarControlsStyle")
         let style = TitlebarControlsStyle(rawValue: styleRawValue) ?? .classic
-        let contentSize = TitlebarControlsLayoutMetrics.contentSize(cluster: .leading, config: style.config)
+        let contentSize = TitlebarControlsLayoutMetrics.contentSize(cluster: cluster, config: style.config)
         if intrinsicSizeNeedsRefresh {
             hostingView.invalidateIntrinsicContentSize()
             intrinsicSizeNeedsRefresh = false
@@ -2064,10 +2073,14 @@ final class TitlebarControlsAccessoryViewController: NSTitlebarAccessoryViewCont
             titlebarHeight: titlebarHeight
         )
         let debugSnapshot = MinimalModeTitlebarDebugSettings.snapshot()
-        let xOffset = TitlebarControlsLayoutMetrics.leadingOffset(
-            trafficLightFrame: trafficLightFrame,
-            debugSnapshot: debugSnapshot
-        )
+        // The traffic-light-derived leading inset only applies to the leading cluster;
+        // the trailing accessory hugs the right window edge with no extra offset.
+        let xOffset = cluster == .leading
+            ? TitlebarControlsLayoutMetrics.leadingOffset(
+                trafficLightFrame: trafficLightFrame,
+                debugSnapshot: debugSnapshot
+            )
+            : 0
         let yOffset = TitlebarControlsLayoutMetrics.yOffset(
             contentHeight: contentSize.height,
             containerHeight: containerHeight,
@@ -2818,6 +2831,7 @@ final class UpdateTitlebarAccessoryController {
     private var pendingAttachRetries: [ObjectIdentifier: Int] = [:]
     private var startupScanWorkItems: [DispatchWorkItem] = []
     private let controlsIdentifier = NSUserInterfaceItemIdentifier("cmux.titlebarControls")
+    private let trailingControlsIdentifier = NSUserInterfaceItemIdentifier("cmux.titlebarControls.trailing")
     private let controlsControllers = NSHashTable<TitlebarControlsAccessoryViewController>.weakObjects()
     private var lastKnownPresentationMode: WorkspacePresentationModeSettings.Mode = WorkspacePresentationModeSettings.mode()
     private var detachedNotificationsPopover: NSPopover?
@@ -2970,6 +2984,7 @@ final class UpdateTitlebarAccessoryController {
 
         if !window.titlebarAccessoryViewControllers.contains(where: { $0.view.identifier == controlsIdentifier }) {
             let controls = TitlebarControlsAccessoryViewController(
+                cluster: .leading,
                 notificationStore: TerminalNotificationStore.shared,
                 settingsRuntime: settingsRuntime
             )
@@ -2977,6 +2992,18 @@ final class UpdateTitlebarAccessoryController {
             controls.view.identifier = controlsIdentifier
             window.addTitlebarAccessoryViewController(controls)
             controlsControllers.add(controls)
+        }
+
+        if !window.titlebarAccessoryViewControllers.contains(where: { $0.view.identifier == trailingControlsIdentifier }) {
+            let trailingControls = TitlebarControlsAccessoryViewController(
+                cluster: .trailing,
+                notificationStore: TerminalNotificationStore.shared,
+                settingsRuntime: settingsRuntime
+            )
+            trailingControls.layoutAttribute = .right
+            trailingControls.view.identifier = trailingControlsIdentifier
+            window.addTitlebarAccessoryViewController(trailingControls)
+            controlsControllers.add(trailingControls)
         }
 
         attachedWindows.add(window)
@@ -3000,7 +3027,8 @@ final class UpdateTitlebarAccessoryController {
         let shouldHide = WorkspacePresentationModeSettings.mode() == .minimal
             || window.styleMask.contains(.fullScreen)
         for accessory in window.titlebarAccessoryViewControllers
-            where accessory.view.identifier == controlsIdentifier {
+            where accessory.view.identifier == controlsIdentifier
+            || accessory.view.identifier == trailingControlsIdentifier {
             accessory.isHidden = shouldHide
             accessory.view.isHidden = shouldHide
             accessory.view.alphaValue = shouldHide ? 0 : 1
@@ -3015,7 +3043,7 @@ final class UpdateTitlebarAccessoryController {
         }
         let matchingIndices = window.titlebarAccessoryViewControllers.indices.reversed().filter { index in
             let id = window.titlebarAccessoryViewControllers[index].view.identifier
-            return id == controlsIdentifier
+            return id == controlsIdentifier || id == trailingControlsIdentifier
         }
         guard !matchingIndices.isEmpty || attachedWindows.contains(window) else { return }
 
@@ -3067,19 +3095,25 @@ final class UpdateTitlebarAccessoryController {
         from controllers: [TitlebarControlsAccessoryViewController],
         preferShownPopover: Bool
     ) -> TitlebarControlsAccessoryViewController? {
-        if let keyWindow = NSApp.keyWindow,
-           let match = controllers.first(where: { $0.view.window === keyWindow }) {
+        // The notifications bell lives in the trailing cluster, and its anchor view is
+        // registered on that instance's view model. Each window now hosts two controllers,
+        // so always prefer the trailing one when matching by window.
+        func preferred(in window: NSWindow) -> TitlebarControlsAccessoryViewController? {
+            let matches = controllers.filter { $0.view.window === window }
+            return matches.first(where: { $0.cluster == .trailing }) ?? matches.first
+        }
+        if let keyWindow = NSApp.keyWindow, let match = preferred(in: keyWindow) {
             return match
         }
         if let keyMain = NSApp.windows.first(where: { $0.isKeyWindow && isMainTerminalWindow($0) }),
-           let match = controllers.first(where: { $0.view.window === keyMain }) {
+           let match = preferred(in: keyMain) {
             return match
         }
         if preferShownPopover,
            let shown = controllers.first(where: { $0.popoverIsShownForTesting }) {
             return shown
         }
-        return controllers.first
+        return controllers.first(where: { $0.cluster == .trailing }) ?? controllers.first
     }
 
     func toggleNotificationsPopover(animated: Bool = true, anchorView: NSView? = nil) {
