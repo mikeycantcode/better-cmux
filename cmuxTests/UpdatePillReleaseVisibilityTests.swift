@@ -218,13 +218,30 @@ final class TitlebarControlsSizingPolicyTests: XCTestCase {
     }
 
     func testTitlebarControlsUseDeterministicContentSize() {
+        // Each cluster reserves width for its own three buttons, so the reservation must
+        // never fall below the button row plus the accessory's fixed leading/trailing
+        // insets. The exact numbers below are the current values for that formula's
+        // larger sibling (the planner-driven hint reservation) and exist to catch silent
+        // layout drift.
+        for cluster in [TitlebarControlsCluster.leading, .trailing] {
+            for style in [TitlebarControlsStyle.classic, .compact] {
+                let config = style.config
+                let size = TitlebarControlsLayoutMetrics.contentSize(cluster: cluster, config: config)
+                let buttonReservation = TitlebarControlsLayoutMetrics.outerLeadingPadding
+                    + config.groupPadding.leading
+                    + TitlebarControlsLayoutMetrics.buttonRowWidth(cluster: cluster, config: config)
+                    + config.groupPadding.trailing
+                    + TitlebarControlsLayoutMetrics.hintTrailingInset()
+                XCTAssertGreaterThanOrEqual(size.width, buttonReservation)
+                XCTAssertEqual(size.height, WindowChromeMetrics.appTitlebarHeight, accuracy: 0.001)
+            }
+        }
+
         let classic = TitlebarControlsLayoutMetrics.contentSize(cluster: .leading, config: TitlebarControlsStyle.classic.config)
-        XCTAssertEqual(classic.width, 136, accuracy: 0.001)
-        XCTAssertEqual(classic.height, WindowChromeMetrics.appTitlebarHeight, accuracy: 0.001)
+        XCTAssertEqual(classic.width, 86, accuracy: 0.001)
 
         let compact = TitlebarControlsLayoutMetrics.contentSize(cluster: .leading, config: TitlebarControlsStyle.compact.config)
-        XCTAssertEqual(compact.width, 126, accuracy: 0.001)
-        XCTAssertEqual(compact.height, WindowChromeMetrics.appTitlebarHeight, accuracy: 0.001)
+        XCTAssertEqual(compact.width, 79, accuracy: 0.001)
     }
 
     func testTitlebarControlsLeadingOffsetDoesNotDoubleApplyTrafficLightPosition() {

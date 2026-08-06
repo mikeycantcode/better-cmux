@@ -528,7 +528,14 @@ enum TitlebarControlsLayoutMetrics {
         cluster: TitlebarControlsCluster,
         config: TitlebarControlsStyleConfig
     ) -> CGFloat {
-        let index = CGFloat(cluster.slots.firstIndex(of: slot) ?? 0)
+        // A slot that isn't a member of `cluster` has no position in this row. Silently
+        // collapsing it to index 0 would stack it under the first button, so make the
+        // programming error loud in debug builds while keeping a safe release fallback.
+        let slotIndex = cluster.slots.firstIndex(of: slot)
+        if slotIndex == nil {
+            assertionFailure("Slot \(slot) is not a member of the \(cluster.rawValue) titlebar cluster")
+        }
+        let index = CGFloat(slotIndex ?? 0)
         return config.groupPadding.leading
             + (index * (config.buttonSize + config.spacing))
             + (config.buttonSize / 2.0)
