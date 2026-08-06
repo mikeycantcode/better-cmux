@@ -77,6 +77,12 @@ final class GitChangesWebController: NSObject, WKNavigationDelegate, WKScriptMes
     private var isReady = false
     private var pendingPayloadJSON: String?
     private var pendingTheme: String?
+    // Last values actually evaluated into the page. `flushPending` clears the
+    // pending fields, so without these a web-content-process crash would reload
+    // the shell with nothing to replay and leave a blank panel at the default
+    // theme until the next `$status` change.
+    private var lastPayloadJSON: String?
+    private var lastTheme: String?
 
     /// Called on the main actor for every parsed bridge message.
     var onMessage: ((GitChangesBridgeMessage) -> Void)?
@@ -114,8 +120,13 @@ final class GitChangesWebController: NSObject, WKNavigationDelegate, WKScriptMes
         )
     }
 
+    /// Loads (or reloads) the shell. Re-seeds the pending payload/theme from the
+    /// last applied values so a recovery reload repaints the panel on `ready`
+    /// instead of coming back empty.
     private func load() {
         isReady = false
+        pendingPayloadJSON = pendingPayloadJSON ?? lastPayloadJSON
+        pendingTheme = pendingTheme ?? lastTheme
         webView?.load(shellRequest())
     }
 
@@ -145,6 +156,7 @@ final class GitChangesWebController: NSObject, WKNavigationDelegate, WKScriptMes
         guard let webView else { return }
         if let theme = pendingTheme {
             pendingTheme = nil
+            lastTheme = theme
             webView.evaluateJavaScript(
                 "window.cmuxSetTheme && window.cmuxSetTheme(\(Self.jsStringLiteral(theme)));",
                 completionHandler: nil
@@ -152,6 +164,7 @@ final class GitChangesWebController: NSObject, WKNavigationDelegate, WKScriptMes
         }
         if let payload = pendingPayloadJSON {
             pendingPayloadJSON = nil
+            lastPayloadJSON = payload
             webView.evaluateJavaScript(
                 "window.cmuxRenderChanges && window.cmuxRenderChanges(\(Self.jsStringLiteral(payload)));",
                 completionHandler: nil
@@ -185,11 +198,14 @@ final class GitChangesWebController: NSObject, WKNavigationDelegate, WKScriptMes
         isReady = false
         pendingPayloadJSON = nil
         pendingTheme = nil
+        lastPayloadJSON = nil
+        lastTheme = nil
     }
 
     func webViewWebContentProcessDidTerminate(_ webView: WKWebView) {
         guard let current = self.webView, current === webView else { return }
-        // The queued payload replays on the recovered page's `ready`.
+        // `load()` re-seeds pending from the last applied payload/theme, so the
+        // recovered page repaints on its `ready` without waiting for new status.
         load()
     }
 }
