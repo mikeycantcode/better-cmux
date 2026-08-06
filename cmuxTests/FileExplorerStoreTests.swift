@@ -330,16 +330,9 @@ struct FileExplorerStoreTests {
 
     // MARK: - Gitignore dimming
 
-    @Test
-    func testMarksGitignoredChildrenAsIgnored() async throws {
-        let base = NSTemporaryDirectory() + "cmux-ignore-" + UUID().uuidString
-        try FileManager.default.createDirectory(atPath: base + "/.venv", withIntermediateDirectories: true)
-        defer { try? FileManager.default.removeItem(atPath: base) }
-        // git resolves the worktree through symlinks (/var -> /private/var on macOS),
-        // so absolute child paths must be given in resolved form or git reports them
-        // as outside the repository.
-        let dir = URL(fileURLWithPath: base).resolvingSymlinksInPath().path
-
+    /// Creates a git repo with `.venv/` and `calibration.json` ignored, `kept.txt` tracked.
+    private func makeIgnoreFixture(at dir: String) throws {
+        try FileManager.default.createDirectory(atPath: dir + "/.venv", withIntermediateDirectories: true)
         try "x\n".write(toFile: dir + "/kept.txt", atomically: true, encoding: .utf8)
         try ".venv/\ncalibration.json\n".write(toFile: dir + "/.gitignore", atomically: true, encoding: .utf8)
         try "{}\n".write(toFile: dir + "/calibration.json", atomically: true, encoding: .utf8)
@@ -352,6 +345,14 @@ struct FileExplorerStoreTests {
         git.standardError = Pipe()
         try git.run()
         git.waitUntilExit()
+    }
+
+    @Test
+    func testMarksGitignoredChildrenAsIgnored() async throws {
+        let dir = URL(fileURLWithPath: NSTemporaryDirectory() + "cmux-ignore-" + UUID().uuidString)
+            .resolvingSymlinksInPath().path
+        defer { try? FileManager.default.removeItem(atPath: dir) }
+        try makeIgnoreFixture(at: dir)
 
         let store = FileExplorerStore()
         store.showHiddenFiles = true
@@ -362,6 +363,34 @@ struct FileExplorerStoreTests {
         #expect(store.isIgnored(dir + "/.venv"))
         #expect(store.isIgnored(dir + "/calibration.json"))
         #expect(!store.isIgnored(dir + "/kept.txt"))
+    }
+
+    /// git resolves its worktree through symlinks, so absolute paths spelled with an
+    /// unresolved root are rejected as "outside repository" (exit 128). The store must
+    /// still dim those entries.
+    @Test
+    func testMarksGitignoredChildrenUnderSymlinkedRoot() async throws {
+        let realDir = URL(fileURLWithPath: NSTemporaryDirectory() + "cmux-ignore-real-" + UUID().uuidString)
+            .resolvingSymlinksInPath().path
+        let linkDir = URL(fileURLWithPath: NSTemporaryDirectory() + "cmux-ignore-link-" + UUID().uuidString)
+            .resolvingSymlinksInPath().path
+        defer {
+            try? FileManager.default.removeItem(atPath: linkDir)
+            try? FileManager.default.removeItem(atPath: realDir)
+        }
+        try makeIgnoreFixture(at: realDir)
+        try FileManager.default.createSymbolicLink(atPath: linkDir, withDestinationPath: realDir)
+
+        let store = FileExplorerStore()
+        store.showHiddenFiles = true
+        store.setProviderForTesting(LocalFileExplorerProvider())
+        store.setRootPath(linkDir)
+
+        try await waitFor("gitignored children marked under symlinked root") {
+            store.isIgnored(linkDir + "/calibration.json")
+        }
+        #expect(store.isIgnored(linkDir + "/.venv"))
+        #expect(!store.isIgnored(linkDir + "/kept.txt"))
     }
 }
 

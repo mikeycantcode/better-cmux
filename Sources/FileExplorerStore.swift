@@ -444,12 +444,20 @@ final class FileExplorerStore: ObservableObject {
         }
     }
 
+    /// Serializes `git check-ignore` batches: directory loads (especially expanded-state
+    /// restore) can fan out to many directories at once, and each batch blocks its thread
+    /// on a subprocess. One queue means at most one git process at a time.
+    private static let ignoreCheckQueue = DispatchQueue(
+        label: "com.cmux.file-explorer.check-ignore",
+        qos: .utility
+    )
+
     /// Batches a `git check-ignore` query for freshly loaded children and folds the
     /// ignored subset into `ignoredPaths` on the main thread.
     private func refreshIgnoredStatus(forChildPaths paths: [String]) {
         guard provider is LocalFileExplorerProvider, !paths.isEmpty, !rootPath.isEmpty else { return }
         let root = rootPath
-        DispatchQueue.global(qos: .utility).async {
+        Self.ignoreCheckQueue.async {
             let ignored = Self.checkIgnored(paths: paths, repoRoot: root)
             guard !ignored.isEmpty else { return }
             DispatchQueue.main.async { [weak self] in
@@ -460,24 +468,61 @@ final class FileExplorerStore: ObservableObject {
     }
 
     /// Feeds paths to `git check-ignore --stdin -z`; returns the subset git reports ignored.
+    ///
+    /// Paths are sent relative to the symlink-resolved repo root. git resolves its worktree
+    /// through symlinks, so an absolute path under an unresolved root (e.g. `/tmp/...` when
+    /// the worktree resolves to `/private/tmp/...`) is rejected as "outside repository"
+    /// (exit 128) and every entry would silently read as not-ignored.
     private static func checkIgnored(paths: [String], repoRoot: String) -> Set<String> {
+        let resolvedRoot = URL(fileURLWithPath: repoRoot).resolvingSymlinksInPath().path
+        // relative path -> the original absolute path the caller asked about
+        var byRelative: [String: String] = [:]
+        for path in paths {
+            guard let relative = relativePath(for: path, root: repoRoot, resolvedRoot: resolvedRoot) else { continue }
+            byRelative[relative] = path
+        }
+        guard !byRelative.isEmpty else { return [] }
+
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/usr/bin/git")
-        process.currentDirectoryURL = URL(fileURLWithPath: repoRoot)
+        process.currentDirectoryURL = URL(fileURLWithPath: resolvedRoot)
         process.arguments = ["check-ignore", "--stdin", "-z"]
         let stdin = Pipe(), stdout = Pipe()
         process.standardInput = stdin
         process.standardOutput = stdout
         process.standardError = Pipe()
         guard (try? process.run()) != nil else { return [] }
-        let payload = paths.joined(separator: "\0") + "\0"
+        let payload = byRelative.keys.joined(separator: "\0") + "\0"
         stdin.fileHandleForWriting.write(payload.data(using: .utf8) ?? Data())
         try? stdin.fileHandleForWriting.close()
         let data = stdout.fileHandleForReading.readDataToEndOfFile()
         process.waitUntilExit()
-        // exit 0 = some ignored, 1 = none, others = error
-        guard process.terminationStatus == 0, let text = String(data: data, encoding: .utf8) else { return [] }
-        return Set(text.split(separator: "\0").map(String.init))
+        // exit 0 = some ignored, 1 = none ignored, anything else = failure
+        guard process.terminationStatus == 0 else {
+            #if DEBUG
+            if process.terminationStatus > 1 {
+                NSLog("[FileExplorer] git check-ignore failed (exit \(process.terminationStatus)) in \(resolvedRoot)")
+            }
+            #endif
+            return []
+        }
+        guard let text = String(data: data, encoding: .utf8) else { return [] }
+        return Set(text.split(separator: "\0").compactMap { byRelative[String($0)] })
+    }
+
+    /// Path relative to the repo root, matching against both the raw and the
+    /// symlink-resolved root so either spelling of the path works.
+    private static func relativePath(for path: String, root: String, resolvedRoot: String) -> String? {
+        for base in [root, resolvedRoot] where !base.isEmpty {
+            let prefix = base.hasSuffix("/") ? base : base + "/"
+            if path.hasPrefix(prefix) {
+                let relative = String(path.dropFirst(prefix.count))
+                if !relative.isEmpty { return relative }
+            }
+        }
+        let resolvedPath = URL(fileURLWithPath: path).resolvingSymlinksInPath().path
+        guard resolvedPath != path else { return nil }
+        return relativePath(for: resolvedPath, root: root, resolvedRoot: resolvedRoot)
     }
 
     private func updateDirectoryWatcher() {
