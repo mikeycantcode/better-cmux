@@ -5528,10 +5528,10 @@ class GhosttyNSView: NSView, NSUserInterfaceValidations {
         ensureSurfaceMs = (ProcessInfo.processInfo.systemUptime - ensureSurfaceStart) * 1000.0
 #endif
         if let appDelegate = AppDelegate.shared,
-           let mode = appDelegate.rightSidebarModeShortcut(for: event),
+           let tab = appDelegate.rightSidebarTabShortcut(for: event),
            let window,
            appDelegate.shouldRouteRightSidebarModeShortcut(in: window) {
-            _ = appDelegate.focusRightSidebarInActiveMainWindow(mode: mode, focusFirstItem: true, preferredWindow: window)
+            _ = appDelegate.focusRightSidebarInActiveMainWindow(tab: tab, focusFirstItem: true, preferredWindow: window)
             return
         }
         if let terminalSurface {
@@ -6301,7 +6301,7 @@ class GhosttyNSView: NSView, NSUserInterfaceValidations {
         // repairs workspace/pane active state before key routing runs.
         if let terminalSurface {
             if terminalSurface.focusPlacement == .rightSidebarDock {
-                AppDelegate.shared?.noteRightSidebarKeyboardFocusIntent(mode: .dock, in: window)
+                AppDelegate.shared?.noteRightSidebarKeyboardFocusIntent(in: window)
             } else {
                 AppDelegate.shared?.noteTerminalKeyboardFocusIntent(
                     workspaceId: terminalSurface.tabId,

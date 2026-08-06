@@ -90,7 +90,6 @@ struct SidebarFileExplorerPanel: View {
                         onOpenFilePreview: { path in
                             onOpenFile(path)
                         },
-                        presentation: .files,
                         placement: .pane,
                         showsHeader: false
                     )

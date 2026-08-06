@@ -505,13 +505,9 @@ final class WorkspaceRenameShortcutDefaultsTests: XCTestCase {
         XCTAssertFalse(findInDirectory.control)
     }
 
-    func testRightSidebarModeSwitchesHavePrivateControlDigitDefaults() {
+    func testRightSidebarTabSwitchesHaveControlDigitDefaults() {
         let modeSwitchActions: [(KeyboardShortcutSettings.Action, String)] = [
             (.switchRightSidebarToFiles, "1"),
-            (.switchRightSidebarToFind, "2"),
-            (.switchRightSidebarToSessions, "3"),
-            (.switchRightSidebarToFeed, "4"),
-            (.switchRightSidebarToDock, "5"),
         ]
 
         for (action, key) in modeSwitchActions {
@@ -532,6 +528,8 @@ final class WorkspaceRenameShortcutDefaultsTests: XCTestCase {
         XCTAssertTrue(visibleActions.contains(.toggleRightSidebar))
         XCTAssertTrue(visibleActions.contains(.focusRightSidebar))
         XCTAssertTrue(visibleActions.contains(.findInDirectory))
+        XCTAssertTrue(visibleActions.contains(.switchRightSidebarToFiles))
+        XCTAssertTrue(visibleActions.contains(.switchRightSidebarToGit))
         XCTAssertTrue(visibleActions.contains(.toggleUnread))
         XCTAssertTrue(visibleActions.contains(.markOldestUnreadAndJumpNext))
         XCTAssertFalse(visibleActions.contains(.showHideAllWindows))
@@ -564,7 +562,8 @@ final class WorkspaceRenameShortcutDefaultsTests: XCTestCase {
     func testSettingsVisibleShortcutActionsColocateRightSidebarFileExplorerAndFindShortcuts() {
         let visibleActions = KeyboardShortcutSettings.settingsVisibleActions
         let expectedActions: [KeyboardShortcutSettings.Action] = [
-            .focusRightSidebar, .toggleRightSidebar, .findInDirectory,
+            .focusRightSidebar, .toggleRightSidebar,
+            .switchRightSidebarToFiles, .switchRightSidebarToGit, .findInDirectory,
             .fileExplorerOpenSelection, .fileExplorerOpenSelectionFinderAlias,
         ]
 
@@ -1137,10 +1136,7 @@ final class KeyboardShortcutSettingsFileStoreTests: XCTestCase {
               "shortcuts": {
                 "focusRightSidebar": "cmd+opt+shift+e",
                 "switchRightSidebarToFiles": "ctrl+4",
-                "switchRightSidebarToFind": "ctrl+5",
-                "switchRightSidebarToSessions": "ctrl+6",
-                "switchRightSidebarToFeed": "ctrl+7",
-                "switchRightSidebarToDock": "ctrl+8"
+                "switchRightSidebarToGit": "ctrl+5"
               }
             }
             """,
@@ -1162,20 +1158,8 @@ final class KeyboardShortcutSettingsFileStoreTests: XCTestCase {
             StoredShortcut(key: "4", command: false, shift: false, option: false, control: true)
         )
         XCTAssertEqual(
-            store.override(for: .switchRightSidebarToFind),
+            store.override(for: .switchRightSidebarToGit),
             StoredShortcut(key: "5", command: false, shift: false, option: false, control: true)
-        )
-        XCTAssertEqual(
-            store.override(for: .switchRightSidebarToSessions),
-            StoredShortcut(key: "6", command: false, shift: false, option: false, control: true)
-        )
-        XCTAssertEqual(
-            store.override(for: .switchRightSidebarToFeed),
-            StoredShortcut(key: "7", command: false, shift: false, option: false, control: true)
-        )
-        XCTAssertEqual(
-            store.override(for: .switchRightSidebarToDock),
-            StoredShortcut(key: "8", command: false, shift: false, option: false, control: true)
         )
     }
 
@@ -5669,7 +5653,6 @@ final class WorkspacePanelGitBranchTests: XCTestCase {
 
         guard let newPanel = workspace.newRightSidebarToolSurface(
             inPane: originalPaneId,
-            mode: .files,
             focus: false
         ) else {
             XCTFail("Expected right sidebar tool surface to be created")
@@ -5682,7 +5665,6 @@ final class WorkspacePanelGitBranchTests: XCTestCase {
 
         XCTAssertNotEqual(newPanel.id, originalFocusedPanelId)
         XCTAssertEqual(newPanel.panelType, .rightSidebarTool)
-        XCTAssertEqual(newPanel.mode, .files)
         XCTAssertEqual(
             workspace.focusedPanelId,
             originalFocusedPanelId,
@@ -5699,7 +5681,7 @@ final class WorkspacePanelGitBranchTests: XCTestCase {
         )
     }
 
-    func testOpenOrFocusRightSidebarToolSurfaceReusesExistingMode() {
+    func testOpenOrFocusRightSidebarToolSurfaceReusesExistingPane() {
         let workspace = Workspace()
         guard let paneId = workspace.bonsplitController.focusedPaneId else {
             XCTFail("Expected focused pane")
@@ -5708,24 +5690,22 @@ final class WorkspacePanelGitBranchTests: XCTestCase {
 
         guard let firstPanel = workspace.openOrFocusRightSidebarToolSurface(
             inPane: paneId,
-            mode: .sessions,
             focus: true
         ) else {
-            XCTFail("Expected Vault tool surface to be created")
+            XCTFail("Expected Files tool surface to be created")
             return
         }
         guard let secondPanel = workspace.openOrFocusRightSidebarToolSurface(
             inPane: paneId,
-            mode: .sessions,
             focus: true
         ) else {
-            XCTFail("Expected existing Vault tool surface to be focused")
+            XCTFail("Expected existing Files tool surface to be focused")
             return
         }
 
         XCTAssertEqual(firstPanel.id, secondPanel.id)
         XCTAssertEqual(
-            workspace.panels.values.compactMap { $0 as? RightSidebarToolPanel }.filter { $0.mode == .sessions }.count,
+            workspace.panels.values.compactMap { $0 as? RightSidebarToolPanel }.count,
             1
         )
         XCTAssertEqual(workspace.focusedPanelId, firstPanel.id)

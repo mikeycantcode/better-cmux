@@ -1592,21 +1592,19 @@ struct SessionMarkdownPanelSnapshot: Codable, Sendable {
 struct SessionFilePreviewPanelSnapshot: Codable, Sendable {
     var filePath: String
 }
+/// The right-sidebar tool pane no longer has modes — it is always the Files|Git
+/// shell. The type is kept (empty) so older session files that still carry a
+/// `mode` string decode and restore as a Files pane instead of being dropped.
 struct SessionRightSidebarToolPanelSnapshot: Codable, Sendable {
-    var mode: RightSidebarMode?
-
-    init(mode: RightSidebarMode?) {
-        self.mode = mode
-    }
-
-    private enum CodingKeys: String, CodingKey {
-        case mode
-    }
+    init() {}
 
     init(from decoder: Decoder) throws {
-        let container = try decoder.container(keyedBy: CodingKeys.self)
-        let raw = try container.decodeIfPresent(String.self, forKey: .mode)
-        self.mode = raw.flatMap { RightSidebarMode(rawValue: $0) }
+        self.init()
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.singleValueContainer()
+        try container.encode([String: String]())
     }
 }
 struct SessionCustomSidebarPanelSnapshot: Codable, Sendable { var name: String }

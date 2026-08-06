@@ -10,8 +10,8 @@ final class FileExplorerNSOutlineView: NSOutlineView {
     private var quickSearchQuery = ""
 
     override func keyDown(with event: NSEvent) {
-        if let mode = AppDelegate.shared?.rightSidebarModeShortcut(for: event) {
-            if fileExplorerCoordinator?.handleModeShortcut(mode, in: window) == true {
+        if let tab = AppDelegate.shared?.rightSidebarTabShortcut(for: event) {
+            if fileExplorerCoordinator?.handleTabShortcut(tab, in: window) == true {
                 return
             }
         }

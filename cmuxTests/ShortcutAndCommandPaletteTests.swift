@@ -1103,10 +1103,7 @@ final class RightSidebarModeShortcutHintTests: XCTestCase {
     private let touchedShortcutActions: [KeyboardShortcutSettings.Action] = [
         .focusRightSidebar,
         .switchRightSidebarToFiles,
-        .switchRightSidebarToFind,
-        .switchRightSidebarToSessions,
-        .switchRightSidebarToFeed,
-        .switchRightSidebarToDock,
+        .switchRightSidebarToGit,
     ]
     private var originalSettingsFileStore: KeyboardShortcutSettingsFileStore!
     private var savedShortcutData: [KeyboardShortcutSettings.Action: Data?] = [:]
@@ -1152,38 +1149,19 @@ final class RightSidebarModeShortcutHintTests: XCTestCase {
         try super.tearDownWithError()
     }
 
-    func testModeShortcutActionsMatchModeSwitchingActions() {
-        XCTAssertEqual(RightSidebarMode.files.shortcutAction, .switchRightSidebarToFiles)
-        XCTAssertEqual(RightSidebarMode.find.shortcutAction, .switchRightSidebarToFind)
-        XCTAssertEqual(RightSidebarMode.sessions.shortcutAction, .switchRightSidebarToSessions)
-        XCTAssertEqual(RightSidebarMode.feed.shortcutAction, .switchRightSidebarToFeed)
-        XCTAssertEqual(RightSidebarMode.dock.shortcutAction, .switchRightSidebarToDock)
-    }
-
-    func testModeShortcutsUsePrivateControlDigitDefaults() {
+    func testTabShortcutsResolveToFilesAndGit() {
+        // Files keeps its factory ⌃1; Git ships unbound, so only a configured
+        // binding can resolve it.
         XCTAssertEqual(
-            RightSidebarMode.modeShortcut(for: makeKeyDownEvent(key: "1", modifiers: [.control], keyCode: 18)),
+            RightSidebarTabShortcut.tab(for: makeKeyDownEvent(key: "1", modifiers: [.control], keyCode: 18)),
             .files
         )
-        XCTAssertEqual(
-            RightSidebarMode.modeShortcut(for: makeKeyDownEvent(key: "2", modifiers: [.control], keyCode: 19)),
-            .find
-        )
-        XCTAssertEqual(
-            RightSidebarMode.modeShortcut(for: makeKeyDownEvent(key: "3", modifiers: [.control], keyCode: 20)),
-            .sessions
-        )
-        XCTAssertEqual(
-            RightSidebarMode.modeShortcut(for: makeKeyDownEvent(key: "4", modifiers: [.control], keyCode: 21)),
-            .feed
-        )
-        XCTAssertEqual(
-            RightSidebarMode.modeShortcut(for: makeKeyDownEvent(key: "5", modifiers: [.control], keyCode: 23)),
-            .dock
+        XCTAssertNil(
+            RightSidebarTabShortcut.tab(for: makeKeyDownEvent(key: "2", modifiers: [.control], keyCode: 19))
         )
     }
 
-    func testModeShortcutUsesConfiguredBindings() {
+    func testTabShortcutUsesConfiguredBindings() {
         let customFilesShortcut = StoredShortcut(
             key: "4",
             command: false,
@@ -1192,39 +1170,52 @@ final class RightSidebarModeShortcutHintTests: XCTestCase {
             control: true
         )
         KeyboardShortcutSettings.setShortcut(customFilesShortcut, for: .switchRightSidebarToFiles)
+        let customGitShortcut = StoredShortcut(
+            key: "5",
+            command: false,
+            shift: false,
+            option: false,
+            control: true
+        )
+        KeyboardShortcutSettings.setShortcut(customGitShortcut, for: .switchRightSidebarToGit)
 
         XCTAssertEqual(
-            RightSidebarMode.modeShortcut(for: makeKeyDownEvent(key: "4", modifiers: [.control], keyCode: 21)),
+            RightSidebarTabShortcut.tab(for: makeKeyDownEvent(key: "4", modifiers: [.control], keyCode: 21)),
             .files
         )
+        XCTAssertEqual(
+            RightSidebarTabShortcut.tab(for: makeKeyDownEvent(key: "5", modifiers: [.control], keyCode: 23)),
+            .git
+        )
         XCTAssertNil(
-            RightSidebarMode.modeShortcut(for: makeKeyDownEvent(key: "1", modifiers: [.control], keyCode: 18))
+            RightSidebarTabShortcut.tab(for: makeKeyDownEvent(key: "1", modifiers: [.control], keyCode: 18))
         )
     }
 
-    func testModeShortcutHonorsActionGate() {
-        let feedEvent = makeKeyDownEvent(key: "4", modifiers: [.control], keyCode: 21)
+    func testTabShortcutHonorsActionGate() {
+        let filesEvent = makeKeyDownEvent(key: "1", modifiers: [.control], keyCode: 18)
 
         XCTAssertNil(
-            RightSidebarMode.modeShortcut(for: feedEvent) { action in
-                action != .switchRightSidebarToFeed
+            RightSidebarTabShortcut.tab(for: filesEvent) { action in
+                action != .switchRightSidebarToFiles
             }
         )
         XCTAssertEqual(
-            RightSidebarMode.modeShortcut(for: feedEvent) { action in
-                action == .switchRightSidebarToFeed
+            RightSidebarTabShortcut.tab(for: filesEvent) { action in
+                action == .switchRightSidebarToFiles
             },
-            .feed
+            .files
         )
     }
 
-    func testModeShortcutUsesSettingsFileBindings() throws {
+    func testTabShortcutUsesSettingsFileBindings() throws {
         let settingsFileURL = try XCTUnwrap(temporaryDirectoryURL)
             .appendingPathComponent("cmux.json", isDirectory: false)
         try """
         {
           "shortcuts": {
-            "switchRightSidebarToFiles": "ctrl+8"
+            "switchRightSidebarToFiles": "ctrl+8",
+            "switchRightSidebarToGit": "ctrl+9"
           }
         }
         """.write(to: settingsFileURL, atomically: true, encoding: .utf8)
@@ -1232,27 +1223,15 @@ final class RightSidebarModeShortcutHintTests: XCTestCase {
         KeyboardShortcutSettings.notifySettingsFileDidChange()
 
         XCTAssertEqual(
-            RightSidebarMode.modeShortcut(for: makeKeyDownEvent(key: "8", modifiers: [.control], keyCode: 28)),
+            RightSidebarTabShortcut.tab(for: makeKeyDownEvent(key: "8", modifiers: [.control], keyCode: 28)),
             .files
         )
+        XCTAssertEqual(
+            RightSidebarTabShortcut.tab(for: makeKeyDownEvent(key: "9", modifiers: [.control], keyCode: 25)),
+            .git
+        )
         XCTAssertNil(
-            RightSidebarMode.modeShortcut(for: makeKeyDownEvent(key: "1", modifiers: [.control], keyCode: 18))
-        )
-        XCTAssertEqual(
-            RightSidebarMode.modeShortcut(for: makeKeyDownEvent(key: "2", modifiers: [.control], keyCode: 19)),
-            .find
-        )
-        XCTAssertEqual(
-            RightSidebarMode.modeShortcut(for: makeKeyDownEvent(key: "3", modifiers: [.control], keyCode: 20)),
-            .sessions
-        )
-        XCTAssertEqual(
-            RightSidebarMode.modeShortcut(for: makeKeyDownEvent(key: "4", modifiers: [.control], keyCode: 21)),
-            .feed
-        )
-        XCTAssertEqual(
-            RightSidebarMode.modeShortcut(for: makeKeyDownEvent(key: "5", modifiers: [.control], keyCode: 23)),
-            .dock
+            RightSidebarTabShortcut.tab(for: makeKeyDownEvent(key: "1", modifiers: [.control], keyCode: 18))
         )
     }
 
@@ -1314,7 +1293,7 @@ final class MainWindowFocusControllerRightSidebarHideTests: XCTestCase {
         let panelId = UUID()
 
         XCTAssertTrue(controller.allowsTerminalFocus(workspaceId: workspaceId, panelId: panelId))
-        controller.noteRightSidebarInteraction(mode: .feed)
+        controller.noteRightSidebarInteraction()
         XCTAssertFalse(controller.allowsTerminalFocus(workspaceId: workspaceId, panelId: panelId))
 
         XCTAssertFalse(controller.restoreTerminalFocusAfterRightSidebarHiddenIfNeeded())
@@ -1381,7 +1360,7 @@ final class MainWindowFocusControllerRightSidebarHideTests: XCTestCase {
     }
 
     @MainActor
-    func testPendingSessionsFocusSurvivesStaleFeedResponderDuringModeSwitch() {
+    func testPendingRightSidebarFocusSurvivesStaleFeedResponder() {
         let fileExplorerState = FileExplorerState()
         let controller = MainWindowFocusController(
             windowId: UUID(),
@@ -1392,19 +1371,20 @@ final class MainWindowFocusControllerRightSidebarHideTests: XCTestCase {
         let staleFeedResponder = TestRightSidebarResponder(frame: NSRect(x: 0, y: 0, width: 24, height: 24))
 
         XCTAssertTrue(controller.selectFeedItem(UUID(), focusFeed: false))
-        XCTAssertTrue(controller.focusRightSidebar(mode: .sessions, focusFirstItem: true))
-        XCTAssertEqual(controller.intent, .rightSidebar(mode: .sessions))
-        XCTAssertEqual(fileExplorerState.mode, .sessions)
-        XCTAssertEqual(controller.debugPendingRightSidebarFocusMode, .sessions)
+        XCTAssertTrue(controller.focusRightSidebar(tab: .files, focusFirstItem: true))
+        XCTAssertEqual(controller.intent, .rightSidebar)
+        XCTAssertEqual(FilesGitTab.current(), .files)
+        XCTAssertTrue(controller.debugHasPendingRightSidebarFocusRequest)
 
         controller.debugSyncAfterResponderChange(responder: staleFeedResponder)
 
-        XCTAssertEqual(controller.intent, .rightSidebar(mode: .sessions))
-        XCTAssertEqual(controller.debugPendingRightSidebarFocusMode, .sessions)
+        XCTAssertEqual(controller.intent, .rightSidebar)
+        XCTAssertTrue(controller.debugHasPendingRightSidebarFocusRequest)
+        _ = fileExplorerState
     }
 
     @MainActor
-    func testPendingSessionsFocusCompletesWhenRightSidebarHostRegisters() {
+    func testPendingRightSidebarFocusCompletesWhenHostRegisters() {
         let fileExplorerState = FileExplorerState()
         let window = NSWindow(
             contentRect: NSRect(x: 0, y: 0, width: 240, height: 180),
@@ -1421,8 +1401,8 @@ final class MainWindowFocusControllerRightSidebarHideTests: XCTestCase {
             fileExplorerState: fileExplorerState
         )
 
-        XCTAssertTrue(controller.focusRightSidebar(mode: .sessions, focusFirstItem: true))
-        XCTAssertEqual(controller.debugPendingRightSidebarFocusMode, .sessions)
+        XCTAssertTrue(controller.focusRightSidebar(tab: .files, focusFirstItem: true))
+        XCTAssertTrue(controller.debugHasPendingRightSidebarFocusRequest)
 
         let focusHost = RightSidebarKeyboardFocusView(frame: NSRect(x: 0, y: 0, width: 24, height: 24))
         defer {
@@ -1434,7 +1414,7 @@ final class MainWindowFocusControllerRightSidebarHideTests: XCTestCase {
         contentView.addSubview(focusHost)
         controller.registerRightSidebarHost(focusHost)
 
-        XCTAssertNil(controller.debugPendingRightSidebarFocusMode)
+        XCTAssertFalse(controller.debugHasPendingRightSidebarFocusRequest)
         XCTAssertTrue(window.firstResponder === focusHost)
     }
 
@@ -1449,7 +1429,7 @@ final class MainWindowFocusControllerRightSidebarHideTests: XCTestCase {
         let workspaceId = UUID()
         let panelId = UUID()
 
-        controller.noteRightSidebarInteraction(mode: .feed)
+        controller.noteRightSidebarInteraction()
         XCTAssertFalse(controller.allowsTerminalFocus(workspaceId: workspaceId, panelId: panelId))
 
         XCTAssertFalse(controller.toggleRightSidebarOrTerminalFocus())

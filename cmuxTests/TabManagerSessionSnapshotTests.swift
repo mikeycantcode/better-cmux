@@ -1360,10 +1360,22 @@ final class TabManagerSessionSnapshotTests: XCTestCase {
         XCTAssertTrue(item.menuSubtitle.contains(String(localized: "menu.history.recentlyClosed.kind.tab", defaultValue: "Tab")))
     }
 
-    func testRightSidebarToolSnapshotTolerantlyDecodesObsoleteHistoryMode() throws {
-        let json = #"{"mode":"history"}"#.data(using: .utf8)!
-        let snapshot = try JSONDecoder().decode(SessionRightSidebarToolPanelSnapshot.self, from: json)
-        XCTAssertNil(snapshot.mode)
+    /// Modes are gone (Task 7): the snapshot must still decode old session files
+    /// that carry any `mode` string, so those panes restore as Files panes.
+    func testRightSidebarToolSnapshotTolerantlyDecodesObsoleteModes() throws {
+        for mode in ["history", "find", "sessions", "feed", "dock", "custom-sidebar"] {
+            let json = #"{"mode":"\#(mode)"}"#.data(using: .utf8)!
+            XCTAssertNoThrow(
+                try JSONDecoder().decode(SessionRightSidebarToolPanelSnapshot.self, from: json),
+                "Should decode obsolete mode '\(mode)'"
+            )
+        }
+        XCTAssertNoThrow(
+            try JSONDecoder().decode(
+                SessionRightSidebarToolPanelSnapshot.self,
+                from: #"{}"#.data(using: .utf8)!
+            )
+        )
     }
 
     func testReopenSpecificRecentlyClosedRowRestoresOnlyThatRecord() throws {

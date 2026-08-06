@@ -14,7 +14,7 @@ protocol FeedKeyboardFocusResponder: AnyObject {}
 
 enum MainWindowKeyboardFocusIntent: Equatable {
     case mainPanel(workspaceId: UUID, panelId: UUID)
-    case rightSidebar(mode: RightSidebarMode)
+    case rightSidebar
 }
 
 enum MainWindowFocusToggleDestination: Equatable {

@@ -369,10 +369,9 @@ private final class ShortcutNoopFileSearchController: FileSearchControlling {
         )
         let container = FileExplorerContainerView(
             coordinator: coordinator,
-            presentation: .find,
             searchController: ShortcutNoopFileSearchController()
         )
-        container.updatePresentation(.find)
+        container.showSearch()
         let searchField = try #require(findSearchField(in: container))
         let textView = NSTextView()
         textView.setMarkedText(

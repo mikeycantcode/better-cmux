@@ -714,10 +714,7 @@ final class ClosedItemHistoryStore: ObservableObject {
         case .filePreview:
             return String(localized: "menu.history.recentlyClosed.panel.filePreview", defaultValue: "File Preview")
         case .rightSidebarTool:
-            if let mode = snapshot.rightSidebarTool?.mode {
-                return mode.label
-            }
-            return String(localized: "menu.history.recentlyClosed.panel.tool", defaultValue: "Tool")
+            return FilesGitTab.files.label
         case .customSidebar:
             return String(localized: "menu.history.recentlyClosed.panel.customSidebar", defaultValue: "Custom Sidebar")
         case .agentSession:

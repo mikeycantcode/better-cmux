@@ -1,9 +1,9 @@
 #if DEBUG
 /// The outcome of `debug.right_sidebar.focus`, preserving the legacy body's
-/// ordering: mode validation first (app-side, against `RightSidebarMode`),
+/// ordering: mode validation first (app-side, against `FilesGitTab`),
 /// then explicit-window lookup, then the reveal attempt.
 public enum ControlDebugRightSidebarFocusResolution: Sendable, Equatable {
-    /// The mode raw value is not a `RightSidebarMode` (legacy
+    /// The mode raw value is not a `FilesGitTab` (legacy
     /// `invalid_params` / "Invalid right sidebar mode"). Carries the resolved
     /// mode name (the request's, or the `dock` default).
     case invalidMode(String)

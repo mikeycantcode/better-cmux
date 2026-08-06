@@ -551,7 +551,8 @@ extension Workspace {
             browserSnapshot = nil
             markdownSnapshot = nil
             filePreviewSnapshot = nil
-            rightSidebarToolSnapshot = SessionRightSidebarToolPanelSnapshot(mode: toolPanel.mode)
+            _ = toolPanel
+            rightSidebarToolSnapshot = SessionRightSidebarToolPanelSnapshot()
             agentSessionSnapshot = nil
             projectSnapshot = nil
         case .customSidebar:
@@ -1363,11 +1364,8 @@ extension Workspace {
             applySessionPanelMetadata(snapshot, toPanelId: filePreviewPanel.id)
             return filePreviewPanel.id
         case .rightSidebarTool:
-            guard let mode = snapshot.rightSidebarTool?.mode,
-                  mode.canOpenAsPane,
-                  let toolPanel = newRightSidebarToolSurface(
+            guard let toolPanel = newRightSidebarToolSurface(
                     inPane: paneId,
-                    mode: mode,
                     focus: false
                   ) else {
                 return nil
@@ -6312,13 +6310,10 @@ final class Workspace: Identifiable, ObservableObject {
     @discardableResult
     func openOrFocusRightSidebarToolSurface(
         inPane paneId: PaneID,
-        mode: RightSidebarMode,
         focus: Bool = true
     ) -> RightSidebarToolPanel? {
-        guard mode.canOpenAsPane else { return nil }
         for (existingId, panel) in panels {
-            guard let toolPanel = panel as? RightSidebarToolPanel,
-                  toolPanel.mode == mode else {
+            guard let toolPanel = panel as? RightSidebarToolPanel else {
                 continue
             }
             if focus {
@@ -6326,22 +6321,20 @@ final class Workspace: Identifiable, ObservableObject {
             }
             return toolPanel
         }
-        return newRightSidebarToolSurface(inPane: paneId, mode: mode, focus: focus)
+        return newRightSidebarToolSurface(inPane: paneId, focus: focus)
     }
 
     @discardableResult
     func newRightSidebarToolSurface(
         inPane paneId: PaneID,
-        mode: RightSidebarMode,
         focus: Bool? = nil,
         targetIndex: Int? = nil
     ) -> RightSidebarToolPanel? {
-        guard mode.canOpenAsPane else { return nil }
         let shouldFocusNewTab = focus ?? (bonsplitController.focusedPaneId == paneId)
         let previousFocusedPanelId = focusedPanelId
         let previousHostedView = focusedTerminalPanel?.hostedView
 
-        let toolPanel = RightSidebarToolPanel(workspace: self, mode: mode)
+        let toolPanel = RightSidebarToolPanel(workspace: self)
         panels[toolPanel.id] = toolPanel
         panelTitles[toolPanel.id] = toolPanel.displayTitle
 

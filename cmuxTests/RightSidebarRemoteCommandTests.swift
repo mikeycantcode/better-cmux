@@ -17,7 +17,7 @@ extension TerminalControllerSocketSecurityTests {
         let tabManager = TabManager()
         let fileExplorerState = FileExplorerState()
         fileExplorerState.setVisible(false)
-        fileExplorerState.mode = .files
+        FilesGitTab.select(.files)
 
         appDelegate.fileExplorerState = fileExplorerState
         appDelegate.registerMainWindowContextForTesting(
@@ -28,20 +28,23 @@ extension TerminalControllerSocketSecurityTests {
         defer { appDelegate.unregisterMainWindowContextForTesting(windowId: windowId) }
 
         fileExplorerState.setVisible(false)
-        fileExplorerState.mode = .files
+        FilesGitTab.select(.files)
 
         #expect(TerminalController.shared.handleSocketLine("right_sidebar show") == "OK")
         #expect(fileExplorerState.isVisible)
 
-        #expect(TerminalController.shared.handleSocketLine("right_sidebar set find") == "OK")
-        #expect(fileExplorerState.mode == .find)
+        #expect(TerminalController.shared.handleSocketLine("right_sidebar set git") == "OK")
+        #expect(FilesGitTab.current() == .git)
         #expect(fileExplorerState.isVisible)
 
-        #expect(TerminalController.shared.handleSocketLine("right_sidebar set vault --no-focus") == "OK")
-        #expect(fileExplorerState.mode == .sessions)
+        #expect(TerminalController.shared.handleSocketLine("right_sidebar set files --no-focus") == "OK")
+        #expect(FilesGitTab.current() == .files)
 
-        #expect(TerminalController.shared.handleSocketLine("right_sidebar set sessions --no-focus") == "OK")
-        #expect(fileExplorerState.mode == .sessions)
+        // Retired modes are no longer addressable.
+        for dead in ["find", "vault", "sessions", "feed", "dock"] {
+            #expect(TerminalController.shared.handleSocketLine("right_sidebar set \(dead)").hasPrefix("ERROR:"))
+        }
+        #expect(FilesGitTab.current() == .files)
 
         #expect(TerminalController.shared.handleSocketLine("right_sidebar hide") == "OK")
         #expect(!fileExplorerState.isVisible)
@@ -56,7 +59,7 @@ extension TerminalControllerSocketSecurityTests {
         let modeData = try #require(modeResponse.data(using: .utf8))
         let modePayload = try #require(JSONSerialization.jsonObject(with: modeData) as? [String: Any])
         #expect(modePayload["visible"] as? Bool == true)
-        #expect(modePayload["mode"] as? String == "sessions")
+        #expect(modePayload["mode"] as? String == "files")
 
         #expect(TerminalController.shared.handleSocketLine("right_sidebar set unknown").hasPrefix("ERROR:"))
     }
@@ -96,7 +99,7 @@ extension TerminalControllerSocketSecurityTests {
 
             #expect(TerminalController.shared.handleSocketLine("right_sidebar set \(name) --no-focus").hasPrefix("ERROR:"))
             #expect(!fileExplorerState.isVisible)
-            #expect(fileExplorerState.mode == .files)
+            #expect(FilesGitTab.current() == .files)
             #expect(fileExplorerState.customSidebarName != name)
 
             let modeResponse = TerminalController.shared.handleSocketLine("right_sidebar mode")
@@ -129,16 +132,16 @@ extension TerminalControllerSocketSecurityTests {
                 RightSidebarRemoteRequest(command: .focus, target: RightSidebarRemoteTarget())
             ),
             (
-                "right_sidebar set find",
-                RightSidebarRemoteRequest(command: .setMode(.find, focus: true), target: RightSidebarRemoteTarget())
+                "right_sidebar set git",
+                RightSidebarRemoteRequest(command: .setTab(.git, focus: true), target: RightSidebarRemoteTarget())
             ),
             (
-                "right_sidebar set vault --no-focus",
-                RightSidebarRemoteRequest(command: .setMode(.sessions, focus: false), target: RightSidebarRemoteTarget())
+                "right_sidebar set files --no-focus",
+                RightSidebarRemoteRequest(command: .setTab(.files, focus: false), target: RightSidebarRemoteTarget())
             ),
             (
-                "right_sidebar sessions",
-                RightSidebarRemoteRequest(command: .setMode(.sessions, focus: true), target: RightSidebarRemoteTarget())
+                "right_sidebar git",
+                RightSidebarRemoteRequest(command: .setTab(.git, focus: true), target: RightSidebarRemoteTarget())
             ),
             (
                 "right_sidebar mode",
@@ -159,6 +162,9 @@ extension TerminalControllerSocketSecurityTests {
             ("right_sidebar", "Usage: right_sidebar"),
             ("right_sidebar set", "Usage: right_sidebar set"),
             ("right_sidebar set unknown", "Unknown right sidebar mode"),
+            ("right_sidebar set find", "Unknown right sidebar mode"),
+            ("right_sidebar set vault", "Unknown right sidebar mode"),
+            ("right_sidebar set dock", "Unknown right sidebar mode"),
             ("right_sidebar show --no-focus", "Usage: right_sidebar show"),
             ("right_sidebar files --no-focus", "--no-focus is only valid"),
             ("right_sidebar --bad", "Unknown right sidebar option"),
@@ -186,9 +192,9 @@ extension TerminalControllerSocketSecurityTests {
             ("right_sidebar toggle", true),
             ("right_sidebar show", true),
             ("right_sidebar focus", true),
-            ("right_sidebar set find", true),
-            ("right_sidebar sessions", true),
-            ("right_sidebar set vault --no-focus", false),
+            ("right_sidebar set git", true),
+            ("right_sidebar git", true),
+            ("right_sidebar set files --no-focus", false),
             ("right_sidebar hide", false),
             ("right_sidebar mode", false),
             ("right_sidebar state", false),
@@ -221,11 +227,9 @@ extension TerminalControllerSocketSecurityTests {
         let fallbackState = FileExplorerState()
 
         stateA.setVisible(false)
-        stateA.mode = .files
         stateB.setVisible(false)
-        stateB.mode = .files
         fallbackState.setVisible(true)
-        fallbackState.mode = .dock
+        FilesGitTab.select(.files)
         appDelegate.fileExplorerState = fallbackState
 
         appDelegate.registerMainWindowContextForTesting(
@@ -248,21 +252,19 @@ extension TerminalControllerSocketSecurityTests {
         }
 
         #expect(appDelegate.applyRightSidebarRemoteCommand(
-            .setMode(.find, focus: false),
+            .setTab(.git, focus: false),
             target: RightSidebarRemoteTarget(windowId: windowAId, workspaceId: nil)
         ) == .ok)
         #expect(stateA.isVisible)
-        #expect(stateA.mode == .find)
+        #expect(FilesGitTab.current() == .git)
         #expect(!stateB.isVisible)
-        #expect(stateB.mode == .files)
 
         #expect(appDelegate.applyRightSidebarRemoteCommand(
-            .setMode(.sessions, focus: false),
+            .setTab(.files, focus: false),
             target: RightSidebarRemoteTarget(windowId: nil, workspaceId: workspaceB.id)
         ) == .ok)
         #expect(stateB.isVisible)
-        #expect(stateB.mode == .sessions)
-        #expect(stateA.mode == .find)
+        #expect(FilesGitTab.current() == .files)
 
         #expect(appDelegate.applyRightSidebarRemoteCommand(
             .hide,
@@ -285,7 +287,7 @@ extension TerminalControllerSocketSecurityTests {
         #expect(appDelegate.applyRightSidebarRemoteCommand(
             .getState,
             target: RightSidebarRemoteTarget(windowId: nil, workspaceId: workspaceB.id)
-        ) == .state(.init(visible: false, modeRawValue: "sessions")))
+        ) == .state(.init(visible: false, modeRawValue: "files")))
 
         switch appDelegate.applyRightSidebarRemoteCommand(
             .getState,

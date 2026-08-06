@@ -1,8 +1,41 @@
 import SwiftUI
 
-nonisolated enum FilesGitTab: String, Codable {
+nonisolated enum FilesGitTab: String, Codable, CaseIterable, Sendable {
     case files
     case git
+
+    /// Single source of truth for the persisted tab. `FilesGitPanelView` binds it
+    /// through `@AppStorage`; shortcuts, the command palette, and the CLI write it
+    /// through `select(_:)` so every entrypoint shares one mutation path.
+    static let defaultsKey = "rightSidebar.filesGitTab"
+
+    static func current(defaults: UserDefaults = .standard) -> FilesGitTab {
+        FilesGitTab(rawValue: defaults.string(forKey: defaultsKey) ?? "") ?? .files
+    }
+
+    static func select(_ tab: FilesGitTab, defaults: UserDefaults = .standard) {
+        guard defaults.string(forKey: defaultsKey) != tab.rawValue else { return }
+        defaults.set(tab.rawValue, forKey: defaultsKey)
+    }
+
+    /// CLI/socket spelling for `cmux right_sidebar set <files|git>`.
+    static func from(cliArgument rawValue: String) -> FilesGitTab? {
+        FilesGitTab(rawValue: rawValue.trimmingCharacters(in: .whitespacesAndNewlines).lowercased())
+    }
+
+    var label: String {
+        switch self {
+        case .files: return String(localized: "filesGitPanel.tab.files", defaultValue: "Files")
+        case .git: return String(localized: "filesGitPanel.tab.git", defaultValue: "Git")
+        }
+    }
+
+    var symbolName: String {
+        switch self {
+        case .files: return "doc.on.doc"
+        case .git: return "arrow.triangle.branch"
+        }
+    }
 }
 
 /// The right sidebar: a Files | Git pill header, the ~-abbreviated root path,
@@ -17,7 +50,7 @@ struct FilesGitPanelView: View {
     let filesContent: AnyView          // FileExplorerPanelView supplied by the mount site
     let gitContent: AnyView            // GitPanelView supplied by the mount site (Task 6)
 
-    @AppStorage("rightSidebar.filesGitTab") private var tabRaw: String = FilesGitTab.files.rawValue
+    @AppStorage(FilesGitTab.defaultsKey) private var tabRaw: String = FilesGitTab.files.rawValue
 
     private var tab: FilesGitTab { FilesGitTab(rawValue: tabRaw) ?? .files }
 
@@ -39,16 +72,9 @@ struct FilesGitPanelView: View {
 
     private var header: some View {
         HStack(spacing: 2) {
-            segment(
-                .files,
-                label: String(localized: "filesGitPanel.tab.files", defaultValue: "Files"),
-                symbol: "doc.on.doc"
-            )
-            segment(
-                .git,
-                label: String(localized: "filesGitPanel.tab.git", defaultValue: "Git"),
-                symbol: "arrow.triangle.branch"
-            )
+            ForEach(FilesGitTab.allCases, id: \.rawValue) { value in
+                segment(value, label: value.label, symbol: value.symbolName)
+            }
         }
         .padding(3)
         .background(RoundedRectangle(cornerRadius: 8).fill(Color.primary.opacity(0.06)))

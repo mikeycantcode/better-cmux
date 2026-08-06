@@ -9,54 +9,66 @@ import XCTest
 #endif
 
 final class RightSidebarCommandPaletteTests: XCTestCase {
-    func testCommandPaletteIncludesDefaultRightSidebarModes() throws {
-        try withSavedBetaFeatureDefaults {
-            let defaults = UserDefaults.standard
-            defaults.removeObject(forKey: RightSidebarBetaFeatureSettings.feedEnabledKey)
-            defaults.removeObject(forKey: RightSidebarBetaFeatureSettings.dockEnabledKey)
-            let contributions = ContentView.commandPaletteRightSidebarModeCommandContributions()
-            let contributionsByID = Dictionary(uniqueKeysWithValues: contributions.map { ($0.commandId, $0) })
-            let context = CommandPaletteContextSnapshot()
+    func testCommandPaletteIncludesFilesAndGitTabs() throws {
+        let contributions = ContentView.commandPaletteRightSidebarTabCommandContributions()
+        let contributionsByID = Dictionary(uniqueKeysWithValues: contributions.map { ($0.commandId, $0) })
+        let context = CommandPaletteContextSnapshot()
 
-            for mode in RightSidebarMode.availableModes() {
-                let commandID = ContentView.commandPaletteRightSidebarModeCommandID(mode)
-                let contribution = try XCTUnwrap(
-                    contributionsByID[commandID],
-                    "Expected command palette contribution for \(mode.rawValue)"
-                )
+        for tab in FilesGitTab.allCases {
+            let commandID = ContentView.commandPaletteRightSidebarTabCommandID(tab)
+            let contribution = try XCTUnwrap(
+                contributionsByID[commandID],
+                "Expected command palette contribution for \(tab.rawValue)"
+            )
 
-                XCTAssertEqual(contribution.title(context), mode.shortcutAction?.label ?? mode.label)
-                XCTAssertEqual(
-                    contribution.subtitle(context),
-                    String(localized: "command.rightSidebarMode.subtitle", defaultValue: "Right Sidebar")
-                )
-                XCTAssertTrue(contribution.keywords.contains("right"))
-                XCTAssertTrue(contribution.keywords.contains("sidebar"))
-                XCTAssertTrue(contribution.keywords.contains(mode.rawValue))
-                XCTAssertTrue(contribution.when(context))
-                XCTAssertTrue(contribution.enablement(context))
-            }
+            XCTAssertEqual(
+                contribution.title(context),
+                ContentView.commandPaletteRightSidebarTabAction(tab).label
+            )
+            XCTAssertEqual(
+                contribution.subtitle(context),
+                String(localized: "command.rightSidebarMode.subtitle", defaultValue: "Right Sidebar")
+            )
+            XCTAssertTrue(contribution.keywords.contains("right"))
+            XCTAssertTrue(contribution.keywords.contains("sidebar"))
+            XCTAssertTrue(contribution.keywords.contains(tab.rawValue))
+            XCTAssertTrue(contribution.when(context))
+            XCTAssertTrue(contribution.enablement(context))
+        }
 
-            XCTAssertEqual(contributions.count, 3)
-            XCTAssertNil(contributionsByID[ContentView.commandPaletteRightSidebarModeCommandID(.feed)])
-            XCTAssertNil(contributionsByID[ContentView.commandPaletteRightSidebarModeCommandID(.dock)])
+        XCTAssertEqual(contributions.count, 2)
+    }
+
+    func testRetiredRightSidebarModeCommandsAreGone() {
+        for commandID in [
+            "palette.showRightSidebarFind",
+            "palette.showRightSidebarSessions",
+            "palette.showRightSidebarFeed",
+            "palette.showRightSidebarDock",
+            "palette.showRightSidebarCustomSidebar",
+            "palette.openFindPane",
+            "palette.openVaultPane",
+        ] {
+            XCTAssertNil(
+                ContentView.commandPaletteRightSidebarTabCommandContributions()
+                    .first(where: { $0.commandId == commandID }),
+                "\(commandID) should no longer be contributed"
+            )
+            XCTAssertNil(
+                ContentView.commandPaletteShortcutAction(forCommandID: commandID),
+                "\(commandID) should no longer map to a shortcut action"
+            )
         }
     }
 
-    func testCommandPaletteRightSidebarActionsUseModeShortcutActions() {
-        withSavedBetaFeatureDefaults {
-            let defaults = UserDefaults.standard
-            defaults.set(true, forKey: RightSidebarBetaFeatureSettings.feedEnabledKey)
-            defaults.set(true, forKey: RightSidebarBetaFeatureSettings.dockEnabledKey)
-
-            for mode in RightSidebarMode.allCases {
-                XCTAssertEqual(
-                    ContentView.commandPaletteShortcutAction(
-                        forCommandID: ContentView.commandPaletteRightSidebarModeCommandID(mode)
-                    ),
-                    mode.shortcutAction
-                )
-            }
+    func testCommandPaletteRightSidebarActionsUseTabShortcutActions() {
+        for tab in FilesGitTab.allCases {
+            XCTAssertEqual(
+                ContentView.commandPaletteShortcutAction(
+                    forCommandID: ContentView.commandPaletteRightSidebarTabCommandID(tab)
+                ),
+                ContentView.commandPaletteRightSidebarTabAction(tab)
+            )
         }
     }
 
@@ -69,25 +81,5 @@ final class RightSidebarCommandPaletteTests: XCTestCase {
             ContentView.commandPaletteShortcutAction(forCommandID: "palette.markOldestUnreadAndJumpNext"),
             .markOldestUnreadAndJumpNext
         )
-    }
-
-    private func withSavedBetaFeatureDefaults(_ body: () throws -> Void) rethrows {
-        let defaults = UserDefaults.standard
-        let previousFeed = defaults.object(forKey: RightSidebarBetaFeatureSettings.feedEnabledKey)
-        let previousDock = defaults.object(forKey: RightSidebarBetaFeatureSettings.dockEnabledKey)
-        defer {
-            restore(previousFeed, forKey: RightSidebarBetaFeatureSettings.feedEnabledKey)
-            restore(previousDock, forKey: RightSidebarBetaFeatureSettings.dockEnabledKey)
-        }
-        try body()
-    }
-
-    private func restore(_ value: Any?, forKey key: String) {
-        let defaults = UserDefaults.standard
-        if let value {
-            defaults.set(value, forKey: key)
-        } else {
-            defaults.removeObject(forKey: key)
-        }
     }
 }

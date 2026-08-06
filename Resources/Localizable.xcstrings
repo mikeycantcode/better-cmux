@@ -47626,23 +47626,6 @@
         }
       }
     },
-    "command.openFindPane.title": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Open Find as Pane"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "検索をペインで開く"
-          }
-        }
-      }
-    },
     "command.openFolder.subtitle": {
       "extractionState": "manual",
       "localizations": {
@@ -48212,23 +48195,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Відкрити налаштування"
-          }
-        }
-      }
-    },
-    "command.openVaultPane.title": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Open Vault as Pane"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Vaultをペインで開く"
           }
         }
       }
@@ -104962,125 +104928,6 @@
         }
       }
     },
-    "menu.history.recentlyClosed.panel.tool": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Tool"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ツール"
-          }
-        },
-        "ar": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Tool"
-          }
-        },
-        "bs": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Tool"
-          }
-        },
-        "da": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Tool"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Tool"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Tool"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Tool"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Tool"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Tool"
-          }
-        },
-        "nb": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Tool"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Tool"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Tool"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Tool"
-          }
-        },
-        "th": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Tool"
-          }
-        },
-        "tr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Tool"
-          }
-        },
-        "uk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Tool"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Tool"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Tool"
-          }
-        }
-      }
-    },
     "menu.history.recentlyClosed.subtitle": {
       "extractionState": "manual",
       "localizations": {
@@ -118763,131 +118610,6 @@
         }
       }
     },
-    "rightSidebar.mode.customSidebar": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Custom"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "カスタム"
-          }
-        }
-      }
-    },
-    "rightSidebar.mode.dock": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Dock"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Dock"
-          }
-        }
-      }
-    },
-    "rightSidebar.mode.feed": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Feed"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "フィード"
-          }
-        }
-      }
-    },
-    "rightSidebar.mode.files": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Files"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ファイル"
-          }
-        }
-      }
-    },
-    "rightSidebar.mode.find": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Find"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "検索"
-          }
-        }
-      }
-    },
-    "rightSidebar.mode.pendingHelp": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%@ · %lld pending"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%@ · 保留中%lld件"
-          }
-        }
-      }
-    },
-    "rightSidebar.mode.sessions": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Vault"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ボールト"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "볼트"
-          }
-        }
-      }
-    },
     "rightSidebar.openAsPane.accessibilityLabel": {
       "extractionState": "manual",
       "localizations": {
@@ -118969,23 +118691,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "ERROR: 無効な右サイドバー --%@ ID '%@'"
-          }
-        }
-      }
-    },
-    "rightSidebar.remote.error.modeUnavailable": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ERROR: Right sidebar mode '%@' is not available"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ERROR: 右サイドバーのモード '%@' は利用できません"
           }
         }
       }
@@ -179314,52 +179019,6 @@
         }
       }
     },
-    "shortcut.switchRightSidebarToDock.label": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Show Sidebar Dock"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "サイドバーのDockを表示"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "사이드바 Dock 표시"
-          }
-        }
-      }
-    },
-    "shortcut.switchRightSidebarToFeed.label": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Show Sidebar Feed"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "サイドバーのフィードを表示"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "사이드바 피드 표시"
-          }
-        }
-      }
-    },
     "shortcut.switchRightSidebarToFiles.label": {
       "extractionState": "manual",
       "localizations": {
@@ -179383,42 +179042,25 @@
         }
       }
     },
-    "shortcut.switchRightSidebarToFind.label": {
+    "shortcut.switchRightSidebarToGit.label": {
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Show Sidebar Find"
+            "value": "Show Sidebar Git"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "サイドバーの検索を表示"
-          }
-        }
-      }
-    },
-    "shortcut.switchRightSidebarToSessions.label": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Show Sidebar Vault"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "サイドバーのボールトを表示"
+            "value": "サイドバーの Git を表示"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "사이드바 볼트 표시"
+            "value": "사이드바 Git 표시"
           }
         }
       }

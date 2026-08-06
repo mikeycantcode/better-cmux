@@ -10,18 +10,12 @@ nonisolated struct RightSidebarRemoteTarget: Equatable, Sendable {
     }
 }
 
-extension FileExplorerState {
-    var rightSidebarRemoteModeRawValue: String {
-        mode.rawValue
-    }
-}
-
 nonisolated enum RightSidebarRemoteCommand: Equatable, Sendable {
     case toggle
     case show
     case hide
     case focus
-    case setMode(RightSidebarMode, focus: Bool)
+    case setTab(FilesGitTab, focus: Bool)
     case getState
 }
 
@@ -133,11 +127,11 @@ extension RightSidebarRemoteRequest {
             return .success(.init(command: .getState, target: target))
         case "set":
             guard positional.count == 2 else {
-                return .failure(.init(message: String(localized: "rightSidebar.remote.error.usage.set", defaultValue: "ERROR: Usage: right_sidebar set <files|find|vault|sessions|feed|dock> [--no-focus] [--workspace=<workspace-id>] [--window=<window-id>]")))
+                return .failure(.init(message: String(localized: "rightSidebar.remote.error.usage.set", defaultValue: "ERROR: Usage: right_sidebar set <files|git> [--no-focus] [--workspace=<workspace-id>] [--window=<window-id>]")))
             }
-            let rawMode = positional[1].trimmingCharacters(in: .whitespacesAndNewlines)
-            if let mode = RightSidebarMode.from(cliArgument: rawMode), mode != .customSidebar {
-                return .success(.init(command: .setMode(mode, focus: !noFocus), target: target))
+            let rawTab = positional[1].trimmingCharacters(in: .whitespacesAndNewlines)
+            if let tab = FilesGitTab.from(cliArgument: rawTab) {
+                return .success(.init(command: .setTab(tab, focus: !noFocus), target: target))
             }
             return .failure(.init(message: String(localized: "rightSidebar.remote.error.unknownMode", defaultValue: "ERROR: Unknown right sidebar mode '\(positional[1])'")))
         default:
@@ -147,8 +141,8 @@ extension RightSidebarRemoteRequest {
             guard positional.count == 1 else {
                 return .failure(.init(message: String(localized: "rightSidebar.remote.error.unknownCommand", defaultValue: "ERROR: Unknown right sidebar command '\(action)'")))
             }
-            if let mode = RightSidebarMode.from(cliArgument: action), mode != .customSidebar {
-                return .success(.init(command: .setMode(mode, focus: true), target: target))
+            if let tab = FilesGitTab.from(cliArgument: action) {
+                return .success(.init(command: .setTab(tab, focus: true), target: target))
             }
             return .failure(.init(message: String(localized: "rightSidebar.remote.error.unknownCommand", defaultValue: "ERROR: Unknown right sidebar command '\(action)'")))
         }

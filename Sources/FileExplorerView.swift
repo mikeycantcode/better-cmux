@@ -15,18 +15,6 @@ private func fileExplorerDebugResponder(_ responder: NSResponder?) -> String {
 
 // MARK: - File Explorer Panel (single NSViewRepresentable)
 
-enum FileExplorerPanelPresentation: Equatable {
-    case files
-    case find
-
-    var rightSidebarMode: RightSidebarMode {
-        switch self {
-        case .files: return .files
-        case .find: return .find
-        }
-    }
-}
-
 enum FileExplorerPanelPlacement: Equatable {
     case rightSidebar
     case pane
@@ -38,7 +26,6 @@ struct FileExplorerPanelView: NSViewRepresentable {
     @ObservedObject var store: FileExplorerStore
     @ObservedObject var state: FileExplorerState
     let onOpenFilePreview: (String) -> Void
-    var presentation: FileExplorerPanelPresentation = .files
     var placement: FileExplorerPanelPlacement = .rightSidebar
     var showsHeader: Bool = true
     var onFocus: (() -> Void)?
@@ -58,7 +45,6 @@ struct FileExplorerPanelView: NSViewRepresentable {
     func makeNSView(context: Context) -> FileExplorerContainerView {
         let container = FileExplorerContainerView(
             coordinator: context.coordinator,
-            presentation: presentation,
             showsHeader: showsHeader
         )
         context.coordinator.containerView = container
@@ -76,7 +62,6 @@ struct FileExplorerPanelView: NSViewRepresentable {
         context.coordinator.onContainerChange?(container)
         container.updateShortcutPlacement(placement)
         container.updateHeader(store: store)
-        container.updatePresentation(presentation)
         context.coordinator.reloadIfNeeded()
         container.registerWithKeyboardFocusCoordinatorIfNeeded()
     }
@@ -136,10 +121,10 @@ struct FileExplorerPanelView: NSViewRepresentable {
 
         @MainActor
         @discardableResult
-        func handleModeShortcut(_ mode: RightSidebarMode, in window: NSWindow?) -> Bool {
+        func handleTabShortcut(_ tab: FilesGitTab, in window: NSWindow?) -> Bool {
             guard placement == .rightSidebar else { return false }
             _ = AppDelegate.shared?.focusRightSidebarInActiveMainWindow(
-                mode: mode,
+                tab: tab,
                 focusFirstItem: true,
                 preferredWindow: window
             )
@@ -147,11 +132,11 @@ struct FileExplorerPanelView: NSViewRepresentable {
         }
 
         @MainActor
-        func noteKeyboardFocus(mode: RightSidebarMode, in window: NSWindow?) {
+        func noteKeyboardFocus(in window: NSWindow?) {
             switch placement {
             case .rightSidebar:
                 guard let window else { return }
-                AppDelegate.shared?.noteRightSidebarKeyboardFocusIntent(mode: mode, in: window)
+                AppDelegate.shared?.noteRightSidebarKeyboardFocusIntent(in: window)
             case .pane:
                 onFocus?()
             }
@@ -724,7 +709,6 @@ final class FileExplorerContainerView: NSView {
             }
         }
     }
-    private var presentation: FileExplorerPanelPresentation
     private let showsHeader: Bool
     private let coordinator: FileExplorerPanelView.Coordinator
     private var fontMagnificationObserver: GlobalFontMagnificationChangeObserver?
@@ -742,7 +726,6 @@ final class FileExplorerContainerView: NSView {
 
     init(
         coordinator: FileExplorerPanelView.Coordinator,
-        presentation: FileExplorerPanelPresentation,
         showsHeader: Bool = true,
         searchController: (any FileSearchControlling)? = nil
     ) {
@@ -761,7 +744,6 @@ final class FileExplorerContainerView: NSView {
         emptyLabel = NSTextField(labelWithString: String(localized: "fileExplorer.empty", defaultValue: "No folder open"))
         loadingIndicator = NSProgressIndicator()
         self.searchController = searchController ?? FileSearchController()
-        self.presentation = presentation
         self.showsHeader = showsHeader
         self.coordinator = coordinator
 
@@ -844,7 +826,7 @@ final class FileExplorerContainerView: NSView {
         searchField.onFocus = { [weak self] in
             guard let self else { return }
             self.isSearchVisible = true
-            self.coordinator.noteKeyboardFocus(mode: self.representedRightSidebarMode(), in: self.window)
+            self.coordinator.noteKeyboardFocus(in: self.window)
             self.updateSearchLayout()
         }
         searchBarView.addSubview(searchField)
@@ -943,10 +925,10 @@ final class FileExplorerContainerView: NSView {
         }
         searchResultsView.onFocus = { [weak self] in
             guard let self else { return }
-            self.coordinator.noteKeyboardFocus(mode: self.representedRightSidebarMode(), in: self.window)
+            self.coordinator.noteKeyboardFocus(in: self.window)
         }
-        searchResultsView.onModeShortcut = { [weak coordinator] mode, window in
-            coordinator?.handleModeShortcut(mode, in: window) ?? false
+        searchResultsView.onTabShortcut = { [weak coordinator] tab, window in
+            coordinator?.handleTabShortcut(tab, in: window) ?? false
         }
         let searchColumn = NSTableColumn(identifier: NSUserInterfaceItemIdentifier("searchResult"))
         searchColumn.isEditable = false
@@ -1080,7 +1062,7 @@ final class FileExplorerContainerView: NSView {
     private var filterBarContentAvailable = false
 
     private func updateFilterBarVisibility() {
-        let shouldShow = presentation == .files && filterBarContentAvailable
+        let shouldShow = filterBarContentAvailable
         filterBarHeightConstraint?.constant = shouldShow ? 32 : 0
         applyHidden(filterBarView, !shouldShow)
     }
@@ -1158,38 +1140,10 @@ final class FileExplorerContainerView: NSView {
         }
     }
 
-    func representedRightSidebarMode() -> RightSidebarMode {
-        presentation.rightSidebarMode
-    }
-
     func updateShortcutPlacement(_ placement: FileExplorerPanelPlacement) {
         searchField.fileExplorerPanelPlacement = placement
         outlineView.fileExplorerPanelPlacement = placement
         searchResultsView.fileExplorerPanelPlacement = placement
-    }
-
-    func updatePresentation(_ nextPresentation: FileExplorerPanelPresentation) {
-        guard presentation != nextPresentation else {
-            // Re-selecting the active presentation is a no-op unless visibility drifted.
-            if presentation == .find, !isSearchVisible {
-                isSearchVisible = true
-                updateSearchLayout()
-            }
-            return
-        }
-
-        presentation = nextPresentation
-        switch presentation {
-        case .files:
-            isSearchVisible = false
-            searchController.cancel(clear: false)
-        case .find:
-            isSearchVisible = true
-            refreshSearchIfNeeded()
-        }
-        updateSearchLayout()
-        updateFilterBarVisibility()
-        registerWithKeyboardFocusCoordinatorIfNeeded()
     }
 
     func updateVisibility(hasContent: Bool, isLoading: Bool, statusMessage: String?) {
@@ -1220,6 +1174,18 @@ final class FileExplorerContainerView: NSView {
         }
     }
 
+    /// Reveals the in-Files search bar. `⌘⇧F` (Find in Directory) and the search
+    /// field's own focus handler both route through here; search is a mode of the
+    /// Files tab, not a separate sidebar surface.
+    func showSearch() {
+        let wasVisible = isSearchVisible
+        isSearchVisible = true
+        updateSearchLayout()
+        if !wasVisible {
+            refreshSearchIfNeeded()
+        }
+    }
+
     @discardableResult
     func focusSearchField() -> Bool {
         guard let window, cmuxCanAcceptRightSidebarKeyboardFocus else {
@@ -1231,9 +1197,7 @@ final class FileExplorerContainerView: NSView {
 #endif
             return false
         }
-        isSearchVisible = true
-        updateSearchLayout()
-        refreshSearchIfNeeded()
+        showSearch()
         let result = window.makeFirstResponder(searchField)
         searchField.selectText(nil)
 #if DEBUG
@@ -1594,25 +1558,6 @@ final class FileExplorerContainerView: NSView {
 #endif
 
     private func closeSearchAndFocusOutline() {
-        if presentation == .find {
-            let hadQuery = !searchField.stringValue.isEmpty
-            cancelPendingSearchRefresh()
-            pendingSearchRefreshAfterSettled = false
-            searchController.cancel(clear: true)
-            searchField.stringValue = ""
-            applySearchSnapshot(.empty)
-            updateSearchLayout()
-            if hadQuery {
-                _ = focusSearchField()
-                return
-            }
-            if AppDelegate.shared?.keyboardFocusCoordinator(for: window)?.focusTerminal() == true {
-                return
-            }
-            window?.makeFirstResponder(nil)
-            return
-        }
-
         isSearchVisible = false
         searchController.cancel(clear: true)
         searchField.stringValue = ""

@@ -1,4 +1,5 @@
 import AppKit
+import CmuxSettings
 import Testing
 
 #if canImport(cmux_DEV)
@@ -11,62 +12,67 @@ import Testing
 struct FileExplorerRootSyncPolicyTests {
     @Test("Hidden right sidebar keeps file explorer root lazy")
     func hiddenRightSidebarKeepsFileExplorerRootLazy() {
-        for mode in RightSidebarMode.allCases {
-            #expect(
-                FileExplorerRootSyncPolicy.shouldSyncFileExplorerStore(
-                    isRightSidebarVisible: false,
-                    mode: mode
-                ) == false
-            )
-        }
+        #expect(
+            FileExplorerRootSyncPolicy.shouldSyncFileExplorerStore(isRightSidebarVisible: false) == false
+        )
     }
 
-    @Test("Visible Files and Find may sync file explorer root")
-    func visibleFileModesMaySyncFileExplorerRoot() {
-        for mode in [RightSidebarMode.files, .find] {
-            #expect(
-                FileExplorerRootSyncPolicy.shouldSyncFileExplorerStore(
-                    isRightSidebarVisible: true,
-                    mode: mode
-                )
-            )
-        }
-    }
-
-    @Test("Visible non-file modes keep file explorer root lazy")
-    func visibleNonFileModesKeepFileExplorerRootLazy() {
-        let fileModes = Set([RightSidebarMode.files, .find])
-        for mode in RightSidebarMode.allCases.filter({ !fileModes.contains($0) }) {
-            #expect(
-                FileExplorerRootSyncPolicy.shouldSyncFileExplorerStore(
-                    isRightSidebarVisible: true,
-                    mode: mode
-                ) == false
-            )
-        }
+    @Test("Visible right sidebar syncs the file explorer root")
+    func visibleRightSidebarSyncsFileExplorerRoot() {
+        #expect(FileExplorerRootSyncPolicy.shouldSyncFileExplorerStore(isRightSidebarVisible: true))
     }
 }
 
 @Suite("Right sidebar directory context")
 struct RightSidebarDirectoryContextTests {
-    @Test("Dock root prefers selected workspace directory")
-    func dockRootPrefersSelectedWorkspaceDirectory() {
-        #expect(
-            RightSidebarDirectoryContext.dockRootDirectory(
-                workspaceDirectory: " /remote/project ",
-                fallbackDirectory: "/local/session"
-            ) == "/remote/project"
-        )
+    @Test("Blank directories normalize to nil")
+    func blankDirectoriesNormalizeToNil() {
+        #expect(RightSidebarDirectoryContext.normalizedDirectory("   ") == nil)
+        #expect(RightSidebarDirectoryContext.normalizedDirectory(nil) == nil)
     }
 
-    @Test("Dock root falls back to session index directory")
-    func dockRootFallsBackToSessionIndexDirectory() {
-        #expect(
-            RightSidebarDirectoryContext.dockRootDirectory(
-                workspaceDirectory: " ",
-                fallbackDirectory: "/local/session"
-            ) == "/local/session"
-        )
+    @Test("Directories are trimmed")
+    func directoriesAreTrimmed() {
+        #expect(RightSidebarDirectoryContext.normalizedDirectory(" /remote/project ") == "/remote/project")
+    }
+}
+
+/// Task 7 removed the Find / Vault / Feed / Dock right-sidebar modes. The sidebar
+/// is strictly Files | Git, so the shortcut catalog must not carry the dead actions.
+@Suite("Right sidebar mode removal")
+struct RightSidebarModeRemovalTests {
+    @Test("Dead right-sidebar shortcut actions are gone")
+    func deadRightSidebarShortcutsAreGone() {
+        let ids = KeyboardShortcutSettings.Action.allCases.map(\.rawValue)
+        #expect(!ids.contains("switchRightSidebarToFind"))
+        #expect(!ids.contains("switchRightSidebarToSessions"))
+        #expect(!ids.contains("switchRightSidebarToFeed"))
+        #expect(!ids.contains("switchRightSidebarToDock"))
+        #expect(ids.contains("switchRightSidebarToFiles"))
+        #expect(ids.contains("switchRightSidebarToGit"))
+    }
+
+    @Test("The shared settings catalog matches the app's action list")
+    func sharedShortcutCatalogMatchesAppActions() {
+        let sharedIDs = Set(ShortcutAction.allCases.map(\.rawValue))
+        #expect(!sharedIDs.contains("switchRightSidebarToFind"))
+        #expect(!sharedIDs.contains("switchRightSidebarToSessions"))
+        #expect(!sharedIDs.contains("switchRightSidebarToFeed"))
+        #expect(!sharedIDs.contains("switchRightSidebarToDock"))
+        #expect(sharedIDs.contains("switchRightSidebarToGit"))
+    }
+
+    @Test("Both Files|Git shortcuts are editable in Settings")
+    func filesAndGitShortcutsAreSettingsVisible() {
+        let visible = KeyboardShortcutSettings.settingsVisibleActions
+        #expect(visible.contains(.switchRightSidebarToFiles))
+        #expect(visible.contains(.switchRightSidebarToGit))
+    }
+
+    @Test("Show Sidebar Git ships unbound")
+    func showSidebarGitShipsUnbound() {
+        #expect(KeyboardShortcutSettings.Action.switchRightSidebarToGit.defaultShortcut.isUnbound)
+        #expect(ShortcutAction.switchRightSidebarToGit.defaultStroke == nil)
     }
 }
 

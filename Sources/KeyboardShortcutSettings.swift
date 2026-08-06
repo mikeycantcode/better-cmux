@@ -31,6 +31,8 @@ enum KeyboardShortcutSettings {
         let colocatedSidebarActions = [
             .focusRightSidebar,
             .toggleRightSidebar,
+            .switchRightSidebarToFiles,
+            .switchRightSidebarToGit,
             .findInDirectory,
             .fileExplorerOpenSelection,
             .fileExplorerOpenSelectionFinderAlias,
@@ -91,10 +93,7 @@ enum KeyboardShortcutSettings {
         case markOldestUnreadAndJumpNext
         case focusRightSidebar
         case switchRightSidebarToFiles
-        case switchRightSidebarToFind
-        case switchRightSidebarToSessions
-        case switchRightSidebarToFeed
-        case switchRightSidebarToDock
+        case switchRightSidebarToGit
         case triggerFlash
 
         // Navigation
@@ -217,10 +216,7 @@ enum KeyboardShortcutSettings {
                 return String(localized: "shortcut.markOldestUnreadAndJumpNext.label", defaultValue: "Mark as Oldest Unread and Jump to Next Latest Unread")
             case .focusRightSidebar: return String(localized: "shortcut.focusRightSidebar.label", defaultValue: "Toggle Right Sidebar Focus")
             case .switchRightSidebarToFiles: return String(localized: "shortcut.switchRightSidebarToFiles.label", defaultValue: "Show Sidebar Files")
-            case .switchRightSidebarToFind: return String(localized: "shortcut.switchRightSidebarToFind.label", defaultValue: "Show Sidebar Find")
-            case .switchRightSidebarToSessions: return String(localized: "shortcut.switchRightSidebarToSessions.label", defaultValue: "Show Sidebar Vault")
-            case .switchRightSidebarToFeed: return String(localized: "shortcut.switchRightSidebarToFeed.label", defaultValue: "Show Sidebar Feed")
-            case .switchRightSidebarToDock: return String(localized: "shortcut.switchRightSidebarToDock.label", defaultValue: "Show Sidebar Dock")
+            case .switchRightSidebarToGit: return String(localized: "shortcut.switchRightSidebarToGit.label", defaultValue: "Show Sidebar Git")
             case .triggerFlash: return String(localized: "shortcut.flashFocusedPanel.label", defaultValue: "Flash Focused Panel")
             case .nextSurface: return String(localized: "shortcut.nextSurface.label", defaultValue: "Next Surface")
             case .prevSurface: return String(localized: "shortcut.previousSurface.label", defaultValue: "Previous Surface")
@@ -309,12 +305,6 @@ enum KeyboardShortcutSettings {
 
         var isPublicShortcutAction: Bool {
             switch self {
-            case .switchRightSidebarToFiles,
-                 .switchRightSidebarToFind,
-                 .switchRightSidebarToSessions,
-                 .switchRightSidebarToFeed,
-                 .switchRightSidebarToDock:
-                return false
             default:
                 return true
             }
@@ -381,14 +371,10 @@ enum KeyboardShortcutSettings {
                 return StoredShortcut(key: "e", command: true, shift: true, option: false, control: false)
             case .switchRightSidebarToFiles:
                 return StoredShortcut(key: "1", command: false, shift: false, option: false, control: true)
-            case .switchRightSidebarToFind:
-                return StoredShortcut(key: "2", command: false, shift: false, option: false, control: true)
-            case .switchRightSidebarToSessions:
-                return StoredShortcut(key: "3", command: false, shift: false, option: false, control: true)
-            case .switchRightSidebarToFeed:
-                return StoredShortcut(key: "4", command: false, shift: false, option: false, control: true)
-            case .switchRightSidebarToDock:
-                return StoredShortcut(key: "5", command: false, shift: false, option: false, control: true)
+            case .switchRightSidebarToGit:
+                // No factory chord: Ctrl+2 belonged to the retired Find mode and
+                // Select Surface owns ⌃1…9. Bind it in Settings or cmux.json.
+                return .unbound
             case .triggerFlash:
                 return StoredShortcut(key: "h", command: true, shift: true, option: false, control: false)
             case .nextSidebarTab:

@@ -239,7 +239,7 @@ final class KeyboardShortcutContextTests: XCTestCase {
         XCTAssertTrue(
             KeyboardShortcutSettings.Action.switchRightSidebarToFiles.conflicts(
                 with: sidebarFiles,
-                proposedAction: .switchRightSidebarToFind,
+                proposedAction: .switchRightSidebarToGit,
                 configuredShortcut: sidebarFiles
             )
         )

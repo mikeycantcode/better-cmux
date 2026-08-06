@@ -307,7 +307,7 @@ class TerminalController {
         switch request.command {
         case .toggle, .show, .focus:
             return true
-        case .setMode(_, let focus):
+        case .setTab(_, let focus):
             return focus
         case .hide, .getState:
             return false

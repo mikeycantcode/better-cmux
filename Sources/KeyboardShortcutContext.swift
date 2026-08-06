@@ -109,8 +109,7 @@ extension KeyboardShortcutSettings.Action {
     /// test asserts the two stay aligned.
     var hasPriorityShortcutRouting: Bool {
         switch self {
-        case .switchRightSidebarToFiles, .switchRightSidebarToFind,
-             .switchRightSidebarToSessions, .switchRightSidebarToFeed, .switchRightSidebarToDock:
+        case .switchRightSidebarToFiles, .switchRightSidebarToGit:
             return true
         case .browserBack, .browserForward:
             // Mirrors `handleCustomShortcut`, which checks browserBack/browserForward
@@ -131,7 +130,7 @@ extension KeyboardShortcutSettings.Action {
              .diffViewerScrollToTop,
              .diffViewerOpenFileSearch:
             return .browserPanel
-        case .switchRightSidebarToFiles, .switchRightSidebarToFind, .switchRightSidebarToSessions, .switchRightSidebarToFeed, .switchRightSidebarToDock:
+        case .switchRightSidebarToFiles, .switchRightSidebarToGit:
             return .rightSidebarFocus
         case .fileExplorerOpenSelection, .fileExplorerOpenSelectionFinderAlias:
             return .rightSidebarFocus
@@ -222,8 +221,8 @@ extension AppDelegate {
                 )
             }
         }
-        if let mode = window.flatMap({ keyboardFocusCoordinator(for: $0)?.activeRightSidebarMode }) {
-            context.setString(ShortcutContextKnownKey.sidebarMode.rawValue, mode.rawValue)
+        if window.flatMap({ keyboardFocusCoordinator(for: $0)?.isRightSidebarFocusActive }) == true {
+            context.setString(ShortcutContextKnownKey.sidebarMode.rawValue, FilesGitTab.current().rawValue)
         }
         return context
     }

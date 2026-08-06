@@ -2716,7 +2716,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
         let attemptReveal: () -> Void = { [weak self] in
             guard let self else { return }
             let result = self.debugRevealRightSidebarInActiveMainWindow(
-                mode: .dock,
+                tab: .files,
                 focusFirstItem: false,
                 preferredWindow: NSApp.keyWindow ?? NSApp.mainWindow
             )
@@ -6419,7 +6419,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
         switch command {
         case .focus:
             requiresWindowFocus = true
-        case .setMode(_, let focus):
+        case .setTab(_, let focus):
             requiresWindowFocus = focus
         case .toggle, .show, .hide, .getState:
             requiresWindowFocus = false
@@ -6461,27 +6461,23 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
         case .focus:
             // Remote focus should preserve the currently selected sidebar mode
             // instead of reviving a stale keyboard-focus memory.
-            guard focusRightSidebarInActiveMainWindow(mode: state.mode, preferredWindow: preferredWindow) else {
+            guard focusRightSidebarInActiveMainWindow(preferredWindow: preferredWindow) else {
                 return .failure(String(localized: "rightSidebar.remote.error.focusFailed", defaultValue: "ERROR: Failed to focus right sidebar"))
             }
             return .ok
 
-        case .setMode(let mode, let focus):
-            guard mode.isAvailable() else {
-                return .failure(String(localized: "rightSidebar.remote.error.modeUnavailable", defaultValue: "ERROR: Right sidebar mode '\(mode.rawValue)' is not available"))
-            }
+        case .setTab(let tab, let focus):
             if focus {
-                guard focusRightSidebarInActiveMainWindow(mode: mode, focusFirstItem: true, preferredWindow: preferredWindow) else {
+                guard focusRightSidebarInActiveMainWindow(tab: tab, focusFirstItem: true, preferredWindow: preferredWindow) else {
                     return .failure(String(localized: "rightSidebar.remote.error.focusFailed", defaultValue: "ERROR: Failed to focus right sidebar"))
                 }
             } else {
+                FilesGitTab.select(tab)
                 state.setVisible(true)
-                state.mode = mode
-                context?.keyboardFocusCoordinator.rememberRightSidebarMode(mode)
             }
             return .ok
         case .getState:
-            return .state(.init(visible: state.isVisible, modeRawValue: state.rightSidebarRemoteModeRawValue))
+            return .state(.init(visible: state.isVisible, modeRawValue: FilesGitTab.current().rawValue))
         }
     }
 
@@ -6566,7 +6562,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
 
     func shouldRouteRightSidebarModeShortcut(in window: NSWindow?) -> Bool {
         guard let window else { return false }
-        let sidebarIntentActive = keyboardFocusCoordinator(for: window)?.activeRightSidebarMode != nil
+        let sidebarIntentActive = keyboardFocusCoordinator(for: window)?.isRightSidebarFocusActive == true
         guard let responder = window.firstResponder else { return sidebarIntentActive }
         if isRightSidebarFocusResponder(responder, in: window) { return true }
         if terminalKeyboardFocusRequest(for: responder) != nil { return false }
@@ -6634,8 +6630,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
         keyboardFocusCoordinator(for: window)?.noteMainPanelInteraction(workspaceId: workspaceId, panelId: panelId)
     }
 
-    func noteRightSidebarKeyboardFocusIntent(mode: RightSidebarMode, in window: NSWindow?) {
-        keyboardFocusCoordinator(for: window)?.noteRightSidebarInteraction(mode: mode)
+    func noteRightSidebarKeyboardFocusIntent(in window: NSWindow?) {
+        keyboardFocusCoordinator(for: window)?.noteRightSidebarInteraction()
     }
 
     func syncKeyboardFocusAfterFirstResponderChange(in window: NSWindow?) {
@@ -6644,7 +6640,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
 
     @discardableResult
     func focusRightSidebarInActiveMainWindow(
-        mode requestedMode: RightSidebarMode? = nil,
+        tab requestedTab: FilesGitTab? = nil,
         focusFirstItem: Bool = true,
         preferredWindow: NSWindow? = nil
     ) -> Bool {
@@ -6666,7 +6662,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
         dlog(
             "rs.focus.app.begin preferred={\(debugWindowToken(preferredWindow))} " +
             "context={\(debugContextToken(context))} targetWin={\(debugWindowToken(window))} " +
-            "visible=\((beforeState?.isVisible ?? false) ? 1 : 0) mode=\(beforeState?.mode.rawValue ?? "nil") " +
+            "visible=\((beforeState?.isVisible ?? false) ? 1 : 0) tab=\(FilesGitTab.current().rawValue) " +
             "fr=\(beforeResponder)"
         )
 #endif
@@ -6674,14 +6670,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
             mainWindowVisibilityController.focusForInWindowCommand(window, reason: .rightSidebarFocus)
         }
         let result = context.keyboardFocusCoordinator.focusRightSidebar(
-            mode: requestedMode,
+            tab: requestedTab,
             focusFirstItem: focusFirstItem
         )
 #if DEBUG
         let afterResponder = window?.firstResponder.map { String(describing: type(of: $0)) } ?? "nil"
         dlog(
             "rs.focus.app.end requested=1 result=\(result ? 1 : 0) " +
-            "mode=\(requestedMode?.rawValue ?? (context.fileExplorerState?.mode.rawValue ?? "nil")) " +
+            "tab=\(requestedTab?.rawValue ?? FilesGitTab.current().rawValue) " +
             "targetWin={\(debugWindowToken(window))} fr=\(afterResponder)"
         )
 #endif
@@ -6690,7 +6686,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
 
 #if DEBUG
     func debugRevealRightSidebarInActiveMainWindow(
-        mode: RightSidebarMode,
+        tab: FilesGitTab,
         focusFirstItem: Bool,
         preferredWindow: NSWindow? = nil
     ) -> (
@@ -6724,23 +6720,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
             )
         }
 
-        if state.mode != mode {
-            state.mode = mode
-        }
+        FilesGitTab.select(tab)
         state.setVisible(true)
 
         let focusApplied = context?.keyboardFocusCoordinator.focusRightSidebar(
-            mode: mode,
+            tab: tab,
             focusFirstItem: focusFirstItem
         ) ?? false
 
         return (
-            revealed: state.isVisible && state.mode == mode,
+            revealed: state.isVisible && FilesGitTab.current() == tab,
             focusApplied: focusApplied,
             contextFound: context != nil,
             stateFound: true,
             visible: state.isVisible,
-            activeMode: state.mode.rawValue
+            activeMode: FilesGitTab.current().rawValue
         )
     }
 #endif
@@ -8134,7 +8128,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
         let fileExplorerState = FileExplorerState()
 #if DEBUG
         if ProcessInfo.processInfo.environment["CMUX_UI_TEST_BONSPLIT_SHOW_RIGHT_SIDEBAR"] == "1" {
-            fileExplorerState.mode = .files
+            FilesGitTab.select(.files)
             fileExplorerState.isVisible = true
         }
 #endif
@@ -10132,7 +10126,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
                     self.writeBonsplitTabDragUITestData(["setupError": "Missing right sidebar state"])
                     return
                 }
-                fileExplorerState.mode = .files
+                FilesGitTab.select(.files)
                 fileExplorerState.setVisible(true)
             }
             self.writeBonsplitTabDragUITestData([
@@ -12664,11 +12658,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
             return false
         }
 
-        if let mode = rightSidebarModeShortcut(for: event),
+        if let tab = rightSidebarTabShortcut(for: event),
            let rightSidebarWindow = mainWindowForShortcutEvent(event) ?? event.window ?? shortcutRoutingActiveWindow,
            shouldRouteRightSidebarModeShortcut(in: rightSidebarWindow) {
             _ = focusRightSidebarInActiveMainWindow(
-                mode: mode,
+                tab: tab,
                 focusFirstItem: true,
                 preferredWindow: rightSidebarWindow
             )
@@ -14521,8 +14515,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
 
     /// Resolves a right-sidebar mode shortcut after applying the action's
     /// effective `when` clause.
-    func rightSidebarModeShortcut(for event: NSEvent) -> RightSidebarMode? {
-        RightSidebarMode.modeShortcut(for: event) { [self] action in
+    func rightSidebarTabShortcut(for event: NSEvent) -> FilesGitTab? {
+        RightSidebarTabShortcut.tab(for: event) { [self] action in
             shortcutWhenClauseAllows(action: action, event: event)
         }
     }
@@ -16670,10 +16664,10 @@ private extension NSWindow {
             }
             return false
         }
-        if let mode = AppDelegate.shared?.rightSidebarModeShortcut(for: event),
+        if let tab = AppDelegate.shared?.rightSidebarTabShortcut(for: event),
            AppDelegate.shared?.shouldRouteRightSidebarModeShortcut(in: self) == true {
             _ = AppDelegate.shared?.focusRightSidebarInActiveMainWindow(
-                mode: mode,
+                tab: tab,
                 focusFirstItem: true,
                 preferredWindow: self
             )

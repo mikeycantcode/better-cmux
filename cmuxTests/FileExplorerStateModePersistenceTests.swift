@@ -7,98 +7,77 @@ import XCTest
 @testable import cmux
 #endif
 
+/// The right sidebar used to persist a `RightSidebarMode` raw value under
+/// `rightSidebar.mode`. Files|Git replaced modes; these tests pin the migration
+/// so a stored dead mode can never revive a removed surface.
 final class FileExplorerStateModePersistenceTests: XCTestCase {
-    private let modeKey = "rightSidebar.mode"
-    private let customSidebarNameKey = "rightSidebar.customSidebarName"
-    private let feedEnabledKey = RightSidebarBetaFeatureSettings.feedEnabledKey
-    private let dockEnabledKey = RightSidebarBetaFeatureSettings.dockEnabledKey
+    private let legacyModeKey = "rightSidebar.mode"
+    private let filesGitTabKey = FilesGitTab.defaultsKey
 
-    func testDisabledFeedStoredModeFallsBackToFiles() {
-        withSavedRightSidebarModeDefaults {
-            let defaults = UserDefaults.standard
-            defaults.set(RightSidebarMode.feed.rawValue, forKey: modeKey)
-            defaults.set(false, forKey: feedEnabledKey)
+    func testDeadStoredModeIsDroppedAndFallsBackToFiles() {
+        for deadMode in ["find", "sessions", "feed", "dock", "custom-sidebar", "totally-unknown"] {
+            withSavedRightSidebarDefaults {
+                let defaults = UserDefaults.standard
+                defaults.set(deadMode, forKey: legacyModeKey)
+                defaults.removeObject(forKey: filesGitTabKey)
 
-            let state = FileExplorerState()
+                _ = FileExplorerState()
 
-            XCTAssertEqual(state.mode, .files)
-            XCTAssertEqual(defaults.string(forKey: modeKey), RightSidebarMode.files.rawValue)
+                XCTAssertNil(
+                    defaults.object(forKey: legacyModeKey),
+                    "Legacy mode key should be dropped for '\(deadMode)'"
+                )
+                XCTAssertEqual(FilesGitTab.current(), .files, "'\(deadMode)' must fall back to Files")
+            }
         }
     }
 
-    func testEnabledFeedStoredModeSurvives() {
-        withSavedRightSidebarModeDefaults {
+    func testMigrationPreservesAnAlreadyChosenFilesGitTab() {
+        withSavedRightSidebarDefaults {
             let defaults = UserDefaults.standard
-            defaults.set(RightSidebarMode.feed.rawValue, forKey: modeKey)
-            defaults.set(true, forKey: feedEnabledKey)
+            defaults.set("dock", forKey: legacyModeKey)
+            FilesGitTab.select(.git)
 
-            let state = FileExplorerState()
+            _ = FileExplorerState()
 
-            XCTAssertEqual(state.mode, .feed)
-            XCTAssertEqual(defaults.string(forKey: modeKey), RightSidebarMode.feed.rawValue)
+            XCTAssertNil(defaults.object(forKey: legacyModeKey))
+            XCTAssertEqual(FilesGitTab.current(), .git)
         }
     }
 
-    func testModeSetterClampsUnavailableBetaModes() {
-        withSavedRightSidebarModeDefaults {
+    func testMigrationIsANoOpWhenNoLegacyValueExists() {
+        withSavedRightSidebarDefaults {
             let defaults = UserDefaults.standard
-            defaults.set(false, forKey: feedEnabledKey)
-            defaults.set(false, forKey: dockEnabledKey)
-            let state = FileExplorerState()
+            defaults.removeObject(forKey: legacyModeKey)
+            defaults.removeObject(forKey: filesGitTabKey)
 
-            state.mode = .feed
-            XCTAssertEqual(state.mode, .files)
-            XCTAssertEqual(defaults.string(forKey: modeKey), RightSidebarMode.files.rawValue)
+            _ = FileExplorerState()
 
-            defaults.set(true, forKey: dockEnabledKey)
-            state.mode = .dock
-            XCTAssertEqual(state.mode, .dock)
-            XCTAssertEqual(defaults.string(forKey: modeKey), RightSidebarMode.dock.rawValue)
-
-            defaults.set(false, forKey: dockEnabledKey)
-            state.refreshModeAvailability()
-            XCTAssertEqual(state.mode, .files)
-            XCTAssertEqual(defaults.string(forKey: modeKey), RightSidebarMode.files.rawValue)
+            XCTAssertNil(defaults.object(forKey: legacyModeKey))
+            XCTAssertNil(defaults.object(forKey: filesGitTabKey))
+            XCTAssertEqual(FilesGitTab.current(), .files)
         }
     }
 
-    func testStoredCustomSidebarModeFallsBackToFiles() {
-        withSavedRightSidebarModeDefaults {
-            let defaults = UserDefaults.standard
-            defaults.set(RightSidebarMode.customSidebar.rawValue, forKey: modeKey)
-            defaults.set("status-board", forKey: customSidebarNameKey)
-
-            let state = FileExplorerState()
-
-            XCTAssertEqual(state.mode, .files)
-            XCTAssertEqual(defaults.string(forKey: modeKey), RightSidebarMode.files.rawValue)
-        }
+    func testCLIArgumentNormalizerAcceptsOnlyFilesAndGit() {
+        XCTAssertEqual(FilesGitTab.from(cliArgument: "files"), .files)
+        XCTAssertEqual(FilesGitTab.from(cliArgument: " Git "), .git)
+        XCTAssertNil(FilesGitTab.from(cliArgument: "find"))
+        XCTAssertNil(FilesGitTab.from(cliArgument: "vault"))
+        XCTAssertNil(FilesGitTab.from(cliArgument: "sessions"))
+        XCTAssertNil(FilesGitTab.from(cliArgument: "feed"))
+        XCTAssertNil(FilesGitTab.from(cliArgument: "dock"))
+        XCTAssertNil(FilesGitTab.from(cliArgument: "custom-sidebar"))
+        XCTAssertNil(FilesGitTab.from(cliArgument: "unknown"))
     }
 
-    func testCLIArgumentNormalizerMapsVaultAndSessionsToSessions() {
-        XCTAssertEqual(RightSidebarMode.from(cliArgument: "files"), .files)
-        XCTAssertEqual(RightSidebarMode.from(cliArgument: "find"), .find)
-        XCTAssertEqual(RightSidebarMode.from(cliArgument: "vault"), .sessions)
-        XCTAssertEqual(RightSidebarMode.from(cliArgument: "sessions"), .sessions)
-        XCTAssertEqual(RightSidebarMode.from(cliArgument: "feed"), .feed)
-        XCTAssertEqual(RightSidebarMode.from(cliArgument: "dock"), .dock)
-        XCTAssertEqual(RightSidebarMode.from(cliArgument: " Vault "), .sessions)
-        XCTAssertNil(RightSidebarMode.from(cliArgument: "custom-sidebar"))
-        XCTAssertNil(RightSidebarMode.from(cliArgument: "custom"))
-        XCTAssertNil(RightSidebarMode.from(cliArgument: "unknown"))
-    }
-
-    private func withSavedRightSidebarModeDefaults(_ body: () -> Void) {
+    private func withSavedRightSidebarDefaults(_ body: () -> Void) {
         let defaults = UserDefaults.standard
-        let previousMode = defaults.object(forKey: modeKey)
-        let previousCustomSidebarName = defaults.object(forKey: customSidebarNameKey)
-        let previousFeedEnabled = defaults.object(forKey: feedEnabledKey)
-        let previousDockEnabled = defaults.object(forKey: dockEnabledKey)
+        let previousMode = defaults.object(forKey: legacyModeKey)
+        let previousTab = defaults.object(forKey: filesGitTabKey)
         defer {
-            restore(previousMode, forKey: modeKey)
-            restore(previousCustomSidebarName, forKey: customSidebarNameKey)
-            restore(previousFeedEnabled, forKey: feedEnabledKey)
-            restore(previousDockEnabled, forKey: dockEnabledKey)
+            restore(previousMode, forKey: legacyModeKey)
+            restore(previousTab, forKey: filesGitTabKey)
         }
         body()
     }

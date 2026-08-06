@@ -5,8 +5,8 @@ import CmuxSwiftRender
 
 extension ContentView {
     static func commandPaletteShortcutAction(forCommandID commandId: String) -> KeyboardShortcutSettings.Action? {
-        if let rightSidebarModeAction = commandPaletteRightSidebarModeShortcutAction(forCommandID: commandId) {
-            return rightSidebarModeAction
+        if let rightSidebarTabAction = commandPaletteRightSidebarTabShortcutAction(forCommandID: commandId) {
+            return rightSidebarTabAction
         }
 
         switch commandId {
@@ -97,18 +97,17 @@ extension ContentView {
         }
     }
 
-    static func commandPaletteRightSidebarModeCommandContributions() -> [CommandPaletteCommandContribution] {
+    static func commandPaletteRightSidebarTabCommandContributions() -> [CommandPaletteCommandContribution] {
         func constant(_ value: String) -> (CommandPaletteContextSnapshot) -> String {
             { _ in value }
         }
 
-        return RightSidebarMode.availableModes().map { mode in
-            let title = mode.shortcutAction?.label ?? mode.label
-            return CommandPaletteCommandContribution(
-                commandId: Self.commandPaletteRightSidebarModeCommandID(mode),
-                title: constant(title),
+        return FilesGitTab.allCases.map { tab in
+            CommandPaletteCommandContribution(
+                commandId: Self.commandPaletteRightSidebarTabCommandID(tab),
+                title: constant(Self.commandPaletteRightSidebarTabAction(tab).label),
                 subtitle: constant(String(localized: "command.rightSidebarMode.subtitle", defaultValue: "Right Sidebar")),
-                keywords: ["right", "sidebar", "show", "switch", "focus", mode.rawValue]
+                keywords: ["right", "sidebar", "show", "switch", "focus", tab.rawValue]
             )
         }
     }
@@ -123,83 +122,49 @@ extension ContentView {
                 commandId: descriptor.commandId,
                 title: constant(descriptor.title),
                 subtitle: constant(String(localized: "command.openRightSidebarToolAsPane.subtitle", defaultValue: "Pane")),
-                keywords: ["open", "pane", "tool", "right", "sidebar", descriptor.mode.rawValue, descriptor.mode.label.lowercased()]
+                keywords: ["open", "pane", "tool", "right", "sidebar", "files", "git"]
             )
         }
     }
 
-    static func commandPaletteRightSidebarModeCommandID(_ mode: RightSidebarMode) -> String {
-        switch mode {
+    static func commandPaletteRightSidebarTabCommandID(_ tab: FilesGitTab) -> String {
+        switch tab {
         case .files:
             return "palette.showRightSidebarFiles"
-        case .find:
-            return "palette.showRightSidebarFind"
-        case .sessions:
-            return "palette.showRightSidebarSessions"
-        case .feed:
-            return "palette.showRightSidebarFeed"
-        case .dock:
-            return "palette.showRightSidebarDock"
-        case .customSidebar:
-            return "palette.showRightSidebarCustomSidebar"
+        case .git:
+            return "palette.showRightSidebarGit"
         }
     }
 
-    static func commandPaletteRightSidebarToolPaneCommandDescriptors() -> [(mode: RightSidebarMode, commandId: String, title: String)] {
-        RightSidebarMode.paneModes.compactMap { mode in
-            guard let commandId = commandPaletteRightSidebarToolPaneCommandID(mode),
-                  let title = commandPaletteRightSidebarToolPaneTitle(mode) else {
-                return nil
-            }
-            return (mode: mode, commandId: commandId, title: title)
-        }
-    }
-
-    private static func commandPaletteRightSidebarToolPaneCommandID(_ mode: RightSidebarMode) -> String? {
-        switch mode {
+    static func commandPaletteRightSidebarTabAction(_ tab: FilesGitTab) -> KeyboardShortcutSettings.Action {
+        switch tab {
         case .files:
-            return "palette.openFilesPane"
-        case .find:
-            return "palette.openFindPane"
-        case .sessions:
-            return "palette.openVaultPane"
-        case .feed, .dock, .customSidebar:
-            return nil
+            return .switchRightSidebarToFiles
+        case .git:
+            return .switchRightSidebarToGit
         }
     }
 
-    private static func commandPaletteRightSidebarToolPaneTitle(_ mode: RightSidebarMode) -> String? {
-        switch mode {
-        case .files:
-            return String(localized: "command.openFilesPane.title", defaultValue: "Open Files as Pane")
-        case .find:
-            return String(localized: "command.openFindPane.title", defaultValue: "Open Find as Pane")
-        case .sessions:
-            return String(localized: "command.openVaultPane.title", defaultValue: "Open Vault as Pane")
-        case .feed, .dock, .customSidebar:
-            return nil
-        }
+    static func commandPaletteRightSidebarToolPaneCommandDescriptors() -> [(commandId: String, title: String)] {
+        [(
+            commandId: "palette.openFilesPane",
+            title: String(localized: "command.openFilesPane.title", defaultValue: "Open Files as Pane")
+        )]
     }
 
-    func handleCommandPaletteRightSidebarMode(_ mode: RightSidebarMode, observedWindow: NSWindow?) {
-        guard mode.isAvailable() else {
-            NSSound.beep()
-            return
-        }
+    func handleCommandPaletteRightSidebarTab(_ tab: FilesGitTab, observedWindow: NSWindow?) {
+        FilesGitTab.select(tab)
         if AppDelegate.shared?.focusRightSidebarInActiveMainWindow(
-            mode: mode,
+            tab: tab,
             focusFirstItem: true,
             preferredWindow: observedWindow ?? NSApp.keyWindow ?? NSApp.mainWindow
         ) != true {
             fileExplorerState.setVisible(true)
-            if fileExplorerState.mode != mode {
-                fileExplorerState.mode = mode
-            }
         }
     }
 
-    func handleCommandPaletteRightSidebarToolPane(_ mode: RightSidebarMode) {
-        openRightSidebarToolPane(mode)
+    func handleCommandPaletteRightSidebarToolPane() {
+        openRightSidebarToolPane()
     }
 
     func openCustomSidebarPane(_ name: String) {
@@ -221,15 +186,15 @@ extension ContentView {
         }
     }
 
-    private static func commandPaletteRightSidebarModeShortcutAction(
+    private static func commandPaletteRightSidebarTabShortcutAction(
         forCommandID commandID: String
     ) -> KeyboardShortcutSettings.Action? {
-        guard let mode = RightSidebarMode.availableModes().first(where: { mode in
-            Self.commandPaletteRightSidebarModeCommandID(mode) == commandID
+        guard let tab = FilesGitTab.allCases.first(where: { tab in
+            Self.commandPaletteRightSidebarTabCommandID(tab) == commandID
         }) else {
             return nil
         }
-        return mode.shortcutAction
+        return Self.commandPaletteRightSidebarTabAction(tab)
     }
 
     func rightSidebarCustomSidebarDataContext(now: Date) -> [String: SwiftValue] {

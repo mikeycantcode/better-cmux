@@ -40,10 +40,7 @@ public enum ShortcutAction: String, CaseIterable, Sendable, Hashable, SettingCod
     case markOldestUnreadAndJumpNext
     case focusRightSidebar
     case switchRightSidebarToFiles
-    case switchRightSidebarToFind
-    case switchRightSidebarToSessions
-    case switchRightSidebarToFeed
-    case switchRightSidebarToDock
+    case switchRightSidebarToGit
     case triggerFlash
 
     // MARK: Navigation
@@ -176,9 +173,8 @@ extension ShortcutAction {
         case .toggleSidebar, .hideSidebar, .showSidebar, .newTab, .newBrowserWorkspace, .openFolder, .reopenPreviousSession, .goToWorkspace,
              .commandPalette, .commandPaletteNext, .commandPalettePrevious, .sendFeedback,
              .showNotifications, .jumpToUnread, .toggleUnread, .markOldestUnreadAndJumpNext,
-             .focusRightSidebar, .switchRightSidebarToFiles, .switchRightSidebarToFind,
-             .switchRightSidebarToSessions, .switchRightSidebarToFeed,
-             .switchRightSidebarToDock, .triggerFlash:
+             .focusRightSidebar, .switchRightSidebarToFiles,
+             .switchRightSidebarToGit, .triggerFlash:
             return .workspace
         case .nextSurface, .prevSurface, .selectSurfaceByNumber, .nextSidebarTab,
              .prevSidebarTab, .focusHistoryBack, .focusHistoryForward,
@@ -263,8 +259,7 @@ extension ShortcutAction {
     /// mappings agree for every shared action.
     public var defaultFocusWhenClause: ShortcutWhenClause {
         switch self {
-        case .switchRightSidebarToFiles, .switchRightSidebarToFind,
-             .switchRightSidebarToSessions, .switchRightSidebarToFeed, .switchRightSidebarToDock:
+        case .switchRightSidebarToFiles, .switchRightSidebarToGit:
             return .atom(.sidebarFocus)
         case .fileExplorerOpenSelection, .fileExplorerOpenSelectionFinderAlias:
             return .atom(.sidebarFocus)
@@ -298,8 +293,7 @@ extension ShortcutAction {
     /// `handleCustomShortcut`; a drift test asserts the two stay aligned.
     public var hasPriorityShortcutRouting: Bool {
         switch self {
-        case .switchRightSidebarToFiles, .switchRightSidebarToFind,
-             .switchRightSidebarToSessions, .switchRightSidebarToFeed, .switchRightSidebarToDock:
+        case .switchRightSidebarToFiles, .switchRightSidebarToGit:
             return true
         case .browserBack, .browserForward:
             // Browser back/forward win Cmd+[ / Cmd+] while a browser pane is
@@ -343,10 +337,7 @@ extension ShortcutAction {
         case .markOldestUnreadAndJumpNext: return "Mark as Oldest Unread and Jump to Next Latest Unread"
         case .focusRightSidebar: return "Toggle Right Sidebar Focus"
         case .switchRightSidebarToFiles: return "Show Sidebar Files"
-        case .switchRightSidebarToFind: return "Show Sidebar Find"
-        case .switchRightSidebarToSessions: return "Show Sidebar Vault"
-        case .switchRightSidebarToFeed: return "Show Sidebar Feed"
-        case .switchRightSidebarToDock: return "Show Sidebar Dock"
+        case .switchRightSidebarToGit: return "Show Sidebar Git"
         case .triggerFlash: return "Flash Focused Panel"
         case .nextSurface: return "Next Surface"
         case .prevSurface: return "Previous Surface"

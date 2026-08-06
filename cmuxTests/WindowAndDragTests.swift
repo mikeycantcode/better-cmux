@@ -1831,16 +1831,12 @@ final class WindowDragHandleHitTests: XCTestCase {
         defer { window.orderOut(nil) }
 
         let rootView = RightSidebarPanelView(
-            tabManager: TabManager(),
             fileExplorerStore: FileExplorerStore(),
             fileExplorerState: FileExplorerState(),
-            sessionIndexStore: SessionIndexStore(),
             gitModel: GitWorkingTreeModel(repoPath: ""),
             titlebarHeight: 36,
-            workspaceId: nil,
-            onResumeSession: nil,
             onOpenFilePreview: { _ in },
-            onOpenAsPane: { _ in },
+            onOpenAsPane: {},
             onClose: {}
         )
         let hostingView = NSHostingView(rootView: rootView)

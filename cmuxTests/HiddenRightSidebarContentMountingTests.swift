@@ -50,7 +50,6 @@ struct HiddenRightSidebarContentMountingTests {
         }
 
         let fileExplorerState = FileExplorerState()
-        fileExplorerState.mode = .find
         fileExplorerState.setVisible(false)
 
         let window = NSWindow(
@@ -62,16 +61,12 @@ struct HiddenRightSidebarContentMountingTests {
         defer { window.orderOut(nil) }
 
         let rootView = RightSidebarPanelView(
-            tabManager: TabManager(),
             fileExplorerStore: FileExplorerStore(),
             fileExplorerState: fileExplorerState,
-            sessionIndexStore: SessionIndexStore(),
             gitModel: GitWorkingTreeModel(repoPath: ""),
             titlebarHeight: 36,
-            workspaceId: nil,
-            onResumeSession: nil,
             onOpenFilePreview: { _ in },
-            onOpenAsPane: { _ in },
+            onOpenAsPane: {},
             onClose: {}
         )
         let hostingView = NSHostingView(rootView: rootView)
@@ -83,7 +78,7 @@ struct HiddenRightSidebarContentMountingTests {
         let mountedContainer = Self.firstSubview(in: hostingView) { $0 is FileExplorerContainerView }
         #expect(
             mountedContainer == nil,
-            "Hidden right-sidebar state should preserve the selected mode without mounting FileExplorerPanelView content"
+            "A hidden right sidebar must not mount FileExplorerPanelView content"
         )
     }
 

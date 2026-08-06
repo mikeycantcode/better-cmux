@@ -197,12 +197,12 @@ struct FileSearchWorkspaceScopeTests {
         let state = FileExplorerState()
         let searchController = SpyFileSearchController()
         let coordinator = FileExplorerPanelView.Coordinator(store: store, state: state, onOpenFilePreview: { _ in })
-        let container = FileExplorerContainerView(coordinator: coordinator, presentation: .find, searchController: searchController)
+        let container = FileExplorerContainerView(coordinator: coordinator, searchController: searchController)
         let rootPath = "/tmp/cmux-find-same-directory-test"
 
         store.applyWorkspaceRoot(.local(workspaceId: UUID(), path: rootPath))
         container.updateHeader(store: store)
-        container.updatePresentation(.find)
+        container.showSearch()
 
         let searchField = try #require(Self.findSearchField(in: container))
         searchController.searchRequests.removeAll()
@@ -213,7 +213,7 @@ struct FileSearchWorkspaceScopeTests {
 
         store.applyWorkspaceRoot(.local(workspaceId: UUID(), path: rootPath))
         container.updateHeader(store: store)
-        container.updatePresentation(.find)
+        container.showSearch()
 
         #expect(searchField.stringValue == "")
         #expect(container.searchSnapshot == .empty)

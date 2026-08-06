@@ -31,16 +31,20 @@ struct AppDelegateSurfaceShortcutRoutingTests {
             window.displayIfNeeded()
             terminalPanel.hostedView.setVisibleInUI(true)
             terminalPanel.hostedView.setActive(true)
-            appDelegate.noteRightSidebarKeyboardFocusIntent(mode: .sessions, in: window)
+            appDelegate.noteRightSidebarKeyboardFocusIntent(in: window)
 
-            let modeEvents: [(mode: RightSidebarMode, event: NSEvent)] = [
+            // Files keeps ⌃1; Git ships unbound, so bind it for this test.
+            KeyboardShortcutSettings.setShortcut(
+                StoredShortcut(key: "2", command: false, shift: false, option: false, control: true),
+                for: .switchRightSidebarToGit
+            )
+            let tabEvents: [(tab: FilesGitTab, event: NSEvent)] = [
                 (.files, try #require(makeKeyDownEvent(key: "1", keyCode: 18, windowNumber: window.windowNumber))),
-                (.find, try #require(makeKeyDownEvent(key: "2", keyCode: 19, windowNumber: window.windowNumber))),
-                (.sessions, try #require(makeKeyDownEvent(key: "3", keyCode: 20, windowNumber: window.windowNumber)))
+                (.git, try #require(makeKeyDownEvent(key: "2", keyCode: 19, windowNumber: window.windowNumber)))
             ]
 
             for cycle in 0..<10 {
-                for (mode, event) in modeEvents {
+                for (tab, event) in tabEvents {
                     _ = window.makeFirstResponder(nil)
 #if DEBUG
                     #expect(
@@ -51,8 +55,8 @@ struct AppDelegateSurfaceShortcutRoutingTests {
                     Issue.record("debugHandleCustomShortcut is only available in DEBUG")
 #endif
                     #expect(
-                        appDelegate.fileExplorerState?.mode == mode,
-                        "Ctrl+\(event.charactersIgnoringModifiers ?? "?") should keep routing as a right-sidebar mode shortcut on cycle \(cycle)"
+                        FilesGitTab.current() == tab,
+                        "Ctrl+\(event.charactersIgnoringModifiers ?? "?") should keep routing as a right-sidebar tab shortcut on cycle \(cycle)"
                     )
                     #expect(
                         !terminalPanel.hostedView.isSurfaceViewFirstResponder(),
@@ -73,9 +77,10 @@ struct AppDelegateSurfaceShortcutRoutingTests {
             let window = try #require(mainWindow(for: windowId))
             window.makeKeyAndOrderFront(nil)
             window.displayIfNeeded()
-            appDelegate.noteRightSidebarKeyboardFocusIntent(mode: .sessions, in: window)
+            appDelegate.noteRightSidebarKeyboardFocusIntent(in: window)
             let fileExplorerState = try #require(appDelegate.fileExplorerState)
-            fileExplorerState.mode = .sessions
+            _ = fileExplorerState
+            FilesGitTab.select(.git)
 
             let unrelatedResponder = ShortcutUnrelatedResponderView(frame: NSRect(x: 0, y: 0, width: 8, height: 8))
             window.contentView?.addSubview(unrelatedResponder)
@@ -96,8 +101,8 @@ struct AppDelegateSurfaceShortcutRoutingTests {
 #endif
 
             #expect(
-                fileExplorerState.mode == .sessions,
-                "Ctrl+1 should not switch right-sidebar mode when a non-sidebar responder owns focus"
+                FilesGitTab.current() == .git,
+                "Ctrl+1 should not switch the right-sidebar tab when a non-sidebar responder owns focus"
             )
             #expect(
                 window.firstResponder === unrelatedResponder,

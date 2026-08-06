@@ -477,16 +477,9 @@ private struct FeedListView: View {
         guard let targetId = preferredFocusItemId(in: snapshots) else {
             let window = activeFeedWindow()
             if focusHost {
-                _ = AppDelegate.shared?.focusRightSidebarInActiveMainWindow(
-                    mode: .feed,
-                    focusFirstItem: false,
-                    preferredWindow: window
-                )
+                _ = FeedKeyboardFocusView.focusHost(in: window)
             } else {
-                AppDelegate.shared?.noteRightSidebarKeyboardFocusIntent(
-                    mode: .feed,
-                    in: window
-                )
+                AppDelegate.shared?.noteRightSidebarKeyboardFocusIntent(in: window)
             }
             syncFeedFocusSnapshot(window: window)
             return
@@ -735,6 +728,29 @@ private struct FeedKeyboardFocusBridge: NSViewRepresentable {
 }
 
 final class FeedKeyboardFocusView: NSView {
+    /// Focuses the feed host inside `window`, wherever the feed is mounted.
+    /// The feed left the right sidebar, so focus can no longer be routed
+    /// through the right-sidebar focus coordinator.
+    @MainActor
+    @discardableResult
+    static func focusHost(in window: NSWindow?) -> Bool {
+        guard let window,
+              let root = window.contentView,
+              let host = findHost(in: root) else {
+            return false
+        }
+        return window.makeFirstResponder(host)
+    }
+
+    @MainActor
+    private static func findHost(in view: NSView) -> FeedKeyboardFocusView? {
+        if let host = view as? FeedKeyboardFocusView { return host }
+        for subview in view.subviews {
+            if let host = findHost(in: subview) { return host }
+        }
+        return nil
+    }
+
     var onEscape: (() -> Void)?
     var onMoveSelection: ((Int) -> Void)?
     var onActivateSelection: (() -> Void)?
@@ -790,9 +806,9 @@ final class FeedKeyboardFocusView: NSView {
             "fr=\(feedDebugResponderSummary(window?.firstResponder))"
         )
 #endif
-        if let mode = AppDelegate.shared?.rightSidebarModeShortcut(for: event) {
+        if let tab = AppDelegate.shared?.rightSidebarTabShortcut(for: event) {
             _ = AppDelegate.shared?.focusRightSidebarInActiveMainWindow(
-                mode: mode,
+                tab: tab,
                 focusFirstItem: true,
                 preferredWindow: window
             )
@@ -3420,11 +3436,7 @@ private struct FeedInlineTextField: NSViewRepresentable {
             dlog("feed.editor.blurField frBefore=\(feedDebugResponderSummary(window.firstResponder))")
 #endif
             Task { @MainActor in
-                if AppDelegate.shared?.focusRightSidebarInActiveMainWindow(
-                    mode: .feed,
-                    focusFirstItem: false,
-                    preferredWindow: window
-                ) != true {
+                if !FeedKeyboardFocusView.focusHost(in: window) {
                     window.makeFirstResponder(nil)
                 }
             }
@@ -3517,11 +3529,7 @@ private struct FeedInlineTextField: NSViewRepresentable {
     }
 
     private func moveFocusToFeedHost(in window: NSWindow) {
-        if AppDelegate.shared?.focusRightSidebarInActiveMainWindow(
-            mode: .feed,
-            focusFirstItem: false,
-            preferredWindow: window
-        ) == true {
+        if FeedKeyboardFocusView.focusHost(in: window) {
             return
         }
         window.makeFirstResponder(nil)

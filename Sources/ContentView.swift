@@ -1971,21 +1971,15 @@ struct ContentView: View {
 
     private var rightSidebarPanel: some View {
         return RightSidebarPanelView(
-            tabManager: tabManager,
             fileExplorerStore: fileExplorerStore,
             fileExplorerState: fileExplorerState,
-            sessionIndexStore: sessionIndexStore,
             gitModel: gitWorkingTreeModel,
             titlebarHeight: RightSidebarChromeMetrics.titlebarHeight,
-            workspaceId: tabManager.selectedTabId,
-            onResumeSession: { entry in
-                resumeSession(entry: entry)
-            },
             onOpenFilePreview: { filePath in
                 openFilePreviewFromSidebar(filePath: filePath)
             },
-            onOpenAsPane: { mode in
-                openRightSidebarToolPane(mode)
+            onOpenAsPane: {
+                openRightSidebarToolPane()
             },
             onClose: {
                 #if DEBUG
@@ -2349,13 +2343,8 @@ struct ContentView: View {
         )
     }
 
-    private func resumeSession(entry: SessionEntry) {
-        SessionEntryResumeCoordinator.resume(entry, tabManager: tabManager)
-    }
-
-    func openRightSidebarToolPane(_ mode: RightSidebarMode) {
-        guard mode.canOpenAsPane,
-              let workspace = tabManager.selectedWorkspace,
+    func openRightSidebarToolPane() {
+        guard let workspace = tabManager.selectedWorkspace,
               let paneId = workspace.bonsplitController.focusedPaneId ?? workspace.bonsplitController.allPaneIds.first else {
             NSSound.beep()
             return
@@ -2363,7 +2352,7 @@ struct ContentView: View {
 
         sidebarSelectionState.selection = .tabs
         workspace.clearSplitZoom()
-        _ = workspace.openOrFocusRightSidebarToolSurface(inPane: paneId, mode: mode, focus: true)
+        _ = workspace.openOrFocusRightSidebarToolSurface(inPane: paneId, focus: true)
     }
 
     private func openFilePreviewFromSidebar(filePath: String) {
@@ -2432,8 +2421,7 @@ struct ContentView: View {
 
     private var shouldSyncFileExplorerStore: Bool {
         FileExplorerRootSyncPolicy.shouldSyncFileExplorerStore(
-            isRightSidebarVisible: fileExplorerState.isVisible,
-            mode: fileExplorerState.mode
+            isRightSidebarVisible: fileExplorerState.isVisible
         )
     }
 
@@ -3121,10 +3109,6 @@ struct ContentView: View {
             } else {
                 TerminalWindowPortalRegistry.scheduleExternalGeometrySynchronizeForAllWindows()
             }
-        })
-
-        view = AnyView(view.onChange(of: fileExplorerState.mode) { _, _ in
-            syncFileExplorerDirectory()
         })
 
         view = AnyView(view.onChange(of: sidebarMatchTerminalBackground) { _ in
@@ -6528,7 +6512,7 @@ struct ContentView: View {
                 )
             )
         }
-        contributions.append(contentsOf: Self.commandPaletteRightSidebarModeCommandContributions())
+        contributions.append(contentsOf: Self.commandPaletteRightSidebarTabCommandContributions())
         contributions.append(contentsOf: Self.commandPaletteRightSidebarToolPaneCommandContributions())
         contributions.append(
             CommandPaletteCommandContribution(
@@ -7721,14 +7705,14 @@ struct ContentView: View {
                 CmuxExtensionSidebarSelection.setProviderId(descriptor.id)
             }
         }
-        for mode in RightSidebarMode.allCases {
-            registry.register(commandId: Self.commandPaletteRightSidebarModeCommandID(mode)) {
-                handleCommandPaletteRightSidebarMode(mode, observedWindow: observedWindow)
+        for tab in FilesGitTab.allCases {
+            registry.register(commandId: Self.commandPaletteRightSidebarTabCommandID(tab)) {
+                handleCommandPaletteRightSidebarTab(tab, observedWindow: observedWindow)
             }
         }
         for descriptor in Self.commandPaletteRightSidebarToolPaneCommandDescriptors() {
             registry.register(commandId: descriptor.commandId) {
-                handleCommandPaletteRightSidebarToolPane(descriptor.mode)
+                handleCommandPaletteRightSidebarToolPane()
             }
         }
         registry.register(commandId: "palette.toggleMatchTerminalBackground") {

@@ -677,13 +677,12 @@ struct FileSearchControllerTests {
         )
         let container = FileExplorerContainerView(
             coordinator: coordinator,
-            presentation: .find,
             searchController: searchController
         )
         store.provider = MockFileExplorerProvider(homePath: "/tmp")
         store.setRootPath("/tmp/cmux-find-debounce-test")
         container.updateHeader(store: store)
-        container.updatePresentation(.find)
+        container.showSearch()
 
         let searchField = try #require(Self.findSearchField(in: container))
         searchController.searchRequests.removeAll()
@@ -722,13 +721,12 @@ struct FileSearchControllerTests {
             )
             let container = FileExplorerContainerView(
                 coordinator: coordinator,
-                presentation: .find,
                 searchController: searchController
             )
             store.provider = MockFileExplorerProvider(homePath: "/tmp")
             store.setRootPath("/tmp/cmux-find-return-fallback-test")
             container.updateHeader(store: store)
-            container.updatePresentation(.find)
+            container.showSearch()
 
             KeyboardShortcutSettings.setShortcut(.unbound, for: .fileExplorerOpenSelection)
             KeyboardShortcutSettings.setShortcut(.unbound, for: .fileExplorerOpenSelectionFinderAlias)
@@ -765,13 +763,12 @@ struct FileSearchControllerTests {
         )
         let container = FileExplorerContainerView(
             coordinator: coordinator,
-            presentation: .find,
             searchController: searchController
         )
         store.provider = MockFileExplorerProvider(homePath: "/tmp")
         store.setRootPath("/tmp/cmux-find-content-revision-test")
         container.updateHeader(store: store)
-        container.updatePresentation(.find)
+        container.showSearch()
 
         let searchField = try #require(Self.findSearchField(in: container))
         searchField.stringValue = "needle"
@@ -790,7 +787,7 @@ struct FileSearchControllerTests {
 
         store.reload()
         container.updateHeader(store: store)
-        container.updatePresentation(.find)
+        container.showSearch()
 
         #expect(
             searchController.searchRequests.count == originalRequestCount,
@@ -822,13 +819,12 @@ struct FileSearchControllerTests {
         )
         let container = FileExplorerContainerView(
             coordinator: coordinator,
-            presentation: .find,
             searchController: searchController
         )
         store.provider = MockFileExplorerProvider(homePath: "/tmp")
         store.setRootPath("/tmp/cmux-find-idempotent-layout-test")
         container.updateHeader(store: store)
-        container.updatePresentation(.find)
+        container.showSearch()
 
         // updateVisibility runs on every store/content update and is unguarded; a second
         // identical pass must not invalidate layout.
@@ -843,7 +839,7 @@ struct FileSearchControllerTests {
         // The guard-else in updatePresentation(.find) re-runs updateSearchLayout on every
         // redundant pass (the Cmd+Shift+F re-entry path); it must be a no-op too.
         container.needsLayout = false
-        container.updatePresentation(.find)
+        container.showSearch()
         #expect(
             !container.needsLayout,
             "A redundant updatePresentation(.find) pass must not invalidate layout (#4931)."

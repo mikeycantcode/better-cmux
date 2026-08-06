@@ -6,7 +6,7 @@ final class FileExplorerSearchResultsTableView: NSTableView {
     var onMoveSelection: ((Int) -> Void)?
     var onCommit: (() -> Void)?
     var onFocus: (() -> Void)?
-    var onModeShortcut: ((RightSidebarMode, NSWindow?) -> Bool)?
+    var onTabShortcut: ((FilesGitTab, NSWindow?) -> Bool)?
 
     override func becomeFirstResponder() -> Bool {
         let result = super.becomeFirstResponder()
@@ -26,8 +26,8 @@ final class FileExplorerSearchResultsTableView: NSTableView {
     }
 
     override func keyDown(with event: NSEvent) {
-        if let mode = AppDelegate.shared?.rightSidebarModeShortcut(for: event) {
-            if onModeShortcut?(mode, window) == true {
+        if let tab = AppDelegate.shared?.rightSidebarTabShortcut(for: event) {
+            if onTabShortcut?(tab, window) == true {
                 return
             }
         }

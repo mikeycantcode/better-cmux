@@ -6,22 +6,18 @@ import SwiftUI
 final class RightSidebarToolPanel: Panel, ObservableObject {
     let id: UUID
     let panelType: PanelType = .rightSidebarTool
-    let mode: RightSidebarMode
 
     @Published private(set) var focusFlashToken: Int = 0
 
     private weak var workspace: Workspace?
     private weak var fileExplorerContainerView: FileExplorerContainerView?
-    private weak var sessionIndexFocusAnchorView: RightSidebarToolFocusAnchorView?
     private var fileExplorerStoreStorage: FileExplorerStore?
     private var fileExplorerStateStorage: FileExplorerState?
     private var gitWorkingTreeModelStorage: GitWorkingTreeModel?
-    private var sessionIndexStoreStorage: SessionIndexStore?
     private var workspaceObservationCancellable: AnyCancellable?
 
-    init(workspace: Workspace, mode: RightSidebarMode) {
+    init(workspace: Workspace) {
         self.id = UUID()
-        self.mode = mode
         reattach(to: workspace)
     }
 
@@ -57,18 +53,8 @@ final class RightSidebarToolPanel: Panel, ObservableObject {
         return state
     }
 
-    var sessionIndexStore: SessionIndexStore {
-        if let store = sessionIndexStoreStorage { return store }
-        let store = SessionIndexStore()
-        sessionIndexStoreStorage = store
-        if let workspace {
-            syncSessionIndexRoot(from: workspace, store: store)
-        }
-        return store
-    }
-
-    var displayTitle: String { mode.label }
-    var displayIcon: String? { mode.symbolName }
+    var displayTitle: String { FilesGitTab.files.label }
+    var displayIcon: String? { FilesGitTab.files.symbolName }
 
     func reattach(to workspace: Workspace) {
         self.workspace = workspace
@@ -80,21 +66,9 @@ final class RightSidebarToolPanel: Panel, ObservableObject {
         fileExplorerContainerView = container
     }
 
-    fileprivate func attachSessionIndexFocusAnchor(_ anchor: RightSidebarToolFocusAnchorView?) {
-        sessionIndexFocusAnchorView = anchor
-    }
-
     func syncWorkspaceRoot(from workspace: Workspace) {
-        switch mode {
-        case .files, .find:
-            guard let store = fileExplorerStoreStorage else { return }
-            syncFileExplorerRoot(from: workspace, store: store)
-        case .sessions:
-            guard let store = sessionIndexStoreStorage else { return }
-            syncSessionIndexRoot(from: workspace, store: store)
-        case .feed, .dock, .customSidebar:
-            break
-        }
+        guard let store = fileExplorerStoreStorage else { return }
+        syncFileExplorerRoot(from: workspace, store: store)
     }
 
     func openFilePreview(_ filePath: String) {
@@ -116,25 +90,12 @@ final class RightSidebarToolPanel: Panel, ObservableObject {
 
     func close() {
         fileExplorerContainerView = nil
-        sessionIndexFocusAnchorView = nil
         fileExplorerStoreStorage?.applyWorkspaceRoot(.none)
-        sessionIndexStoreStorage?.setCurrentDirectoryIfChanged(nil)
         workspaceObservationCancellable = nil
     }
 
     func focus() {
-        switch mode {
-        case .files:
-            _ = fileExplorerContainerView?.focusOutline()
-        case .find:
-            _ = fileExplorerContainerView?.focusSearchField()
-        case .sessions:
-            guard let anchor = sessionIndexFocusAnchorView,
-                  let window = anchor.window else { return }
-            _ = window.makeFirstResponder(anchor)
-        case .feed, .dock, .customSidebar:
-            break
-        }
+        _ = fileExplorerContainerView?.focusOutline()
     }
 
     func unfocus() {}
@@ -147,16 +108,8 @@ final class RightSidebarToolPanel: Panel, ObservableObject {
 
     func ownedFocusIntent(for responder: NSResponder, in window: NSWindow) -> PanelFocusIntent? {
         _ = window
-        switch mode {
-        case .files, .find:
-            guard fileExplorerContainerView?.ownsKeyboardFocus(responder) == true else { return nil }
-            return .panel
-        case .sessions:
-            guard sessionIndexFocusAnchorView?.ownsKeyboardFocus(responder) == true else { return nil }
-            return .panel
-        case .feed, .dock, .customSidebar:
-            return nil
-        }
+        guard fileExplorerContainerView?.ownsKeyboardFocus(responder) == true else { return nil }
+        return .panel
     }
 
     private func observeWorkspaceRootChanges(_ workspace: Workspace) {
@@ -185,10 +138,6 @@ final class RightSidebarToolPanel: Panel, ObservableObject {
         gitWorkingTreeModelStorage?.repoPath = directory
     }
 
-    private func syncSessionIndexRoot(from workspace: Workspace, store: SessionIndexStore) {
-        let directory = workspace.currentDirectory.trimmingCharacters(in: .whitespacesAndNewlines)
-        store.setCurrentDirectoryIfChanged(directory.isEmpty ? nil : directory)
-    }
 }
 
 /// Pane-hosted Files surface. Exists as its own view so the store is observed here —
@@ -208,7 +157,6 @@ private struct PaneFilesGitShell: View {
                     store: store,
                     state: panel.fileExplorerState,
                     onOpenFilePreview: panel.openFilePreview,
-                    presentation: .files,
                     placement: .pane,
                     onFocus: onFocus,
                     onContainerChange: panel.attachFileExplorerContainer
@@ -230,7 +178,6 @@ private struct PaneFilesGitShell: View {
 
 struct RightSidebarToolPanelView: View {
     @ObservedObject var panel: RightSidebarToolPanel
-    @EnvironmentObject private var tabManager: TabManager
     let isFocused: Bool
     let isVisibleInUI: Bool
     let appearance: PanelAppearance
@@ -252,39 +199,12 @@ struct RightSidebarToolPanelView: View {
             }
     }
 
-    @ViewBuilder
     private var content: some View {
-        switch panel.mode {
-        case .files:
-            PaneFilesGitShell(
-                panel: panel,
-                store: panel.fileExplorerStore,
-                onFocus: requestPanelFocusIfNeeded
-            )
-        case .find:
-            FileExplorerPanelView(
-                store: panel.fileExplorerStore,
-                state: panel.fileExplorerState,
-                onOpenFilePreview: panel.openFilePreview,
-                presentation: .find,
-                placement: .pane,
-                onFocus: requestPanelFocusIfNeeded,
-                onContainerChange: panel.attachFileExplorerContainer
-            )
-        case .sessions:
-            SessionIndexView(
-                store: panel.sessionIndexStore,
-                onResume: { entry in
-                    SessionEntryResumeCoordinator.resume(entry, tabManager: tabManager)
-                }
-            )
-            .background(
-                RightSidebarToolFocusAnchor(onViewChange: panel.attachSessionIndexFocusAnchor)
-                    .frame(width: 0, height: 0)
-            )
-        case .feed, .dock, .customSidebar:
-            EmptyView()
-        }
+        PaneFilesGitShell(
+            panel: panel,
+            store: panel.fileExplorerStore,
+            onFocus: requestPanelFocusIfNeeded
+        )
     }
 
     private func requestPanelFocusIfNeeded() {

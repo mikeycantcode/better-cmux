@@ -3888,7 +3888,7 @@ final class AppDelegateShortcutRoutingTests: XCTestCase {
 
         XCTAssertNotNil(manager.focusedBrowserPanel)
         XCTAssertNil(manager.focusedBrowserPanel?.searchState)
-        let initialMode = appDelegate.fileExplorerState?.mode
+        let initialTab = FilesGitTab.current()
 
         guard let event = makeKeyDownEvent(
             key: "f",
@@ -3910,7 +3910,7 @@ final class AppDelegateShortcutRoutingTests: XCTestCase {
 #endif
 
         XCTAssertNotNil(manager.focusedBrowserPanel?.searchState)
-        XCTAssertEqual(appDelegate.fileExplorerState?.mode, initialMode)
+        XCTAssertEqual(FilesGitTab.current(), initialTab)
     }
 
     func testOmnibarArrowSelectionUsesResponderResolvedPanelWhenTrackedFocusWasCleared() {
@@ -10676,7 +10676,7 @@ final class AppDelegateShortcutRoutingTests: XCTestCase {
         terminalPanel.hostedView.setActive(true)
 
         XCTAssertTrue(window.makeFirstResponder(strayView), "Expected a foreign responder before blocking terminal focus")
-        appDelegate.noteRightSidebarKeyboardFocusIntent(mode: .feed, in: window)
+        appDelegate.noteRightSidebarKeyboardFocusIntent(in: window)
 
         XCTAssertFalse(
             window.makeFirstResponder(terminalView),
@@ -10717,8 +10717,8 @@ final class AppDelegateShortcutRoutingTests: XCTestCase {
         defer { sidebarResponder.removeFromSuperview() }
 
         XCTAssertTrue(window.makeFirstResponder(sidebarResponder), "Expected right sidebar responder to take focus")
-        appDelegate.fileExplorerState?.mode = .files
-        appDelegate.noteRightSidebarKeyboardFocusIntent(mode: .files, in: window)
+        FilesGitTab.select(.files)
+        appDelegate.noteRightSidebarKeyboardFocusIntent(in: window)
 
         guard let event = makeKeyDownEvent(
             key: "f",
@@ -10737,7 +10737,7 @@ final class AppDelegateShortcutRoutingTests: XCTestCase {
 #endif
 
         XCTAssertNil(terminalPanel.searchState, "Cmd+F from the file tree should not create terminal search state")
-        XCTAssertEqual(appDelegate.fileExplorerState?.mode, .find)
+        XCTAssertEqual(FilesGitTab.current(), .files, "Find lives inside the Files tab")
     }
 
     func testFindShortcutFromTerminalOpensTerminalFind() {
@@ -10825,21 +10825,21 @@ final class AppDelegateShortcutRoutingTests: XCTestCase {
         terminalPanel.hostedView.moveFocus()
         RunLoop.main.run(until: Date(timeIntervalSinceNow: 0.05))
 
-        let nonFileMode = RightSidebarMode.sessions
+        let gitTab = FilesGitTab.git
         XCTAssertTrue(window.makeFirstResponder(sidebarResponder), "Expected right sidebar responder to take focus")
 #if DEBUG
         let revealResult = appDelegate.debugRevealRightSidebarInActiveMainWindow(
-            mode: nonFileMode,
+            tab: gitTab,
             focusFirstItem: false,
             preferredWindow: window
         )
         XCTAssertTrue(revealResult.stateFound, "Expected registered right sidebar state")
-        XCTAssertEqual(revealResult.activeMode, nonFileMode.rawValue)
+        XCTAssertEqual(revealResult.activeMode, gitTab.rawValue)
         XCTAssertTrue(window.makeFirstResponder(sidebarResponder), "Expected sidebar responder to retake focus")
 #else
-        appDelegate.fileExplorerState?.mode = nonFileMode
+        FilesGitTab.select(gitTab)
 #endif
-        appDelegate.noteRightSidebarKeyboardFocusIntent(mode: nonFileMode, in: window)
+        appDelegate.noteRightSidebarKeyboardFocusIntent(in: window)
         XCTAssertFalse(
             appDelegate.allowsTerminalKeyboardFocus(
                 workspaceId: workspace.id,
@@ -10861,7 +10861,7 @@ final class AppDelegateShortcutRoutingTests: XCTestCase {
 
 #if DEBUG
         withTemporaryShortcut(action: .switchRightSidebarToFiles, shortcut: .unbound) {
-            withTemporaryShortcut(action: .switchRightSidebarToFind, shortcut: .unbound) {
+            withTemporaryShortcut(action: .switchRightSidebarToGit, shortcut: .unbound) {
                 XCTAssertFalse(appDelegate.debugHandleCustomShortcut(event: event))
             }
         }
@@ -10878,10 +10878,10 @@ final class AppDelegateShortcutRoutingTests: XCTestCase {
             "Cmd+F should keep keyboard ownership in the existing right sidebar section"
         )
         XCTAssertNil(terminalPanel.searchState, "Cmd+F should not create terminal search state")
-        XCTAssertEqual(appDelegate.fileExplorerState?.mode, nonFileMode)
+        XCTAssertEqual(FilesGitTab.current(), gitTab)
         XCTAssertFalse(
             terminalPanel.hostedView.isSurfaceViewFirstResponder(),
-            "Cmd+F from a non-file right sidebar mode should not refocus the terminal responder"
+            "Cmd+F from the Git tab should not refocus the terminal responder"
         )
     }
 

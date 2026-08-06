@@ -350,8 +350,8 @@ extension TerminalController: ControlDebugContext {
         windowID: UUID?,
         focusFirstItem: Bool
     ) -> ControlDebugRightSidebarFocusResolution {
-        let resolvedModeName = modeName ?? RightSidebarMode.dock.rawValue
-        guard let mode = RightSidebarMode(rawValue: resolvedModeName) else {
+        let resolvedModeName = modeName ?? FilesGitTab.files.rawValue
+        guard let tab = FilesGitTab(rawValue: resolvedModeName) else {
             return .invalidMode(resolvedModeName)
         }
         let preferredWindow: NSWindow?
@@ -364,7 +364,7 @@ extension TerminalController: ControlDebugContext {
             preferredWindow = NSApp.keyWindow ?? NSApp.mainWindow
         }
         let result = AppDelegate.shared?.debugRevealRightSidebarInActiveMainWindow(
-            mode: mode,
+            tab: tab,
             focusFirstItem: focusFirstItem,
             preferredWindow: preferredWindow
         )
@@ -375,7 +375,7 @@ extension TerminalController: ControlDebugContext {
             stateFound: result?.stateFound ?? false,
             visible: result?.visible ?? false,
             activeMode: result?.activeMode,
-            mode: mode.rawValue
+            mode: tab.rawValue
         ))
     }
 
