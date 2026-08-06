@@ -84,6 +84,17 @@ final class RightSidebarToolPanel: Panel, ObservableObject {
         )
     }
 
+    /// Opens (or focuses) the workspace's Changes panel on this pane's git model.
+    func openGitChangesPanel() {
+        workspace?.openGitChangesPanel(model: gitWorkingTreeModel)
+    }
+
+    /// Reveals a repo-relative path in an already-open Changes panel.
+    /// Returns `false` when none is open.
+    func revealInGitChangesPanel(relativePath: String) -> Bool {
+        workspace?.revealInGitChangesPanel(relativePath: relativePath) ?? false
+    }
+
     var isFocusedInWorkspace: Bool {
         workspace?.focusedPanelId == id
     }
@@ -165,11 +176,15 @@ private struct PaneFilesGitShell: View {
             gitContent: AnyView(
                 GitPanelView(
                     model: panel.gitWorkingTreeModel,
-                    openFile: { [rootPath = store.rootPath, openPreview = panel.openFilePreview] relativePath in
-                        openPreview(GitPanelView.absolutePath(root: rootPath, relative: relativePath))
+                    // Row clicks land in the Changes panel when one is open, and
+                    // fall back to a file preview otherwise.
+                    openFile: { [rootPath = store.rootPath] relativePath in
+                        guard !panel.revealInGitChangesPanel(relativePath: relativePath) else { return }
+                        panel.openFilePreview(
+                            GitPanelView.absolutePath(root: rootPath, relative: relativePath)
+                        )
                     },
-                    // Task 8 supplies the GitChangesPanel opener; hidden until then.
-                    openChanges: nil
+                    openChanges: panel.openGitChangesPanel
                 )
             )
         )

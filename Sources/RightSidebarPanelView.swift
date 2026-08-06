@@ -65,6 +65,11 @@ struct RightSidebarPanelView: View {
     let onOpenFilePreview: (String) -> Void
     let onOpenAsPane: () -> Void
     let onClose: () -> Void
+    /// Opens (or focuses) the workspace's Changes panel.
+    let onOpenChanges: () -> Void
+    /// Reveals a repo-relative path in an already-open Changes panel; `false` when
+    /// none is open, so a Git row click falls back to a file preview.
+    let onRevealInChanges: (String) -> Bool
 
     @State private var focusShortcutHintMonitor = WindowScopedShortcutHintModifierMonitor(activation: .commandOnly)
     @State private var closeShortcutHintMonitor = WindowScopedShortcutHintModifierMonitor(activation: .commandOnly)
@@ -282,13 +287,15 @@ struct RightSidebarPanelView: View {
                 gitContent: AnyView(
                     GitPanelView(
                         model: gitModel,
+                        // Row clicks land in the Changes panel when one is open, and
+                        // fall back to a file preview otherwise.
                         openFile: { [rootPath = fileExplorerStore.rootPath] relativePath in
+                            guard !onRevealInChanges(relativePath) else { return }
                             onOpenFilePreview(
                                 GitPanelView.absolutePath(root: rootPath, relative: relativePath)
                             )
                         },
-                        // Task 8 supplies the GitChangesPanel opener; hidden until then.
-                        openChanges: nil
+                        openChanges: onOpenChanges
                     )
                 )
             )

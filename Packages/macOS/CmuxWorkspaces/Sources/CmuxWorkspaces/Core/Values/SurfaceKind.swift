@@ -33,4 +33,6 @@ public struct SurfaceKind: RawRepresentable, Hashable, Sendable {
     public static let project = SurfaceKind(rawValue: "project")
     /// A browser pane owned by a sidebar extension.
     public static let extensionBrowser = SurfaceKind(rawValue: "extensionBrowser")
+    /// The git Changes review pane (stacked inline diffs + staging checklist).
+    public static let gitChanges = SurfaceKind(rawValue: "gitChanges")
 }

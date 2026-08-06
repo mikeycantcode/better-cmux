@@ -96056,6 +96056,176 @@
         }
       }
     },
+    "gitChanges.empty": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No changes"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "変更はありません"
+          }
+        }
+      }
+    },
+    "gitChanges.new": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "New"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "新規"
+          }
+        }
+      }
+    },
+    "gitChanges.open": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "開く"
+          }
+        }
+      }
+    },
+    "gitChanges.rail.title": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Files"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ファイル"
+          }
+        }
+      }
+    },
+    "gitChanges.revert": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Revert"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "元に戻す"
+          }
+        }
+      }
+    },
+    "gitChanges.revert.confirm": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Discard changes to this file? This cannot be undone."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "このファイルの変更を破棄しますか？この操作は取り消せません。"
+          }
+        }
+      }
+    },
+    "gitChanges.revert.confirmButton": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Discard"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "破棄"
+          }
+        }
+      }
+    },
+    "gitChanges.stage": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stage"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ステージ"
+          }
+        }
+      }
+    },
+    "gitChanges.title": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Changes"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "変更"
+          }
+        }
+      }
+    },
+    "gitChanges.unstage": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unstage"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ステージ解除"
+          }
+        }
+      }
+    },
     "gitPanel.action.discardAll": {
       "extractionState": "manual",
       "localizations": {
@@ -96226,6 +96396,23 @@
         }
       }
     },
+    "gitPanel.error.detachedPush": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cannot push: detached HEAD."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "プッシュできません: HEAD が切り離されています。"
+          }
+        }
+      }
+    },
     "gitPanel.openChanges.tooltip": {
       "extractionState": "manual",
       "localizations": {
@@ -96392,23 +96579,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "未追跡"
-          }
-        }
-      }
-    },
-    "gitPanel.error.detachedPush": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Cannot push: detached HEAD."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "プッシュできません: HEAD が切り離されています。"
           }
         }
       }
@@ -174270,6 +174440,22 @@
         }
       }
     },
+    "shortcut.hideSidebar.label": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hide Left Sidebar"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "左サイドバーを隠す"
+          }
+        }
+      }
+    },
     "shortcut.jumpToUnread.label": {
       "extractionState": "manual",
       "localizations": {
@@ -178441,6 +178627,22 @@
         }
       }
     },
+    "shortcut.showSidebar.label": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Show Left Sidebar"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "左サイドバーを表示"
+          }
+        }
+      }
+    },
     "shortcut.splitBrowserDown.label": {
       "extractionState": "manual",
       "localizations": {
@@ -179447,38 +179649,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Toggle Focused Workspace’s Group Collapse"
-          }
-        }
-      }
-    },
-    "shortcut.hideSidebar.label": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Hide Left Sidebar"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "左サイドバーを隠す"
-          }
-        }
-      }
-    },
-    "shortcut.showSidebar.label": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Show Left Sidebar"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "左サイドバーを表示"
           }
         }
       }

@@ -482,6 +482,9 @@
 		D3284101A1B2C3D4E5F60718 /* GhosttyTextInputSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3284102A1B2C3D4E5F60718 /* GhosttyTextInputSupport.swift */; };
 		D7C6F5000000000000000000 /* GhosttyTitleChange.swift in Sources */ = {isa = PBXBuildFile; fileRef = D7C6F5000000000000000001 /* GhosttyTitleChange.swift */; };
 		D7C6F5010000000000000000 /* GhosttyTitleChangeSubscription.swift in Sources */ = {isa = PBXBuildFile; fileRef = D7C6F5010000000000000001 /* GhosttyTitleChangeSubscription.swift */; };
+		C0DE9A11000000000006 /* git-changes in Resources */ = {isa = PBXBuildFile; fileRef = C0DE9A11000000000005 /* git-changes */; };
+		C0DE9A11000000000002 /* GitChangesPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0DE9A11000000000001 /* GitChangesPanel.swift */; };
+		C0DE9A11000000000004 /* GitChangesPanelView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0DE9A11000000000003 /* GitChangesPanelView.swift */; };
 		G17A00000000000000000016 /* GitPanelView.swift in Sources */ = {isa = PBXBuildFile; fileRef = G17A00000000000000000015 /* GitPanelView.swift */; };
 		G17A00000000000000000018 /* GitPanelViewTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = G17A00000000000000000017 /* GitPanelViewTests.swift */; };
 		G17A00000000000000000002 /* GitPorcelainStatus.swift in Sources */ = {isa = PBXBuildFile; fileRef = G17A00000000000000000001 /* GitPorcelainStatus.swift */; };
@@ -1468,6 +1471,9 @@
 		D3284102A1B2C3D4E5F60718 /* GhosttyTextInputSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GhosttyTextInputSupport.swift; sourceTree = "<group>"; };
 		D7C6F5000000000000000001 /* GhosttyTitleChange.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GhosttyTitleChange.swift; sourceTree = "<group>"; };
 		D7C6F5010000000000000001 /* GhosttyTitleChangeSubscription.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GhosttyTitleChangeSubscription.swift; sourceTree = "<group>"; };
+		C0DE9A11000000000005 /* git-changes */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = folder; path = "git-changes"; sourceTree = "<group>"; };
+		C0DE9A11000000000001 /* GitChangesPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Panels/GitChangesPanel.swift; sourceTree = "<group>"; };
+		C0DE9A11000000000003 /* GitChangesPanelView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Panels/GitChangesPanelView.swift; sourceTree = "<group>"; };
 		G17A00000000000000000015 /* GitPanelView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Git/GitPanelView.swift"; sourceTree = "<group>"; };
 		G17A00000000000000000017 /* GitPanelViewTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GitPanelViewTests.swift; sourceTree = "<group>"; };
 		G17A00000000000000000001 /* GitPorcelainStatus.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Git/GitPorcelainStatus.swift"; sourceTree = "<group>"; };
@@ -2057,6 +2063,7 @@
 				A9E010000000000000000007 /* agent-session-solid */,
 
 				A5001622 /* cmux.sdef */,
+				C0DE9A11000000000005 /* git-changes */,
 				BBC0DE000000000000000021 /* monaco */,
 			);
 			path = Resources;
@@ -2532,6 +2539,8 @@
 				C76D07ED88D244B1B02FAF3C /* BrowserOmnibarSubmitSupport.swift */,
 				A5007421 /* BrowserPopupWindowController.swift */,
 				A5007423 /* BrowserWebAuthnSupport.swift */,
+				C0DE9A11000000000001 /* GitChangesPanel.swift */,
+				C0DE9A11000000000003 /* GitChangesPanelView.swift */,
 				A5001418 /* MarkdownPanel.swift */,
 				C9BF96BDA2089ABA9B5E9E18 /* MermaidDiagramFileResolver.swift */,
 				A50014F0 /* MarkdownPanelFileLinkResolver.swift */,
@@ -3308,6 +3317,7 @@
 				A5001100 /* Assets.xcassets in Resources */,
 				A5001623 /* cmux.sdef in Resources */,
 				FEED0A00000000000000F007 /* feed-tui in Resources */,
+				C0DE9A11000000000006 /* git-changes in Resources */,
 				DA7A10CA710E000000000004 /* InfoPlist.xcstrings in Resources */,
 				DA7A10CA710E000000000003 /* Localizable.xcstrings in Resources */,
 				A9D9000000000000000F0017 /* markdown-viewer in Resources */,
@@ -3694,6 +3704,8 @@
 				D3284101A1B2C3D4E5F60718 /* GhosttyTextInputSupport.swift in Sources */,
 				D7C6F5000000000000000000 /* GhosttyTitleChange.swift in Sources */,
 				D7C6F5010000000000000000 /* GhosttyTitleChangeSubscription.swift in Sources */,
+				C0DE9A11000000000002 /* GitChangesPanel.swift in Sources */,
+				C0DE9A11000000000004 /* GitChangesPanelView.swift in Sources */,
 				G17A00000000000000000016 /* GitPanelView.swift in Sources */,
 				G17A00000000000000000002 /* GitPorcelainStatus.swift in Sources */,
 				G17A00000000000000000006 /* GitWorkingTreeModel.swift in Sources */,

@@ -1837,7 +1837,9 @@ final class WindowDragHandleHitTests: XCTestCase {
             titlebarHeight: 36,
             onOpenFilePreview: { _ in },
             onOpenAsPane: {},
-            onClose: {}
+            onClose: {},
+            onOpenChanges: {},
+            onRevealInChanges: { _ in false }
         )
         let hostingView = NSHostingView(rootView: rootView)
         hostingView.frame = window.contentRect(forFrameRect: window.frame)

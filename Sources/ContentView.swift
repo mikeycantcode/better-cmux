@@ -1986,6 +1986,13 @@ struct ContentView: View {
                 cmuxDebugLog("rightSidebar.closeButton")
                 #endif
                 _ = AppDelegate.shared?.closeRightSidebarInActiveMainWindow(preferredWindow: observedWindow)
+            },
+            onOpenChanges: {
+                openGitChangesFromSidebar()
+            },
+            onRevealInChanges: { relativePath in
+                guard let workspace = tabManager.selectedWorkspace else { return false }
+                return workspace.revealInGitChangesPanel(relativePath: relativePath)
             }
         )
         .frame(width: rightSidebarWidth)
@@ -2353,6 +2360,13 @@ struct ContentView: View {
         sidebarSelectionState.selection = .tabs
         workspace.clearSplitZoom()
         _ = workspace.openOrFocusRightSidebarToolSurface(inPane: paneId, focus: true)
+    }
+
+    /// Opens (or focuses) the Changes panel on the sidebar's shared git model.
+    private func openGitChangesFromSidebar() {
+        guard let workspace = tabManager.selectedWorkspace else { return }
+        sidebarSelectionState.selection = .tabs
+        workspace.openGitChangesPanel(model: gitWorkingTreeModel)
     }
 
     private func openFilePreviewFromSidebar(filePath: String) {
@@ -5561,6 +5575,8 @@ struct ContentView: View {
             return String(localized: "commandPalette.kind.project", defaultValue: "Project")
         case .extensionBrowser:
             return String(localized: "sidebar.extensions.browser.title", defaultValue: "Sidebar Extensions")
+        case .gitChanges:
+            return String(localized: "gitChanges.title", defaultValue: "Changes")
         }
     }
     private func commandPaletteSurfaceKeywords(for panelType: PanelType) -> [String] {
@@ -5583,6 +5599,8 @@ struct ContentView: View {
             return ["project", "xcode", "build", "settings", "schemes", "targets"]
         case .extensionBrowser:
             return ["sidebar", "extensions", "extensionkit", "browser"]
+        case .gitChanges:
+            return ["git", "changes", "diff", "stage", "review"]
         }
     }
     private func commandPaletteCachedCommandsContext() -> CommandPaletteCommandsContext {
@@ -11230,6 +11248,8 @@ struct VerticalTabsSidebar: View {
         case .project:
             return .project
         case .extensionBrowser:
+            return .unknown
+        case .gitChanges:
             return .unknown
         }
     }

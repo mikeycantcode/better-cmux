@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <style>
+    html, body { height: 100%; margin: 0; padding: 0; }
+    body {
+      background: transparent;
+      overflow-y: auto;
+      overflow-x: hidden;
+      font: 12px -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif;
+      color: #98989d;
+    }
+    #cards { display: flex; flex-direction: column; gap: 12px; padding: 12px; }
+    .card {
+      border: 1px solid rgba(127, 127, 127, 0.25);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    .card > header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 6px 10px;
+      font-size: 12px;
+      color: #98989d;
+      border-bottom: 1px solid rgba(127, 127, 127, 0.25);
+    }
+    .card > header .path { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .card > header button {
+      flex: 0 0 auto;
+      background: none;
+      border: none;
+      padding: 0;
+      margin: 0;
+      font: inherit;
+      font-size: 11px;
+      color: #98989d;
+      cursor: pointer;
+    }
+    .card > header button:hover { color: #0a84ff; }
+    .diff { width: 100%; height: 80px; }
+    #empty { padding: 16px; font-size: 12px; color: #98989d; }
+  </style>
+  <link rel="stylesheet" href="cmux-monaco://app/vs/editor/editor.main.css" />
+</head>
+<body>
+  <div id="cards"></div>
+  <div id="empty" hidden></div>
+  <script>
+    // Syntax-only: route the worker to an inert no-op script so the editor never
+    // fetches a real worker over the custom scheme (WebKit blocks cross-scheme
+    // worker loads). Tokenization for highlighting runs on the main thread.
+    if (self.__cmuxNoopWorker) URL.revokeObjectURL(self.__cmuxNoopWorker);
+    self.__cmuxNoopWorker = URL.createObjectURL(new Blob(["self.onmessage=function(){};"], { type: "text/javascript" }));
+    self.MonacoEnvironment = { getWorkerUrl: function () { return self.__cmuxNoopWorker; } };
+
+    function post(msg) {
+      try { window.webkit.messageHandlers.cmuxGitChanges.postMessage(msg); } catch (e) {}
+    }
+    // Surface a fatal load error directly in the (otherwise blank) pane so a
+    // failure is diagnosable without the Web Inspector, and report it to Swift.
+    function showFatal(message) {
+      try { console.error("git-changes shell error:", message); } catch (e) {}
+      try {
+        var el = document.getElementById("cards");
+        if (el) {
+          el.style.cssText = "white-space:pre-wrap;font:12px ui-monospace,monospace;color:#f85149;padding:12px;overflow:auto;";
+          el.textContent = "Monaco failed to load:\n" + message;
+        }
+      } catch (e) {}
+      post({ type: "loadError", message: String(message) });
+    }
+    window.onerror = function (message, src, line, col) {
+      showFatal(String(message) + (src ? " @ " + src + ":" + line + ":" + col : ""));
+    };
+  </script>
+  <script src="cmux-monaco://app/vs/loader.js"></script>
+  <script>
+    // Map the `vs/` module prefix to the bundle path. Do NOT use `baseUrl`:
+    // module ids already start with `vs/`, so baseUrl would resolve
+    // `vs/editor/editor.main` to `.../vs/vs/editor/editor.main.js` (doubled vs).
+    require.config({ paths: { vs: "cmux-monaco://app/vs" } });
+    require.onError = function (err) {
+      showFatal((err && err.message ? err.message : String(err)) +
+        (err && err.errorCode ? " [" + err.errorCode + "]" : "") +
+        (err && err.moduleId ? " module=" + err.moduleId : ""));
+    };
+
+    // Payload pushed from Swift before Monaco finished loading. Replayed on ready.
+    var pendingPayloadJSON = null;
+    var monacoReady = false;
+    // Live per-card state, keyed by repo-relative path, for scroll-to-file.
+    var cardsByPath = Object.create(null);
+    // Built-in Monaco themes: this shell is a read-only diff surface and does not
+    // depend on the `cmux-dark`/`cmux-light` themes defined by the editor shell.
+    var currentTheme = "vs-dark";
+    // Diff editors + models of the current generation, disposed on re-render.
+    var liveEditors = [];
+
+    // Swift -> JS. Always defined (even before Monaco loads) so a push that
+    // races the loader is queued rather than dropped.
+    window.cmuxRenderChanges = function (payloadJSON) {
+      if (!monacoReady) { pendingPayloadJSON = payloadJSON; return; }
+      render(payloadJSON);
+    };
+
+    window.cmuxSetTheme = function (theme) {
+      currentTheme = theme;
+      if (monacoReady) monaco.editor.setTheme(theme);
+    };
+
+    window.cmuxScrollToFile = function (path) {
+      var card = cardsByPath[path];
+      if (card) card.scrollIntoView({ block: "start" });
+    };
+
+    function button(label, onClick) {
+      var b = document.createElement("button");
+      b.type = "button";
+      b.textContent = label;
+      b.addEventListener("click", onClick);
+      return b;
+    }
+
+    function render(payloadJSON) {
+      var payload = JSON.parse(payloadJSON);
+      var strings = payload.strings || {};
+      var cards = document.getElementById("cards");
+      var empty = document.getElementById("empty");
+      // Dispose the previous generation's models before dropping the DOM;
+      // Monaco models are not garbage-collected with their container.
+      disposeAll();
+      cards.textContent = "";
+      cardsByPath = Object.create(null);
+
+      if (!payload.files || payload.files.length === 0) {
+        empty.hidden = false;
+        empty.textContent = strings.empty || "";
+        return;
+      }
+      empty.hidden = true;
+
+      payload.files.forEach(function (file) {
+        var card = document.createElement("section");
+        card.className = "card";
+        var header = document.createElement("header");
+        var title = document.createElement("span");
+        title.className = "path";
+        title.textContent = file.path + (file.status === "U" ? "  ·  " + (strings.newBadge || "") : "");
+        title.title = file.path;
+        header.appendChild(title);
+        header.appendChild(button(file.staged ? strings.unstage : strings.stage, function () {
+          post({ type: file.staged ? "unstage" : "stage", path: file.path });
+        }));
+        header.appendChild(button(strings.revert, function () {
+          post({ type: "revert", path: file.path });
+        }));
+        header.appendChild(button(strings.open, function () {
+          post({ type: "openFile", path: file.path });
+        }));
+        card.appendChild(header);
+
+        var host = document.createElement("div");
+        host.className = "diff";
+        card.appendChild(host);
+        cards.appendChild(card);
+        cardsByPath[file.path] = card;
+
+        var originalModel = monaco.editor.createModel(file.original, file.language);
+        var modifiedModel = monaco.editor.createModel(file.modified, file.language);
+        var editor = monaco.editor.createDiffEditor(host, {
+          readOnly: true,
+          renderSideBySide: false,
+          automaticLayout: true,
+          scrollBeyondLastLine: false,
+          minimap: { enabled: false },
+          // The page itself scrolls; each card sizes to its content instead of
+          // capturing the wheel into a nested scroller.
+          scrollbar: { vertical: "hidden", handleMouseWheel: false }
+        });
+        editor.setModel({ original: originalModel, modified: modifiedModel });
+        liveEditors.push({ editor: editor, models: [originalModel, modifiedModel] });
+
+        var grow = function () {
+          host.style.height =
+            Math.min(2000, Math.max(80, editor.getModifiedEditor().getContentHeight() + 20)) + "px";
+        };
+        editor.getModifiedEditor().onDidContentSizeChange(grow);
+        grow();
+      });
+    }
+
+    function disposeAll() {
+      liveEditors.forEach(function (entry) {
+        try { entry.editor.dispose(); } catch (e) {}
+        entry.models.forEach(function (m) { try { m.dispose(); } catch (e) {} });
+      });
+      liveEditors = [];
+    }
+
+    require(["vs/editor/editor.main"], function () {
+      monaco.editor.setTheme(currentTheme);
+      monacoReady = true;
+      if (pendingPayloadJSON !== null) {
+        var queued = pendingPayloadJSON;
+        pendingPayloadJSON = null;
+        render(queued);
+      }
+      post({ type: "ready" });
+    });
+  </script>
+</body>
+</html>

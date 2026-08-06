@@ -39,13 +39,24 @@ final class MonacoAssetURLSchemeHandler: NSObject, WKURLSchemeHandler {
     )
 
     func webView(_ webView: WKWebView, start urlSchemeTask: WKURLSchemeTask) {
-        guard let url = urlSchemeTask.request.url,
-              let root = MonacoAssets.rootURL() else {
+        guard let url = urlSchemeTask.request.url else {
             urlSchemeTask.didFailWithError(NSError(domain: NSURLErrorDomain, code: NSURLErrorBadURL))
             return
         }
-        // cmux-monaco://app/vs/loader.js  ->  relative path "/vs/loader.js"
-        let relative = url.path
+        // cmux-monaco://app/vs/loader.js            -> monaco root, "/vs/loader.js"
+        // cmux-monaco://app/git-changes/changes.html -> git-changes root, "/changes.html"
+        //
+        // The Changes-panel shell is served from this same origin on purpose: it
+        // loads `cmux-monaco://app/vs/...`, and a second custom scheme would make
+        // those cross-origin subresource loads.
+        let isGitChanges = url.path.hasPrefix(MonacoAssets.gitChangesPathPrefix)
+        let relative = isGitChanges
+            ? String(url.path.dropFirst(MonacoAssets.gitChangesPathPrefix.count - 1))
+            : url.path
+        guard let root = isGitChanges ? MonacoAssets.gitChangesRootURL() : MonacoAssets.rootURL() else {
+            urlSchemeTask.didFailWithError(NSError(domain: NSURLErrorDomain, code: NSURLErrorBadURL))
+            return
+        }
         guard let fileURL = MonacoAssetPath.resolve(relativePath: relative, under: root) else {
             urlSchemeTask.didFailWithError(NSError(domain: NSURLErrorDomain, code: NSURLErrorFileDoesNotExist))
             return

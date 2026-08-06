@@ -181,12 +181,20 @@ final class GitWorkingTreeModel: ObservableObject {
         return true
     }
 
-    private enum GitResult {
+    /// Result of one git invocation. Internal (not private) because
+    /// ``GitChangesPanel`` reuses ``runGit(_:in:)`` for its read-only diff payload
+    /// instead of standing up a second process-spawning helper.
+    enum GitResult {
         case success(String)
         case failure(String)
     }
 
-    private nonisolated static func runGit(_ args: [String], in directory: String) async -> GitResult {
+    /// Runs `git args` in `directory` off-main and returns stdout, or the first
+    /// stderr line on failure. Read-only callers (the Changes panel's
+    /// `git show HEAD:<path>` / `git diff --numstat`) use this directly; mutating
+    /// callers must go through `runAction`/`runActions` so status refresh and
+    /// error surfacing stay on one path.
+    nonisolated static func runGit(_ args: [String], in directory: String) async -> GitResult {
         await withCheckedContinuation { continuation in
             DispatchQueue.global(qos: .userInitiated).async {
                 let process = Process()

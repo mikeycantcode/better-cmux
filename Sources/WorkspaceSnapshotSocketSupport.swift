@@ -155,6 +155,7 @@ extension TerminalController {
         case .rightSidebarTool: return "rightSidebarTool"
         case .customSidebar: return "customSidebar"
         case .agentSession: return "agentSession"
+        case .gitChanges: return "gitChanges"
         case .none: return "unknown"
         }
     }

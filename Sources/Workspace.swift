@@ -589,6 +589,10 @@ extension Workspace {
             agentSessionSnapshot = nil
         case .extensionBrowser:
             return nil
+        case .gitChanges:
+            // Not restored across launches in v1: the panel is a live view of the
+            // working tree, cheap to reopen from the Git tab.
+            return nil
         }
         return SessionPanelSnapshot(
             id: panelId,
@@ -1398,6 +1402,8 @@ extension Workspace {
             applySessionPanelMetadata(snapshot, toPanelId: projectPanel.id)
             return projectPanel.id
         case .extensionBrowser:
+            return nil
+        case .gitChanges:
             return nil
         }
     }
@@ -3631,6 +3637,8 @@ final class Workspace: Identifiable, ObservableObject {
             return SurfaceKind.project.rawValue
         case .extensionBrowser:
             return SurfaceKind.extensionBrowser.rawValue
+        case .gitChanges:
+            return SurfaceKind.gitChanges.rawValue
         }
     }
 
@@ -6369,6 +6377,98 @@ final class Workspace: Identifiable, ObservableObject {
         }
 
         return toolPanel
+    }
+
+    // MARK: - Git Changes
+
+    /// The workspace's live Changes panel, if one is open.
+    var gitChangesPanel: GitChangesPanel? {
+        panels.values.compactMap { $0 as? GitChangesPanel }.first
+    }
+
+    /// Focuses the existing Changes panel or creates one in the focused pane.
+    ///
+    /// Takes the caller's ``GitWorkingTreeModel`` rather than creating its own so
+    /// staging from the Changes panel and from the Git sidebar tab converge on one
+    /// model (and one status refresh).
+    @discardableResult
+    func openGitChangesPanel(model: GitWorkingTreeModel) -> GitChangesPanel? {
+        if let existing = gitChangesPanel {
+            focusPanel(existing.id)
+            existing.scheduleReload()
+            return existing
+        }
+        guard let paneId = bonsplitController.focusedPaneId ?? bonsplitController.allPaneIds.first else {
+            return nil
+        }
+        return newGitChangesSurface(inPane: paneId, model: model, focus: true)
+    }
+
+    /// Reveals `relativePath` in the open Changes panel. Returns `false` when no
+    /// Changes panel is open, so the caller can fall back to opening a file
+    /// preview — this is the Git tab's row-click routing rule.
+    @discardableResult
+    func revealInGitChangesPanel(relativePath: String) -> Bool {
+        guard let panel = gitChangesPanel else { return false }
+        focusPanel(panel.id)
+        panel.revealFile(path: relativePath)
+        return true
+    }
+
+    @discardableResult
+    func newGitChangesSurface(
+        inPane paneId: PaneID,
+        model: GitWorkingTreeModel,
+        focus: Bool? = nil,
+        targetIndex: Int? = nil
+    ) -> GitChangesPanel? {
+        let shouldFocusNewTab = focus ?? (bonsplitController.focusedPaneId == paneId)
+        let previousFocusedPanelId = focusedPanelId
+        let previousHostedView = focusedTerminalPanel?.hostedView
+
+        let changesPanel = GitChangesPanel(workspace: self, model: model)
+        panels[changesPanel.id] = changesPanel
+        panelTitles[changesPanel.id] = changesPanel.displayTitle
+
+        guard let newTabId = bonsplitController.createTab(
+            title: changesPanel.displayTitle,
+            icon: changesPanel.displayIcon,
+            kind: SurfaceKind.gitChanges.rawValue,
+            isDirty: false,
+            isLoading: false,
+            isPinned: false,
+            inPane: paneId
+        ) else {
+            panels.removeValue(forKey: changesPanel.id)
+            panelTitles.removeValue(forKey: changesPanel.id)
+            return nil
+        }
+
+        bindSurface(newTabId, toPanelId: changesPanel.id)
+        if let targetIndex {
+            _ = bonsplitController.reorderTab(newTabId, toIndex: targetIndex)
+        }
+        publishCmuxSurfaceCreated(
+            changesPanel.id,
+            paneId: paneId,
+            kind: "git_changes",
+            origin: "git_changes_tab",
+            focused: shouldFocusNewTab
+        )
+
+        if shouldFocusNewTab {
+            bonsplitController.focusPane(paneId)
+            bonsplitController.selectTab(newTabId)
+            applyTabSelection(tabId: newTabId, inPane: paneId)
+        } else {
+            preserveFocusAfterNonFocusSplit(
+                preferredPanelId: previousFocusedPanelId,
+                splitPanelId: changesPanel.id,
+                previousHostedView: previousHostedView
+            )
+        }
+
+        return changesPanel
     }
 
     @discardableResult
