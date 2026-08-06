@@ -2070,7 +2070,7 @@ struct ContentView: View {
             ? Color.black.opacity(0.78)
             : Color.white.opacity(0.82)
     }
-    private var fullscreenControls: some View {
+    private func fullscreenControls(cluster: TitlebarControlsCluster) -> some View {
         TitlebarControlsView(
             notificationStore: TerminalNotificationStore.shared,
             viewModel: fullscreenControlsViewModel,
@@ -2101,19 +2101,14 @@ struct ContentView: View {
                     NSSound.beep()
                 }
             },
-            onToggleRightSidebar: {},
-            cluster: .leading,
+            onToggleRightSidebar: {
+                guard cluster == .trailing else { return }
+                _ = AppDelegate.shared?.toggleRightSidebarInActiveMainWindow(preferredWindow: nil)
+            },
+            cluster: cluster,
             visibilityMode: .alwaysVisible
         )
         .offset(y: -TitlebarControlsVisualMetrics.verticalLift)
-    }
-
-    /// Intrinsic width of ``fullscreenControls`` for the current controls style.
-    /// Used to reserve space in the title row so the title flows to the right of
-    /// the controls, which are themselves mounted once in the band overlay.
-    private var fullscreenControlsWidth: CGFloat {
-        let style = TitlebarControlsStyle(rawValue: titlebarControlsStyleRawValue) ?? .classic
-        return TitlebarControlsLayoutMetrics.contentSize(cluster: .leading, config: style.config).width
     }
 
     private var titlebarDebugChromeSnapshot: MinimalModeTitlebarDebugSnapshot {
@@ -2138,14 +2133,6 @@ struct ContentView: View {
     }
 
     private func customTitlebar(appearance: WindowAppearanceSnapshot) -> some View {
-        let titlebarContentHeight = max(1, WindowChromeMetrics.appTitlebarHeight - 2)
-        let leadingPadding = Self.customTitlebarLeadingPadding(
-            isFullScreen: isFullScreen,
-            isSidebarVisible: sidebarState.isVisible,
-            sidebarWidth: sidebarWidth,
-            minimumSidebarWidth: minimumSidebarWidth,
-            titlebarLeadingInset: titlebarLeadingInset
-        )
         return ZStack {
             // Enable window dragging from the titlebar strip without making the entire content
             // view draggable (which breaks drag gestures like tab reordering).
@@ -2157,37 +2144,10 @@ struct ContentView: View {
             )
                 .allowsHitTesting(false)
 
-            HStack(spacing: 8) {
-                if isFullScreen && !sidebarState.isVisible {
-                    // Reserve the controls' width so the title flows to their right.
-                    // The visible controls are rendered once in the band overlay (see
-                    // `workspaceTitlebarBand`) so their position never depends on
-                    // sidebar visibility.
-                    Color.clear
-                        .frame(width: fullscreenControlsWidth, height: titlebarContentHeight)
-                        .allowsHitTesting(false)
-                }
-
-                // Draggable folder icon + focused command name
-                if let directory = focusedDirectory {
-                    DetachedFolderDragIcon(directory: directory)
-                        .frame(width: 16, height: 16)
-                        .padding(.leading, -6)
-                }
-
-                Text(titlebarText)
-                    .cmuxFont(size: 13, weight: .bold)
-                    .foregroundColor(fakeTitlebarTextColor(appearance: appearance))
-                    .lineLimit(1)
-                    .allowsHitTesting(false)
-
-                Spacer()
-
-            }
-            .frame(height: titlebarContentHeight)
-            .padding(.top, 2)
-            .padding(.leading, leadingPadding)
-            .padding(.trailing, 8)
+            // The folder icon + title are rendered by `centeredTitlebarTitle` in the
+            // band overlay, not here: this view is inset by `rightSidebarWidth`
+            // (#5099), so centering inside it would shift the title whenever the
+            // right sidebar toggles. Centering happens against the full band width.
         }
         .frame(height: WindowChromeMetrics.appTitlebarHeight)
         .frame(maxWidth: .infinity)
@@ -2201,6 +2161,24 @@ struct ContentView: View {
             )
                 .padding(.leading, sidebarState.isVisible ? sidebarWidth : 0)
         }
+    }
+
+    /// Folder icon + focused command name, centered against the full titlebar band
+    /// width so it stays put while either sidebar is toggled.
+    private func centeredTitlebarTitle(appearance: WindowAppearanceSnapshot) -> some View {
+        HStack(spacing: 8) {
+            if let directory = focusedDirectory {
+                DetachedFolderDragIcon(directory: directory)
+                    .frame(width: 16, height: 16)
+            }
+
+            Text(titlebarText)
+                .cmuxFont(size: 13, weight: .medium)
+                .foregroundColor(fakeTitlebarTextColor(appearance: appearance).opacity(0.72))
+                .lineLimit(1)
+                .allowsHitTesting(false)
+        }
+        .frame(maxWidth: .infinity, alignment: .center)
     }
 
     private func workspaceTitlebarBand(appearance: WindowAppearanceSnapshot) -> some View {
@@ -2229,12 +2207,18 @@ struct ContentView: View {
                     .padding(.trailing, rightSidebarWidth)
                     .animation(nil, value: rightSidebarWidth)
             }
+            .overlay(alignment: .top) {
+                centeredTitlebarTitle(appearance: appearance)
+                    .frame(height: max(1, WindowChromeMetrics.appTitlebarHeight - 2), alignment: .center)
+                    .padding(.top, 2)
+                    .padding(.horizontal, 120)
+            }
             .overlay(alignment: .topLeading) {
                 if let placement = Self.fullscreenControlsPlacement(
                     isFullScreen: isFullScreen,
                     isSidebarVisible: sidebarState.isVisible
                 ) {
-                    fullscreenControls
+                    fullscreenControls(cluster: .leading)
                         .environment(
                             \.colorScheme,
                             sidebarState.isVisible
@@ -2246,6 +2230,15 @@ struct ContentView: View {
                         .frame(height: max(1, WindowChromeMetrics.appTitlebarHeight - 2), alignment: .center)
                         .padding(.top, placement.topPadding)
                         .padding(.leading, placement.leadingPadding)
+                }
+            }
+            .overlay(alignment: .topTrailing) {
+                if isFullScreen {
+                    fullscreenControls(cluster: .trailing)
+                        .environment(\.colorScheme, appearance.chromeColorScheme)
+                        .frame(height: max(1, WindowChromeMetrics.appTitlebarHeight - 2), alignment: .center)
+                        .padding(.top, 2)
+                        .padding(.trailing, 10)
                 }
             }
     }
