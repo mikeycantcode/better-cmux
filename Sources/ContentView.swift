@@ -2391,8 +2391,12 @@ struct ContentView: View {
     /// a window-level one that would be retargeted across workspaces (and would
     /// then repaint/stage a background workspace's Changes tab into the newly
     /// selected repo).
+    /// Non-forcing on purpose: this is read from `body`, and creation must stay
+    /// outside body computation. `syncFileExplorerDirectory()` is the sole
+    /// creator; until it has run for the selection, the sidebar renders nothing —
+    /// the same path as having no workspace at all.
     private var sidebarGitModel: GitWorkingTreeModel? {
-        tabManager.selectedWorkspace?.gitWorkingTreeModel
+        tabManager.selectedWorkspace?.existingGitWorkingTreeModel
     }
 
     private func syncFileExplorerDirectory() {
