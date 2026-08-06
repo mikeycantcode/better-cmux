@@ -1,6 +1,53 @@
 import AppKit
 
 final class FileExplorerRowView: NSTableRowView {
+    private var hoverTrackingArea: NSTrackingArea?
+    private var isHovered = false {
+        didSet {
+            guard isHovered != oldValue else { return }
+            needsDisplay = true
+        }
+    }
+
+    override func updateTrackingAreas() {
+        super.updateTrackingAreas()
+        if let hoverTrackingArea {
+            removeTrackingArea(hoverTrackingArea)
+        }
+        let area = NSTrackingArea(
+            rect: bounds,
+            options: [.mouseEnteredAndExited, .activeInActiveApp, .inVisibleRect],
+            owner: self,
+            userInfo: nil
+        )
+        addTrackingArea(area)
+        hoverTrackingArea = area
+    }
+
+    override func prepareForReuse() {
+        super.prepareForReuse()
+        isHovered = false
+    }
+
+    override func mouseEntered(with event: NSEvent) { isHovered = true }
+
+    override func mouseExited(with event: NSEvent) { isHovered = false }
+
+    override func drawBackground(in dirtyRect: NSRect) {
+        super.drawBackground(in: dirtyRect)
+        guard isHovered, !isSelected else { return }
+        let style = FileExplorerStyle.current
+        let inset = style.selectionInset
+        let insetRect = bounds.insetBy(dx: inset, dy: inset > 0 ? 1 : 0)
+        let path = NSBezierPath(
+            roundedRect: insetRect,
+            xRadius: style.selectionRadius,
+            yRadius: style.selectionRadius
+        )
+        style.hoverColor.setFill()
+        path.fill()
+    }
+
     override func drawSelection(in dirtyRect: NSRect) {
         guard isSelected else { return }
         let style = FileExplorerStyle.current

@@ -98,6 +98,7 @@ struct FileExplorerPanelView: NSViewRepresentable {
         weak var containerView: FileExplorerContainerView?
         weak var outlineView: NSOutlineView?
         private var lastRootNodeCount: Int = -1
+        private var lastFilterRevision: Int = 0
         private var observationCancellable: AnyCancellable?
         private var styleObserver: Any?
         private var isUpdatingOutlineProgrammatically = false
@@ -183,9 +184,18 @@ struct FileExplorerPanelView: NSViewRepresentable {
                 statusMessage: store.rootStatusMessage
             )
 
-            let newCount = store.rootNodes.count
+            let newCount = store.visibleChildren(of: nil).count
+            let filterRevision = store.filterRevision
+            let filterChanged = filterRevision != lastFilterRevision
+            lastFilterRevision = filterRevision
             withProgrammaticOutlineUpdate {
-                if newCount != lastRootNodeCount {
+                if filterChanged {
+                    lastRootNodeCount = newCount
+                    let expandedPaths = store.expandedPaths
+                    outlineView.reloadData()
+                    restoreExpansionState(expandedPaths, in: outlineView)
+                    expandFilterMatches(in: outlineView)
+                } else if newCount != lastRootNodeCount {
                     lastRootNodeCount = newCount
                     let expandedPaths = store.expandedPaths
                     outlineView.reloadData()
@@ -194,6 +204,45 @@ struct FileExplorerPanelView: NSViewRepresentable {
                     refreshLoadedNodes(in: outlineView)
                 }
                 applyStoredSelection(in: outlineView, fallbackToFirstVisible: false, scroll: false)
+            }
+        }
+
+        /// Expands every loaded directory whose subtree contains a filter match so
+        /// matching descendants are visible while filtering.
+        private func expandFilterMatches(in outlineView: NSOutlineView) {
+            guard !store.filterText.isEmpty else { return }
+            var row = 0
+            while row < outlineView.numberOfRows {
+                if let node = outlineView.item(atRow: row) as? FileExplorerNode,
+                   store.subtreeContainsFilterMatch(node),
+                   outlineView.isExpandable(node),
+                   !outlineView.isItemExpanded(node) {
+                    outlineView.expandItem(node)
+                }
+                row += 1
+            }
+        }
+
+        /// Collapses every row in the tree.
+        func collapseAllNodes() {
+            guard let outlineView else { return }
+            withProgrammaticOutlineUpdate {
+                outlineView.collapseItem(nil, collapseChildren: true)
+                for row in (0..<outlineView.numberOfRows).reversed() {
+                    guard let node = outlineView.item(atRow: row) as? FileExplorerNode else { continue }
+                    if outlineView.isItemExpanded(node) {
+                        outlineView.collapseItem(node, collapseChildren: true)
+                    }
+                }
+            }
+            lastRootNodeCount = -1
+        }
+
+        /// Scrolls the tree back to the current selection, expanding its ancestors.
+        func revealCurrentFile() {
+            guard let outlineView else { return }
+            withProgrammaticOutlineUpdate {
+                applyStoredSelection(in: outlineView, fallbackToFirstVisible: true, scroll: true)
             }
         }
 
@@ -232,21 +281,23 @@ struct FileExplorerPanelView: NSViewRepresentable {
 
         func outlineView(_ outlineView: NSOutlineView, numberOfChildrenOfItem item: Any?) -> Int {
             if item == nil {
-                return store.rootNodes.count
+                return store.visibleChildren(of: nil).count
             }
             guard let node = item as? FileExplorerNode else { return 0 }
-            return node.sortedChildren?.count ?? 0
+            return store.visibleChildren(of: node).count
         }
 
         func outlineView(_ outlineView: NSOutlineView, child index: Int, ofItem item: Any?) -> Any {
-            if item == nil {
-                return store.rootNodes[index]
-            }
-            guard let node = item as? FileExplorerNode,
-                  let children = node.sortedChildren else {
+            let children = store.visibleChildren(of: item as? FileExplorerNode)
+            guard index >= 0, index < children.count else {
                 return FileExplorerNode(name: "", path: "", isDirectory: false)
             }
             return children[index]
+        }
+
+        func outlineView(_ outlineView: NSOutlineView, shouldShowOutlineCellForItem item: Any) -> Bool {
+            guard let node = item as? FileExplorerNode else { return false }
+            return node.isDirectory
         }
 
         func outlineView(_ outlineView: NSOutlineView, isItemExpandable item: Any) -> Bool {
@@ -638,6 +689,11 @@ struct FileExplorerPanelView: NSViewRepresentable {
 @MainActor
 final class FileExplorerContainerView: NSView {
     private let headerView: FileExplorerHeaderView
+    private let filterBarView: NSView
+    private let filterField: NSSearchField
+    private let revealButton: NSButton
+    private let collapseAllButton: NSButton
+    private var filterBarHeightConstraint: NSLayoutConstraint!
     private let searchBarView: NSView
     private let searchField: FileExplorerSearchField
     private let searchStatusLabel: NSTextField
@@ -690,6 +746,10 @@ final class FileExplorerContainerView: NSView {
         searchController: (any FileSearchControlling)? = nil
     ) {
         headerView = FileExplorerHeaderView()
+        filterBarView = NSView()
+        filterField = NSSearchField()
+        revealButton = NSButton()
+        collapseAllButton = NSButton()
         searchBarView = NSView()
         searchField = FileExplorerSearchField()
         searchStatusLabel = NSTextField(labelWithString: "")
@@ -713,6 +773,48 @@ final class FileExplorerContainerView: NSView {
         if showsHeader {
             addSubview(headerView)
         }
+
+        // Filter bar (tree filter + reveal / collapse-all)
+        filterBarView.translatesAutoresizingMaskIntoConstraints = false
+        filterBarView.isHidden = true
+        addSubview(filterBarView)
+
+        filterField.translatesAutoresizingMaskIntoConstraints = false
+        filterField.setAccessibilityIdentifier("FileExplorerFilterField")
+        filterField.placeholderString = String(
+            localized: "filesPanel.filter.placeholder",
+            defaultValue: "Filter…"
+        )
+        filterField.focusRingType = .none
+        filterField.cell?.usesSingleLineMode = true
+        filterField.cell?.isScrollable = true
+        filterField.cell?.lineBreakMode = .byClipping
+        filterField.delegate = self
+        filterBarView.addSubview(filterField)
+
+        Self.configureChromeButton(
+            revealButton,
+            symbolName: "arrow.up.forward.square",
+            tooltip: String(
+                localized: "filesPanel.reveal.tooltip",
+                defaultValue: "Reveal Current File"
+            ),
+            target: self,
+            action: #selector(revealCurrentFileFromHeader(_:))
+        )
+        filterBarView.addSubview(revealButton)
+
+        Self.configureChromeButton(
+            collapseAllButton,
+            symbolName: "rectangle.compress.vertical",
+            tooltip: String(
+                localized: "filesPanel.collapseAll.tooltip",
+                defaultValue: "Collapse All"
+            ),
+            target: self,
+            action: #selector(collapseAllFromHeader(_:))
+        )
+        filterBarView.addSubview(collapseAllButton)
 
         // Search bar
         searchBarView.translatesAutoresizingMaskIntoConstraints = false
@@ -881,9 +983,34 @@ final class FileExplorerContainerView: NSView {
                 headerView.trailingAnchor.constraint(equalTo: trailingAnchor),
             ])
         }
-        let searchBarTopConstraint = showsHeader
-            ? searchBarView.topAnchor.constraint(equalTo: headerView.bottomAnchor)
-            : searchBarView.topAnchor.constraint(equalTo: topAnchor)
+        let filterBarTopConstraint = showsHeader
+            ? filterBarView.topAnchor.constraint(equalTo: headerView.bottomAnchor)
+            : filterBarView.topAnchor.constraint(equalTo: topAnchor)
+        filterBarHeightConstraint = filterBarView.heightAnchor.constraint(equalToConstant: 0)
+        NSLayoutConstraint.activate([
+            filterBarTopConstraint,
+            filterBarView.leadingAnchor.constraint(equalTo: leadingAnchor),
+            filterBarView.trailingAnchor.constraint(equalTo: trailingAnchor),
+            filterBarHeightConstraint,
+
+            filterField.leadingAnchor.constraint(equalTo: filterBarView.leadingAnchor, constant: 8),
+            filterField.centerYAnchor.constraint(equalTo: filterBarView.centerYAnchor),
+            filterField.heightAnchor.constraint(equalToConstant: 22),
+
+            collapseAllButton.trailingAnchor.constraint(equalTo: filterBarView.trailingAnchor, constant: -8),
+            collapseAllButton.centerYAnchor.constraint(equalTo: filterBarView.centerYAnchor),
+            collapseAllButton.widthAnchor.constraint(equalToConstant: 20),
+            collapseAllButton.heightAnchor.constraint(equalToConstant: 20),
+
+            revealButton.trailingAnchor.constraint(equalTo: collapseAllButton.leadingAnchor, constant: -2),
+            revealButton.centerYAnchor.constraint(equalTo: filterBarView.centerYAnchor),
+            revealButton.widthAnchor.constraint(equalToConstant: 20),
+            revealButton.heightAnchor.constraint(equalToConstant: 20),
+
+            filterField.trailingAnchor.constraint(equalTo: revealButton.leadingAnchor, constant: -6),
+        ])
+
+        let searchBarTopConstraint = searchBarView.topAnchor.constraint(equalTo: filterBarView.bottomAnchor)
         searchFieldHeightConstraint = searchField.heightAnchor.constraint(equalToConstant: searchFieldVisibleHeight)
         NSLayoutConstraint.activate([
             searchBarTopConstraint,
@@ -919,7 +1046,46 @@ final class FileExplorerContainerView: NSView {
         ])
     }
 
+    private static func configureChromeButton(
+        _ button: NSButton,
+        symbolName: String,
+        tooltip: String,
+        target: AnyObject,
+        action: Selector
+    ) {
+        button.translatesAutoresizingMaskIntoConstraints = false
+        button.isBordered = false
+        button.bezelStyle = .regularSquare
+        button.imagePosition = .imageOnly
+        button.image = NSImage(systemSymbolName: symbolName, accessibilityDescription: tooltip)?
+            .withSymbolConfiguration(NSImage.SymbolConfiguration(pointSize: 12, weight: .regular))
+        button.contentTintColor = .secondaryLabelColor
+        button.toolTip = tooltip
+        button.target = target
+        button.action = action
+        button.setAccessibilityLabel(tooltip)
+    }
+
+    @objc private func revealCurrentFileFromHeader(_ sender: Any?) {
+        coordinator.revealCurrentFile()
+        _ = window?.makeFirstResponder(outlineView)
+    }
+
+    @objc private func collapseAllFromHeader(_ sender: Any?) {
+        coordinator.collapseAllNodes()
+    }
+
+    /// Whether the tree (and therefore the filter bar) currently has content to show.
+    private var filterBarContentAvailable = false
+
+    private func updateFilterBarVisibility() {
+        let shouldShow = presentation == .files && filterBarContentAvailable
+        filterBarHeightConstraint?.constant = shouldShow ? 32 : 0
+        applyHidden(filterBarView, !shouldShow)
+    }
+
     private func applyChromeFonts() {
+        filterField.font = GlobalFontMagnification.systemFont(ofSize: 12, weight: .regular)
         searchField.font = GlobalFontMagnification.systemFont(ofSize: 12, weight: .regular)
         searchStatusLabel.font = GlobalFontMagnification.systemFont(ofSize: 11, weight: .medium)
         emptyLabel.font = GlobalFontMagnification.systemFont(ofSize: 13)
@@ -1021,6 +1187,7 @@ final class FileExplorerContainerView: NSView {
             refreshSearchIfNeeded()
         }
         updateSearchLayout()
+        updateFilterBarVisibility()
         registerWithKeyboardFocusCoordinatorIfNeeded()
     }
 
@@ -1031,6 +1198,8 @@ final class FileExplorerContainerView: NSView {
         if showsHeader {
             applyHidden(headerView, !hasContent && !hasStatus)
         }
+        filterBarContentAvailable = canShowTree && !isLoading
+        updateFilterBarVisibility()
         updateSearchLayout(hasContent: canShowTree, isLoading: isLoading)
         let searchCanShow = isSearchVisible && canShowTree && !isLoading
         let nextEmptyText = hasStatus
@@ -1523,6 +1692,10 @@ final class FileExplorerContainerView: NSView {
 
 extension FileExplorerContainerView: NSSearchFieldDelegate, NSTableViewDataSource, NSTableViewDelegate, NSMenuDelegate {
     func controlTextDidChange(_ notification: Notification) {
+        if notification.object as? NSTextField === filterField {
+            coordinator.store.filterText = filterField.stringValue
+            return
+        }
         guard notification.object as? NSTextField === searchField else { return }
         scrollSearchFieldEditorToInsertionPoint()
         Task { @MainActor [weak self] in

@@ -14,6 +14,7 @@ enum FileExplorerStyle: Int, CaseIterable {
     case proStudio = 3
     case finder = 4
     case vscodeIcons = 5
+    case codika = 6
 
     var label: String {
         switch self {
@@ -23,6 +24,7 @@ enum FileExplorerStyle: Int, CaseIterable {
         case .proStudio: return "Pro Studio"
         case .finder: return "Finder"
         case .vscodeIcons: return "VS Code Icons"
+        case .codika: return "Codika"
         }
     }
 
@@ -35,6 +37,7 @@ enum FileExplorerStyle: Int, CaseIterable {
         case .proStudio: baseHeight = 32
         case .finder: baseHeight = 26
         case .vscodeIcons: baseHeight = 24
+        case .codika: baseHeight = 34
         }
         return GlobalFontMagnification.scaledSize(baseHeight)
     }
@@ -47,6 +50,7 @@ enum FileExplorerStyle: Int, CaseIterable {
         case .proStudio: return 20
         case .finder: return 18
         case .vscodeIcons: return 16
+        case .codika: return 16
         }
     }
 
@@ -58,6 +62,7 @@ enum FileExplorerStyle: Int, CaseIterable {
         case .proStudio: return 18
         case .finder: return 18
         case .vscodeIcons: return 16
+        case .codika: return 16
         }
     }
 
@@ -69,6 +74,7 @@ enum FileExplorerStyle: Int, CaseIterable {
         case .proStudio: return .regular
         case .finder: return .medium
         case .vscodeIcons: return .regular
+        case .codika: return .regular
         }
     }
 
@@ -80,6 +86,7 @@ enum FileExplorerStyle: Int, CaseIterable {
         case .proStudio: return GlobalFontMagnification.systemFont(ofSize: 14, weight: .semibold)
         case .finder: return GlobalFontMagnification.systemFont(ofSize: 13, weight: .regular)
         case .vscodeIcons: return GlobalFontMagnification.systemFont(ofSize: 12, weight: .regular)
+        case .codika: return GlobalFontMagnification.systemFont(ofSize: 13, weight: .regular)
         }
     }
 
@@ -91,6 +98,7 @@ enum FileExplorerStyle: Int, CaseIterable {
         case .proStudio: return 12
         case .finder: return 6
         case .vscodeIcons: return 6
+        case .codika: return 8
         }
     }
 
@@ -102,6 +110,7 @@ enum FileExplorerStyle: Int, CaseIterable {
         case .proStudio: return 4
         case .finder: return 4
         case .vscodeIcons: return 4
+        case .codika: return 6
         }
     }
 
@@ -113,6 +122,7 @@ enum FileExplorerStyle: Int, CaseIterable {
         case .proStudio: return 8
         case .finder: return 5
         case .vscodeIcons: return 5
+        case .codika: return 6
         }
     }
 
@@ -124,6 +134,7 @@ enum FileExplorerStyle: Int, CaseIterable {
         case .proStudio: return .controlAccentColor
         case .finder: return .controlAccentColor.withAlphaComponent(0.15)
         case .vscodeIcons: return .controlAccentColor.withAlphaComponent(0.15)
+        case .codika: return .controlAccentColor.withAlphaComponent(0.15)
         }
     }
 
@@ -135,6 +146,7 @@ enum FileExplorerStyle: Int, CaseIterable {
         case .proStudio: return .white.withAlphaComponent(0.1)
         case .finder: return .labelColor.withAlphaComponent(0.04)
         case .vscodeIcons: return .labelColor.withAlphaComponent(0.05)
+        case .codika: return .labelColor.withAlphaComponent(0.05)
         }
     }
 
@@ -150,6 +162,7 @@ enum FileExplorerStyle: Int, CaseIterable {
         case .proStudio: return .secondaryLabelColor
         case .finder: return NSColor(white: 0.55, alpha: 1.0)
         case .vscodeIcons: return .secondaryLabelColor
+        case .codika: return .secondaryLabelColor
         }
     }
 
@@ -161,6 +174,7 @@ enum FileExplorerStyle: Int, CaseIterable {
         case .proStudio: return .systemBlue
         case .finder: return .systemBlue
         case .vscodeIcons: return .white
+        case .codika: return .secondaryLabelColor
         }
     }
 
@@ -206,7 +220,7 @@ enum FileExplorerStyle: Int, CaseIterable {
             case .renamed: return .systemBlue
             case .untracked: return .tertiaryLabelColor
             }
-        case .vscodeIcons:
+        case .vscodeIcons, .codika:
             switch status {
             case .modified: return .systemYellow
             case .added: return .systemGreen
@@ -220,9 +234,9 @@ enum FileExplorerStyle: Int, CaseIterable {
     static var current: FileExplorerStyle {
         let defaults = UserDefaults.standard
         if defaults.object(forKey: "fileExplorer.style") == nil {
-            return .vscodeIcons
+            return .codika
         }
-        return FileExplorerStyle(rawValue: defaults.integer(forKey: "fileExplorer.style")) ?? .vscodeIcons
+        return FileExplorerStyle(rawValue: defaults.integer(forKey: "fileExplorer.style")) ?? .codika
     }
 }
 
@@ -346,6 +360,19 @@ final class FileExplorerStore: ObservableObject {
     @Published private(set) var ignoredPaths: Set<String> = []
     @Published private(set) var contentRevision = 0
     @Published private(set) var rootStatusMessage: String?
+    /// In-tree filter text. When non-empty the outline shows only matching entries
+    /// (and the ancestors that lead to them).
+    @Published var filterText: String = "" {
+        didSet {
+            guard oldValue != filterText else { return }
+            recomputeFilterMatches()
+            filterRevision &+= 1
+        }
+    }
+    /// Bumped whenever the filter result set changes so the outline can do a full reload.
+    @Published private(set) var filterRevision = 0
+    /// path -> whether the node (or any loaded descendant) matches `filterText`.
+    private var filterSubtreeMatch: [String: Bool] = [:]
     private(set) var workspaceRootIdentity: UUID?
 
     var provider: FileExplorerProvider?
@@ -428,6 +455,55 @@ final class FileExplorerStore: ObservableObject {
     }
 
     func isIgnored(_ path: String) -> Bool { ignoredPaths.contains(path) }
+
+    // MARK: - Filter
+
+    /// True when `name` fuzzily matches `filter` (case-insensitive subsequence).
+    static func nameMatchesFilter(_ name: String, filter: String) -> Bool {
+        guard !filter.isEmpty else { return true }
+        var remainder = filter.lowercased()[...]
+        for ch in name.lowercased() {
+            if let first = remainder.first, first == ch { remainder = remainder.dropFirst() }
+            if remainder.isEmpty { return true }
+        }
+        return remainder.isEmpty
+    }
+
+    /// Recomputes the per-path match cache for the currently loaded tree.
+    /// Never call from a view body or an outline data-source callback.
+    private func recomputeFilterMatches() {
+        filterSubtreeMatch = [:]
+        guard !filterText.isEmpty else { return }
+        for node in rootNodes { _ = computeFilterMatch(node) }
+    }
+
+    @discardableResult
+    private func computeFilterMatch(_ node: FileExplorerNode) -> Bool {
+        var matches = Self.nameMatchesFilter(node.name, filter: filterText)
+        if let children = node.children {
+            for child in children where computeFilterMatch(child) { matches = true }
+        }
+        filterSubtreeMatch[node.path] = matches
+        return matches
+    }
+
+    /// Children of `node` (or the roots when nil) that survive the current filter.
+    func visibleChildren(of node: FileExplorerNode?) -> [FileExplorerNode] {
+        let children: [FileExplorerNode]
+        if let node {
+            children = node.sortedChildren ?? []
+        } else {
+            children = rootNodes
+        }
+        guard !filterText.isEmpty else { return children }
+        return children.filter { filterSubtreeMatch[$0.path] == true }
+    }
+
+    /// True when a filter is active and `node`'s subtree contains a match (so it should auto-expand).
+    func subtreeContainsFilterMatch(_ node: FileExplorerNode) -> Bool {
+        guard !filterText.isEmpty, node.isDirectory else { return false }
+        return filterSubtreeMatch[node.path] == true
+    }
 
     func refreshGitStatus() {
         guard !rootPath.isEmpty else {
@@ -723,6 +799,10 @@ final class FileExplorerStore: ObservableObject {
             }
             loadingPaths.remove(path)
             loadTasks.removeValue(forKey: path)
+            if !filterText.isEmpty {
+                recomputeFilterMatches()
+                filterRevision &+= 1
+            }
             objectWillChange.send()
 
             refreshIgnoredStatus(forChildPaths: children.map(\.path))

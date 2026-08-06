@@ -392,6 +392,61 @@ struct FileExplorerStoreTests {
         #expect(store.isIgnored(linkDir + "/.venv"))
         #expect(!store.isIgnored(linkDir + "/kept.txt"))
     }
+
+    // MARK: - Filter
+
+    @Test
+    func testNameMatchesFilterExactSubstring() {
+        #expect(FileExplorerStore.nameMatchesFilter("bus.py", filter: "bus"))
+    }
+
+    @Test
+    func testNameMatchesFilterSubsequence() {
+        #expect(FileExplorerStore.nameMatchesFilter("bus.py", filter: "bp"))
+    }
+
+    @Test
+    func testNameMatchesFilterRejectsNonMatch() {
+        #expect(!FileExplorerStore.nameMatchesFilter("bus.py", filter: "zq"))
+    }
+
+    @Test
+    func testNameMatchesFilterEmptyFilterMatchesEverything() {
+        #expect(FileExplorerStore.nameMatchesFilter("bus.py", filter: ""))
+    }
+
+    @Test
+    func testFilterHidesNonMatchingRootNodes() {
+        let store = FileExplorerStore()
+        let match = FileExplorerNode(name: "bus.py", path: "/p/bus.py", isDirectory: false)
+        let other = FileExplorerNode(name: "readme.md", path: "/p/readme.md", isDirectory: false)
+        store.rootNodes = [match, other]
+
+        #expect(store.visibleChildren(of: nil).count == 2)
+
+        store.filterText = "bp"
+        #expect(store.visibleChildren(of: nil).map(\.path) == ["/p/bus.py"])
+
+        store.filterText = ""
+        #expect(store.visibleChildren(of: nil).count == 2)
+    }
+
+    @Test
+    func testFilterKeepsAncestorsOfMatchingDescendants() {
+        let store = FileExplorerStore()
+        let child = FileExplorerNode(name: "bus.py", path: "/p/src/bus.py", isDirectory: false)
+        let dir = FileExplorerNode(name: "src", path: "/p/src", isDirectory: true)
+        dir.children = [child]
+        let empty = FileExplorerNode(name: "docs", path: "/p/docs", isDirectory: true)
+        empty.children = []
+        store.rootNodes = [dir, empty]
+
+        store.filterText = "bus"
+        #expect(store.visibleChildren(of: nil).map(\.path) == ["/p/src"])
+        #expect(store.visibleChildren(of: dir).map(\.path) == ["/p/src/bus.py"])
+        #expect(store.subtreeContainsFilterMatch(dir))
+        #expect(!store.subtreeContainsFilterMatch(empty))
+    }
 }
 
 @MainActor
