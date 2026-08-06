@@ -484,6 +484,8 @@
 		D3284101A1B2C3D4E5F60718 /* GhosttyTextInputSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3284102A1B2C3D4E5F60718 /* GhosttyTextInputSupport.swift */; };
 		D7C6F5000000000000000000 /* GhosttyTitleChange.swift in Sources */ = {isa = PBXBuildFile; fileRef = D7C6F5000000000000000001 /* GhosttyTitleChange.swift */; };
 		D7C6F5010000000000000000 /* GhosttyTitleChangeSubscription.swift in Sources */ = {isa = PBXBuildFile; fileRef = D7C6F5010000000000000001 /* GhosttyTitleChangeSubscription.swift */; };
+		G17A00000000000000000016 /* GitPanelView.swift in Sources */ = {isa = PBXBuildFile; fileRef = G17A00000000000000000015 /* GitPanelView.swift */; };
+		G17A00000000000000000018 /* GitPanelViewTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = G17A00000000000000000017 /* GitPanelViewTests.swift */; };
 		G17A00000000000000000002 /* GitPorcelainStatus.swift in Sources */ = {isa = PBXBuildFile; fileRef = G17A00000000000000000001 /* GitPorcelainStatus.swift */; };
 		G17A00000000000000000004 /* GitPorcelainStatusTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = G17A00000000000000000003 /* GitPorcelainStatusTests.swift */; };
 		G17A00000000000000000006 /* GitWorkingTreeModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = G17A00000000000000000005 /* GitWorkingTreeModel.swift */; };
@@ -1471,6 +1473,8 @@
 		D3284102A1B2C3D4E5F60718 /* GhosttyTextInputSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GhosttyTextInputSupport.swift; sourceTree = "<group>"; };
 		D7C6F5000000000000000001 /* GhosttyTitleChange.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GhosttyTitleChange.swift; sourceTree = "<group>"; };
 		D7C6F5010000000000000001 /* GhosttyTitleChangeSubscription.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GhosttyTitleChangeSubscription.swift; sourceTree = "<group>"; };
+		G17A00000000000000000015 /* GitPanelView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Git/GitPanelView.swift"; sourceTree = "<group>"; };
+		G17A00000000000000000017 /* GitPanelViewTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GitPanelViewTests.swift; sourceTree = "<group>"; };
 		G17A00000000000000000001 /* GitPorcelainStatus.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Git/GitPorcelainStatus.swift"; sourceTree = "<group>"; };
 		G17A00000000000000000003 /* GitPorcelainStatusTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GitPorcelainStatusTests.swift; sourceTree = "<group>"; };
 		G17A00000000000000000005 /* GitWorkingTreeModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Git/GitWorkingTreeModel.swift"; sourceTree = "<group>"; };
@@ -2684,6 +2688,7 @@
 				BBC0DE00000000000000000B /* MonacoLanguageMap.swift */,
 				G17A00000000000000000001 /* GitPorcelainStatus.swift */,
 				G17A00000000000000000005 /* GitWorkingTreeModel.swift */,
+				G17A00000000000000000015 /* GitPanelView.swift */,
 				BBC0DE00000000000000000D /* MonacoWebController.swift */,
 				BBC0DE0000000000000000A1 /* WeakMonacoScriptMessageHandler.swift */,
 				BBC0DE00000000000000000F /* MonacoEditorView.swift */,
@@ -2961,6 +2966,7 @@
 				G17A00000000000000000021 /* FilesGitPanelTests.swift */,
 				G17A00000000000000000003 /* GitPorcelainStatusTests.swift */,
 				G17A00000000000000000007 /* GitWorkingTreeModelTests.swift */,
+				G17A00000000000000000017 /* GitPanelViewTests.swift */,
 				5F5553CB5553CB5553CB0002 /* RightSidebarRemoteCommandTests.swift */,
 				F1E2D3C4B5A69788796A5B4C /* FloatingSidebarPointerRouteTests.swift */,
 				A3A85212211F4FB1B384CA26 /* SidebarAppearanceMigrationTests.swift */,
@@ -3698,6 +3704,7 @@
 				D3284101A1B2C3D4E5F60718 /* GhosttyTextInputSupport.swift in Sources */,
 				D7C6F5000000000000000000 /* GhosttyTitleChange.swift in Sources */,
 				D7C6F5010000000000000000 /* GhosttyTitleChangeSubscription.swift in Sources */,
+				G17A00000000000000000016 /* GitPanelView.swift in Sources */,
 				G17A00000000000000000002 /* GitPorcelainStatus.swift in Sources */,
 				G17A00000000000000000006 /* GitWorkingTreeModel.swift in Sources */,
 					3865A0023865A0023865A002 /* GlobalSearchCoordinator.swift in Sources */,
@@ -4225,6 +4232,7 @@
 				3069F1D10000000000000003 /* GhosttyPasteboardFidelityTests.swift in Sources */,
 				C13519000000000000000003 /* GhosttyTerminalStartupEnvironmentTests.swift in Sources */,
 				D7AB34400000000000000003 /* GhosttyTerminalViewVisibilityPolicyTests.swift in Sources */,
+				G17A00000000000000000018 /* GitPanelViewTests.swift in Sources */,
 				G17A00000000000000000004 /* GitPorcelainStatusTests.swift in Sources */,
 				G17A00000000000000000008 /* GitWorkingTreeModelTests.swift in Sources */,
 				3865A0053865A0053865A005 /* GlobalSearchShortcutSettingsTests.swift in Sources */,

@@ -416,9 +416,17 @@ struct RightSidebarPanelView: View {
                             presentation: .files
                         )
                     ),
-                    // Task 6 replaces this placeholder with GitPanelView.
                     gitContent: AnyView(
-                        Color.clear.frame(maxWidth: .infinity, maxHeight: .infinity)
+                        GitPanelView(
+                            model: gitModel,
+                            openFile: { [rootPath = fileExplorerStore.rootPath] relativePath in
+                                onOpenFilePreview(
+                                    GitPanelView.absolutePath(root: rootPath, relative: relativePath)
+                                )
+                            },
+                            // Task 8 supplies the GitChangesPanel opener; hidden until then.
+                            openChanges: nil
+                        )
                     )
                 )
             case .find:

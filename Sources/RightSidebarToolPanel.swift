@@ -214,9 +214,15 @@ private struct PaneFilesGitShell: View {
                     onContainerChange: panel.attachFileExplorerContainer
                 )
             ),
-            // Task 6 replaces this placeholder with GitPanelView.
             gitContent: AnyView(
-                Color.clear.frame(maxWidth: .infinity, maxHeight: .infinity)
+                GitPanelView(
+                    model: panel.gitWorkingTreeModel,
+                    openFile: { [rootPath = store.rootPath, openPreview = panel.openFilePreview] relativePath in
+                        openPreview(GitPanelView.absolutePath(root: rootPath, relative: relativePath))
+                    },
+                    // Task 8 supplies the GitChangesPanel opener; hidden until then.
+                    openChanges: nil
+                )
             )
         )
     }
