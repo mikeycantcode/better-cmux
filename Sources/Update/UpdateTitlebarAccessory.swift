@@ -490,11 +490,19 @@ enum TitlebarShortcutHintActionSlot: Int, CaseIterable {
 enum TitlebarControlsCluster: String {
     case leading
     case trailing
+    /// The minimal-mode sidebar hover host is not an edge cluster: it is a single
+    /// reveal-on-hover row that predates the split and must keep rendering the full
+    /// pre-split button set, in the pre-split order, because its click/hit proxy
+    /// (`MinimalModeSidebarControlActionSlot` via `TitlebarControlsHitRegions.buttonXRanges`)
+    /// is a fixed 5-column layout in exactly that order. It has no right-sidebar toggle.
+    case minimalSidebarHost
 
     var slots: [TitlebarShortcutHintActionSlot] {
         switch self {
         case .leading: return [.toggleSidebar, .focusHistoryBack, .focusHistoryForward]
         case .trailing: return [.newTab, .showNotifications, .toggleRightSidebar]
+        case .minimalSidebarHost:
+            return [.toggleSidebar, .showNotifications, .newTab, .focusHistoryBack, .focusHistoryForward]
         }
     }
 }
@@ -1531,8 +1539,10 @@ struct HiddenTitlebarSidebarControlsView: View {
                 onNewTab: onNewTab,
                 onFocusHistoryBack: onFocusHistoryBack,
                 onFocusHistoryForward: onFocusHistoryForward,
+                // The minimal-mode host renders no right-sidebar toggle (see
+                // `.minimalSidebarHost` slots), so this closure is never invoked.
                 onToggleRightSidebar: {},
-                cluster: .leading,
+                cluster: .minimalSidebarHost,
                 visibilityMode: .alwaysVisible
             )
             .frame(
