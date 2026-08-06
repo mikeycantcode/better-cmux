@@ -35,4 +35,15 @@ import Testing
         #expect(TitlebarControlsLayoutMetrics.buttonRowWidth(cluster: .leading, config: config) == expected)
         #expect(TitlebarControlsLayoutMetrics.buttonRowWidth(cluster: .trailing, config: config) == expected)
     }
+
+    /// The minimal-mode hover host renders `TitlebarShortcutHintActionSlot`s, but its
+    /// click/hit proxy is the fixed 5-column `MinimalModeSidebarControlActionSlot`
+    /// layout in `WindowDragHandleView.swift` / `MinimalModeSidebarControls.swift`.
+    /// The two enums are distinct types, so lock the icon order to the hit-region
+    /// column order by case name — if they drift, clicks land on the wrong button.
+    @Test func minimalSidebarHostSlotsMatchHitRegionColumnOrder() {
+        let rendered = TitlebarControlsCluster.minimalSidebarHost.slots.map { String(describing: $0) }
+        let hitRegions = MinimalModeSidebarControlActionSlot.allCases.map { String(describing: $0) }
+        #expect(rendered == hitRegions)
+    }
 }
