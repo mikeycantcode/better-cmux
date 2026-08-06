@@ -1710,30 +1710,6 @@ struct ContentView: View {
         return -max(0, min(titlebarPadding, hostingSafeAreaTop))
     }
 
-    nonisolated static func customTitlebarLeadingPadding(
-        isFullScreen: Bool,
-        isSidebarVisible: Bool,
-        sidebarWidth: CGFloat,
-        minimumSidebarWidth: CGFloat,
-        titlebarLeadingInset: CGFloat
-    ) -> CGFloat {
-        if isFullScreen && !isSidebarVisible {
-            return 8
-        }
-
-        let minimumSidebarTitleInset = max(titlebarLeadingInset, minimumSidebarWidth + 12)
-        guard isSidebarVisible else {
-            return minimumSidebarTitleInset
-        }
-
-        let visibleSidebarTitleInset = sidebarWidth + 12
-        // Absorb floating-point drift around the minimum-width clamp.
-        guard sidebarWidth > minimumSidebarWidth + 0.5 else {
-            return minimumSidebarTitleInset
-        }
-        return max(titlebarLeadingInset, visibleSidebarTitleInset)
-    }
-
     /// Where the always-visible fullscreen titlebar controls (sidebar toggle,
     /// history, new tab, notifications) are anchored inside the titlebar band.
     struct FullscreenControlsPlacement: Equatable {
@@ -2040,7 +2016,6 @@ struct ContentView: View {
     @AppStorage("bgGlassTintHex") private var bgGlassTintHex = "#000000"
     @AppStorage("bgGlassTintOpacity") private var bgGlassTintOpacity = 0.03
     @AppStorage("bgGlassEnabled") private var bgGlassEnabled = false
-    @State private var titlebarLeadingInset: CGFloat = 12
     private var windowIdentifier: String { "cmux.main.\(windowId.uuidString)" }
     private var windowAppearanceSnapshot: WindowAppearanceSnapshot {
         _ = titlebarThemeGeneration
@@ -2138,8 +2113,12 @@ struct ContentView: View {
             // view draggable (which breaks drag gestures like tab reordering).
             WindowDragHandleView()
 
+            // The reader stays mounted (it also drives AppKit-side traffic-light
+            // insetting), but nothing in this view consumes the measured value any
+            // more now that the title is band-centered — sink it into a constant so
+            // each layout pass does not invalidate titlebar state.
             TitlebarLeadingInsetReader(
-                inset: $titlebarLeadingInset,
+                inset: .constant(0),
                 baseLeadingInset: { MinimalModeTitlebarDebugSettings.trafficLightTitlebarLeadingInset() }
             )
                 .allowsHitTesting(false)
@@ -2163,13 +2142,37 @@ struct ContentView: View {
         }
     }
 
+    /// Horizontal clearance the centered title must keep from each band edge so it
+    /// never collides with the leading/trailing control clusters. Derived from the
+    /// active controls style rather than hand-tuned, since a non-classic style can be
+    /// substantially wider than the classic one.
+    private var titlebarTitleClearance: CGFloat {
+        let style = TitlebarControlsStyle(rawValue: titlebarControlsStyleRawValue) ?? .classic
+        let config = style.config
+        let placement = Self.fullscreenControlsPlacement(isFullScreen: true, isSidebarVisible: false)
+        let edgePadding = placement?.leadingPadding ?? 10
+        let leadingWidth = TitlebarControlsLayoutMetrics.contentSize(cluster: .leading, config: config).width
+        let trailingWidth = TitlebarControlsLayoutMetrics.contentSize(cluster: .trailing, config: config).width
+        // 8pt breathing room between the widest cluster and the title.
+        return max(leadingWidth, trailingWidth) + edgePadding + 8
+    }
+
     /// Folder icon + focused command name, centered against the full titlebar band
     /// width so it stays put while either sidebar is toggled.
-    private func centeredTitlebarTitle(appearance: WindowAppearanceSnapshot) -> some View {
+    private func centeredTitlebarTitle(
+        appearance: WindowAppearanceSnapshot,
+        allowsFolderDrag: Bool
+    ) -> some View {
         HStack(spacing: 8) {
             if let directory = focusedDirectory {
                 DetachedFolderDragIcon(directory: directory)
                     .frame(width: 16, height: 16)
+                    // The centered row is not inset by `rightSidebarWidth` (the title
+                    // must not move when a sidebar toggles), so in a narrow window with
+                    // a wide right sidebar the row can reach over the sidebar's mode-bar
+                    // strip. The icon is the only interactive element here, so drop its
+                    // hit-testing in that case rather than shifting the title (#5099).
+                    .allowsHitTesting(allowsFolderDrag)
             }
 
             Text(titlebarText)
@@ -2208,10 +2211,29 @@ struct ContentView: View {
                     .animation(nil, value: rightSidebarWidth)
             }
             .overlay(alignment: .top) {
-                centeredTitlebarTitle(appearance: appearance)
-                    .frame(height: max(1, WindowChromeMetrics.appTitlebarHeight - 2), alignment: .center)
+                GeometryReader { proxy in
+                    let clearance = titlebarTitleClearance
+                    let bandWidth = proxy.size.width
+                    let available = max(0, bandWidth - clearance * 2)
+                    // Worst-case right edge of the centered row (it can never grow past
+                    // `available`), used to decide whether the folder icon could land
+                    // over the right sidebar's titlebar-height strip.
+                    let rowRightEdge = bandWidth / 2 + available / 2
+                    let mayOverlapRightSidebar =
+                        rightSidebarWidth > 0 && rowRightEdge > bandWidth - rightSidebarWidth
+                    centeredTitlebarTitle(
+                        appearance: appearance,
+                        allowsFolderDrag: !mayOverlapRightSidebar
+                    )
+                    .frame(maxWidth: available)
+                    .frame(
+                        width: bandWidth,
+                        height: max(1, WindowChromeMetrics.appTitlebarHeight - 2),
+                        alignment: .center
+                    )
                     .padding(.top, 2)
-                    .padding(.horizontal, 120)
+                }
+                .frame(height: WindowChromeMetrics.appTitlebarHeight)
             }
             .overlay(alignment: .topLeading) {
                 if let placement = Self.fullscreenControlsPlacement(
