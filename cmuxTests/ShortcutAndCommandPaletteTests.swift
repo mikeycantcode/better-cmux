@@ -887,6 +887,7 @@ final class ShortcutHintModifierPolicyTests: XCTestCase {
                 .newTab,
                 .focusHistoryBack,
                 .focusHistoryForward,
+                .toggleRightSidebar,
             ]
         )
     }

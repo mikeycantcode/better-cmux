@@ -218,11 +218,11 @@ final class TitlebarControlsSizingPolicyTests: XCTestCase {
     }
 
     func testTitlebarControlsUseDeterministicContentSize() {
-        let classic = TitlebarControlsLayoutMetrics.contentSize(config: TitlebarControlsStyle.classic.config)
+        let classic = TitlebarControlsLayoutMetrics.contentSize(cluster: .leading, config: TitlebarControlsStyle.classic.config)
         XCTAssertEqual(classic.width, 136, accuracy: 0.001)
         XCTAssertEqual(classic.height, WindowChromeMetrics.appTitlebarHeight, accuracy: 0.001)
 
-        let compact = TitlebarControlsLayoutMetrics.contentSize(config: TitlebarControlsStyle.compact.config)
+        let compact = TitlebarControlsLayoutMetrics.contentSize(cluster: .leading, config: TitlebarControlsStyle.compact.config)
         XCTAssertEqual(compact.width, 126, accuracy: 0.001)
         XCTAssertEqual(compact.height, WindowChromeMetrics.appTitlebarHeight, accuracy: 0.001)
     }

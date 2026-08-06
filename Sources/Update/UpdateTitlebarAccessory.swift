@@ -425,18 +425,20 @@ func titlebarHintPillWidth(for shortcut: StoredShortcut, config: TitlebarControl
 /// gated on modifier state) so the reserved width stays stable whether or not the hints
 /// are currently visible. Returns 0 when no slot would show a hint.
 func titlebarHintLayoutRightmostExtent(
+    cluster: TitlebarControlsCluster,
     config: TitlebarControlsStyleConfig,
     titlebarShortcutHintXOffset: Double = ShortcutHintDebugSettings.defaultTitlebarHintX
 ) -> CGFloat {
     let xOffset = CGFloat(ShortcutHintDebugSettings.clamped(titlebarShortcutHintXOffset))
     var intervals: [ClosedRange<CGFloat>] = []
-    for slot in TitlebarShortcutHintActionSlot.allCases {
+    for slot in cluster.slots {
         let shortcut = KeyboardShortcutSettings.shortcut(for: slot.action)
         guard !shortcut.isUnbound, shortcut.command else { continue }
         let width = titlebarHintPillWidth(for: shortcut, config: config)
         intervals.append(
             TitlebarControlsLayoutMetrics.hintInterval(
                 for: slot,
+                cluster: cluster,
                 width: width,
                 config: config,
                 xOffset: xOffset
@@ -461,6 +463,7 @@ enum TitlebarShortcutHintActionSlot: Int, CaseIterable {
     case newTab
     case focusHistoryBack
     case focusHistoryForward
+    case toggleRightSidebar
 
     var action: KeyboardShortcutSettings.Action {
         switch self {
@@ -474,9 +477,26 @@ enum TitlebarShortcutHintActionSlot: Int, CaseIterable {
             return .focusHistoryBack
         case .focusHistoryForward:
             return .focusHistoryForward
+        case .toggleRightSidebar:
+            return .toggleRightSidebar
         }
     }
 
+}
+
+/// The two edge button clusters the titlebar controls are split into. Slot order
+/// within a cluster is the on-screen left-to-right order for that cluster; it is
+/// the only source of truth for layout indices (never `slot.rawValue`).
+enum TitlebarControlsCluster: String {
+    case leading
+    case trailing
+
+    var slots: [TitlebarShortcutHintActionSlot] {
+        switch self {
+        case .leading: return [.toggleSidebar, .focusHistoryBack, .focusHistoryForward]
+        case .trailing: return [.newTab, .showNotifications, .toggleRightSidebar]
+        }
+    }
 }
 
 enum TitlebarControlsLayoutMetrics {
@@ -494,17 +514,21 @@ enum TitlebarControlsLayoutMetrics {
             + hintTrailingBaseInset
     }
 
-    static func buttonRowWidth(config: TitlebarControlsStyleConfig) -> CGFloat {
-        let buttonCount = CGFloat(TitlebarShortcutHintActionSlot.allCases.count)
+    static func buttonRowWidth(
+        cluster: TitlebarControlsCluster,
+        config: TitlebarControlsStyleConfig
+    ) -> CGFloat {
+        let buttonCount = CGFloat(cluster.slots.count)
         let gapCount = max(0, buttonCount - 1)
         return (buttonCount * config.buttonSize) + (gapCount * config.spacing)
     }
 
     static func buttonCenterX(
         for slot: TitlebarShortcutHintActionSlot,
+        cluster: TitlebarControlsCluster,
         config: TitlebarControlsStyleConfig
     ) -> CGFloat {
-        let index = CGFloat(slot.rawValue)
+        let index = CGFloat(cluster.slots.firstIndex(of: slot) ?? 0)
         return config.groupPadding.leading
             + (index * (config.buttonSize + config.spacing))
             + (config.buttonSize / 2.0)
@@ -512,15 +536,17 @@ enum TitlebarControlsLayoutMetrics {
 
     static func hintInterval(
         for slot: TitlebarShortcutHintActionSlot,
+        cluster: TitlebarControlsCluster,
         width: CGFloat,
         config: TitlebarControlsStyleConfig,
         xOffset: CGFloat
     ) -> ClosedRange<CGFloat> {
-        let centerX = buttonCenterX(for: slot, config: config) + xOffset
+        let centerX = buttonCenterX(for: slot, cluster: cluster, config: config) + xOffset
         return (centerX - (width / 2.0))...(centerX + (width / 2.0))
     }
 
     static func contentSize(
+        cluster: TitlebarControlsCluster,
         config: TitlebarControlsStyleConfig,
         titlebarShortcutHintXOffset: Double = ShortcutHintDebugSettings.defaultTitlebarHintX
     ) -> NSSize {
@@ -528,7 +554,7 @@ enum TitlebarControlsLayoutMetrics {
         // shortcut hints are clipped by the accessory's allocated frame.
         let buttonReservation = outerLeadingPadding
             + config.groupPadding.leading
-            + buttonRowWidth(config: config)
+            + buttonRowWidth(cluster: cluster, config: config)
             + config.groupPadding.trailing
             + hintTrailingInset(titlebarShortcutHintXOffset: titlebarShortcutHintXOffset)
         // Drive the reservation from the planner's actual rightmost hint edge so the
@@ -536,6 +562,7 @@ enum TitlebarControlsLayoutMetrics {
         // always covered. This is what prevents the rightmost pill from clipping.
         let hintReservation = hintLeadingPadding
             + titlebarHintLayoutRightmostExtent(
+                cluster: cluster,
                 config: config,
                 titlebarShortcutHintXOffset: titlebarShortcutHintXOffset
             )
@@ -874,6 +901,7 @@ struct TitlebarControlsView: View {
         let style = TitlebarControlsStyle(rawValue: styleRawValue) ?? .classic
         let config = style.config
         let contentSize = TitlebarControlsLayoutMetrics.contentSize(
+            cluster: .leading,
             config: config,
             titlebarShortcutHintXOffset: titlebarShortcutHintXOffset
         )
@@ -1125,6 +1153,7 @@ struct TitlebarControlsView: View {
             let width = titlebarHintWidth(for: shortcut, config: config)
             let interval = TitlebarControlsLayoutMetrics.hintInterval(
                 for: slot,
+                cluster: .leading,
                 width: width,
                 config: config,
                 xOffset: xOffset
@@ -1896,7 +1925,7 @@ final class TitlebarControlsAccessoryViewController: NSTitlebarAccessoryViewCont
         guard showsWorkspaceTitlebar else { return }
         let styleRawValue = UserDefaults.standard.integer(forKey: "titlebarControlsStyle")
         let style = TitlebarControlsStyle(rawValue: styleRawValue) ?? .classic
-        let contentSize = TitlebarControlsLayoutMetrics.contentSize(config: style.config)
+        let contentSize = TitlebarControlsLayoutMetrics.contentSize(cluster: .leading, config: style.config)
         if intrinsicSizeNeedsRefresh {
             hostingView.invalidateIntrinsicContentSize()
             intrinsicSizeNeedsRefresh = false

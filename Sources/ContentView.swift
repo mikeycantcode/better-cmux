@@ -2111,7 +2111,7 @@ struct ContentView: View {
     /// the controls, which are themselves mounted once in the band overlay.
     private var fullscreenControlsWidth: CGFloat {
         let style = TitlebarControlsStyle(rawValue: titlebarControlsStyleRawValue) ?? .classic
-        return TitlebarControlsLayoutMetrics.contentSize(config: style.config).width
+        return TitlebarControlsLayoutMetrics.contentSize(cluster: .leading, config: style.config).width
     }
 
     private var titlebarDebugChromeSnapshot: MinimalModeTitlebarDebugSnapshot {
