@@ -573,6 +573,7 @@
 		ED17ED17ED17ED17ED170022 /* MonacoDiffView.swift in Sources */ = {isa = PBXBuildFile; fileRef = ED17ED17ED17ED17ED170021 /* MonacoDiffView.swift */; };
 		BBC0DE000000000000000010 /* MonacoEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBC0DE00000000000000000F /* MonacoEditorView.swift */; };
 		BBC0DE00000000000000000C /* MonacoLanguageMap.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBC0DE00000000000000000B /* MonacoLanguageMap.swift */; };
+		G17A00000000000000000002 /* GitPorcelainStatus.swift in Sources */ = {isa = PBXBuildFile; fileRef = G17A00000000000000000001 /* GitPorcelainStatus.swift */; };
 		BBC0DE00000000000000001C /* MonacoLanguageMapTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBC0DE00000000000000001B /* MonacoLanguageMapTests.swift */; };
 		BBC0DE00000000000000000E /* MonacoWebController.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBC0DE00000000000000000D /* MonacoWebController.swift */; };
 		B9000015A1B2C3D4E5F60719 /* MultiWindowNotificationsUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B9000016A1B2C3D4E5F60719 /* MultiWindowNotificationsUITests.swift */; };
@@ -787,6 +788,7 @@
 		C06552030000000000000001 /* TabManagerTitleUpdateStalenessTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C06552030000000000000002 /* TabManagerTitleUpdateStalenessTests.swift */; };
 		C06552020000000000000001 /* TabManagerTitleUpdateTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C06552020000000000000002 /* TabManagerTitleUpdateTests.swift */; };
 		B6BF3DC98DB1495E57900199 /* TabManagerUnitTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 42092CDB2109E250F7F2A76E /* TabManagerUnitTests.swift */; };
+		G17A00000000000000000004 /* GitPorcelainStatusTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = G17A00000000000000000003 /* GitPorcelainStatusTests.swift */; };
 		C7A507000000000000000002 /* TaskManagerResourcesTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C7A507000000000000000001 /* TaskManagerResourcesTests.swift */; };
 		C7A503000000000000000002 /* TaskManagerSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = C7A503000000000000000001 /* TaskManagerSnapshot.swift */; };
 		C7A504000000000000000002 /* TaskManagerTypes.swift in Sources */ = {isa = PBXBuildFile; fileRef = C7A504000000000000000001 /* TaskManagerTypes.swift */; };
@@ -1552,6 +1554,7 @@
 		ED17ED17ED17ED17ED170021 /* MonacoDiffView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Monaco/MonacoDiffView.swift"; sourceTree = "<group>"; };
 		BBC0DE00000000000000000F /* MonacoEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Monaco/MonacoEditorView.swift"; sourceTree = "<group>"; };
 		BBC0DE00000000000000000B /* MonacoLanguageMap.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Monaco/MonacoLanguageMap.swift"; sourceTree = "<group>"; };
+		G17A00000000000000000001 /* GitPorcelainStatus.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Git/GitPorcelainStatus.swift"; sourceTree = "<group>"; };
 		BBC0DE00000000000000001B /* MonacoLanguageMapTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MonacoLanguageMapTests.swift; sourceTree = "<group>"; };
 		BBC0DE00000000000000000D /* MonacoWebController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Monaco/MonacoWebController.swift"; sourceTree = "<group>"; };
 		B9000016A1B2C3D4E5F60719 /* MultiWindowNotificationsUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MultiWindowNotificationsUITests.swift; sourceTree = "<group>"; };
@@ -1765,6 +1768,7 @@
 		C06552030000000000000002 /* TabManagerTitleUpdateStalenessTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TabManagerTitleUpdateStalenessTests.swift; sourceTree = "<group>"; };
 		C06552020000000000000002 /* TabManagerTitleUpdateTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TabManagerTitleUpdateTests.swift; sourceTree = "<group>"; };
 		42092CDB2109E250F7F2A76E /* TabManagerUnitTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TabManagerUnitTests.swift; sourceTree = "<group>"; };
+		G17A00000000000000000003 /* GitPorcelainStatusTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GitPorcelainStatusTests.swift; sourceTree = "<group>"; };
 		C7A507000000000000000001 /* TaskManagerResourcesTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskManagerResourcesTests.swift; sourceTree = "<group>"; };
 		C7A503000000000000000001 /* TaskManagerSnapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskManagerSnapshot.swift; sourceTree = "<group>"; };
 		C7A504000000000000000001 /* TaskManagerTypes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskManagerTypes.swift; sourceTree = "<group>"; };
@@ -2669,6 +2673,7 @@
 				BBC0DE000000000000000007 /* MonacoAssetURLSchemeHandler.swift */,
 				BBC0DE000000000000000009 /* MonacoBridgeMessage.swift */,
 				BBC0DE00000000000000000B /* MonacoLanguageMap.swift */,
+				G17A00000000000000000001 /* GitPorcelainStatus.swift */,
 				BBC0DE00000000000000000D /* MonacoWebController.swift */,
 				BBC0DE0000000000000000A1 /* WeakMonacoScriptMessageHandler.swift */,
 				BBC0DE00000000000000000F /* MonacoEditorView.swift */,
@@ -2943,6 +2948,7 @@
 				C06552030000000000000002 /* TabManagerTitleUpdateStalenessTests.swift */,
 				C06552020000000000000002 /* TabManagerTitleUpdateTests.swift */,
 				42092CDB2109E250F7F2A76E /* TabManagerUnitTests.swift */,
+				G17A00000000000000000003 /* GitPorcelainStatusTests.swift */,
 				5F5553CB5553CB5553CB0002 /* RightSidebarRemoteCommandTests.swift */,
 				F1E2D3C4B5A69788796A5B4C /* FloatingSidebarPointerRouteTests.swift */,
 				A3A85212211F4FB1B384CA26 /* SidebarAppearanceMigrationTests.swift */,
@@ -3733,6 +3739,7 @@
 				ED17ED17ED17ED17ED170022 /* MonacoDiffView.swift in Sources */,
 				BBC0DE000000000000000010 /* MonacoEditorView.swift in Sources */,
 				BBC0DE00000000000000000C /* MonacoLanguageMap.swift in Sources */,
+				G17A00000000000000000002 /* GitPorcelainStatus.swift in Sources */,
 				BBC0DE00000000000000000E /* MonacoWebController.swift in Sources */,
 				596100000000000000000003 /* NativeNotificationDeliveryHooks.swift in Sources */,
 				C06552010000000000000003 /* NotificationBurstCoalescer.swift in Sources */,
@@ -4302,6 +4309,7 @@
 				C06552030000000000000001 /* TabManagerTitleUpdateStalenessTests.swift in Sources */,
 				C06552020000000000000001 /* TabManagerTitleUpdateTests.swift in Sources */,
 				B6BF3DC98DB1495E57900199 /* TabManagerUnitTests.swift in Sources */,
+				G17A00000000000000000004 /* GitPorcelainStatusTests.swift in Sources */,
 				5F5553CB5553CB5553CB0001 /* RightSidebarRemoteCommandTests.swift in Sources */,
 				C7A507000000000000000002 /* TaskManagerResourcesTests.swift in Sources */,
 				C7A507000000000000004529 /* TaskManagerViewSnapshotBoundaryTests.swift in Sources */,
