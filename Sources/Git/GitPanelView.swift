@@ -115,7 +115,7 @@ struct GitPanelView: View {
                 role: .destructive
             ) {
                 let entries = pending.entries
-                Task { for entry in entries { await model.discardFile(entry) } }
+                Task { await model.discardFiles(entries) }
             }
         }
         .task { await model.refresh() }
@@ -171,7 +171,7 @@ struct GitPanelView: View {
                     String(localized: "gitPanel.action.unstageAll", defaultValue: "Unstage All")
                 ) {
                     let paths = model.status.staged.map(\.path)
-                    Task { for path in paths { await model.unstageFile(path) } }
+                    Task { await model.unstageFiles(paths) }
                 }
             ),
             perRow: { entry in
@@ -203,7 +203,7 @@ struct GitPanelView: View {
                         String(localized: "gitPanel.action.stageAll", defaultValue: "Stage All")
                     ) {
                         let paths = model.status.modified.map(\.path)
-                        Task { for path in paths { await model.stageFile(path) } }
+                        Task { await model.stageFiles(paths) }
                     }
                 }
             ),
@@ -230,7 +230,7 @@ struct GitPanelView: View {
                     // Scoped to this section: `model.stageAll()` runs `add -A`,
                     // which would also stage the MODIFIED files listed above.
                     let paths = model.status.untracked.map(\.path)
-                    Task { for path in paths { await model.stageFile(path) } }
+                    Task { await model.stageFiles(paths) }
                 }
             ),
             perRow: { entry in

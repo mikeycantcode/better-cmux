@@ -119,6 +119,87 @@ struct GitWorkingTreeModelTests {
         #expect(model.status.untracked.map(\.path) == ["b-only.txt"])
     }
 
+    // MARK: - Batch actions
+
+    @Test func stageFilesStagesOnlyTheGivenPaths() async throws {
+        let repo = try makeFixtureRepo()
+        defer { try? FileManager.default.removeItem(atPath: repo) }
+        try "changed\n".write(toFile: repo + "/a.txt", atomically: true, encoding: .utf8)
+        try "one\n".write(toFile: repo + "/b.txt", atomically: true, encoding: .utf8)
+        try "two\n".write(toFile: repo + "/c.txt", atomically: true, encoding: .utf8)
+
+        let model = GitWorkingTreeModel(repoPath: repo)
+        await model.stageFiles(["b.txt", "c.txt"])
+
+        #expect(model.status.staged.map(\.path).sorted() == ["b.txt", "c.txt"])
+        // a.txt was deliberately left out of the pathspec and must stay dirty.
+        #expect(model.status.modified.map(\.path) == ["a.txt"])
+        #expect(model.lastErrorLine == nil)
+    }
+
+    @Test func unstageFilesUnstagesOnlyTheGivenPaths() async throws {
+        let repo = try makeFixtureRepo()
+        defer { try? FileManager.default.removeItem(atPath: repo) }
+        try "one\n".write(toFile: repo + "/b.txt", atomically: true, encoding: .utf8)
+        try "two\n".write(toFile: repo + "/c.txt", atomically: true, encoding: .utf8)
+
+        let model = GitWorkingTreeModel(repoPath: repo)
+        await model.stageFiles(["b.txt", "c.txt"])
+        await model.unstageFiles(["b.txt"])
+
+        #expect(model.status.staged.map(\.path) == ["c.txt"])
+        #expect(model.status.untracked.map(\.path) == ["b.txt"])
+    }
+
+    @Test func discardFilesHandlesMixedTrackedAndUntrackedInOneShot() async throws {
+        let repo = try makeFixtureRepo()
+        defer { try? FileManager.default.removeItem(atPath: repo) }
+        try "changed\n".write(toFile: repo + "/a.txt", atomically: true, encoding: .utf8)
+        try "junk\n".write(toFile: repo + "/junk.txt", atomically: true, encoding: .utf8)
+        try "keep\n".write(toFile: repo + "/keep.txt", atomically: true, encoding: .utf8)
+
+        let model = GitWorkingTreeModel(repoPath: repo)
+        await model.refresh()
+        let toDiscard = model.status.modified + model.status.untracked.filter { $0.path == "junk.txt" }
+        #expect(toDiscard.count == 2)
+        await model.discardFiles(toDiscard)
+
+        #expect(try String(contentsOfFile: repo + "/a.txt", encoding: .utf8) == "hello\n")
+        #expect(!FileManager.default.fileExists(atPath: repo + "/junk.txt"))
+        // Not in the batch: untouched.
+        #expect(FileManager.default.fileExists(atPath: repo + "/keep.txt"))
+        #expect(model.status.modified.isEmpty)
+        #expect(model.status.untracked.map(\.path) == ["keep.txt"])
+        #expect(model.lastErrorLine == nil)
+    }
+
+    @Test func batchActionsWithEmptyInputAreNoOps() async throws {
+        let repo = try makeFixtureRepo()
+        defer { try? FileManager.default.removeItem(atPath: repo) }
+        try "changed\n".write(toFile: repo + "/a.txt", atomically: true, encoding: .utf8)
+
+        let model = GitWorkingTreeModel(repoPath: repo)
+        await model.refresh()
+        await model.stageFiles([])
+        await model.unstageFiles([])
+        await model.discardFiles([])
+
+        // Empty input must not run git at all, so nothing changed and no error.
+        #expect(model.status.modified.map(\.path) == ["a.txt"])
+        #expect(model.lastErrorLine == nil)
+    }
+
+    /// A failing command in a batch must leave its error visible — the single
+    /// trailing refresh must not clear it.
+    @Test func batchFailureSurfacesErrorLine() async throws {
+        let repo = try makeFixtureRepo()
+        defer { try? FileManager.default.removeItem(atPath: repo) }
+
+        let model = GitWorkingTreeModel(repoPath: repo)
+        await model.stageFiles(["does-not-exist.txt"])
+        #expect(model.lastErrorLine != nil)
+    }
+
     @Test func commitWithNothingStagedFails() async throws {
         let repo = try makeFixtureRepo()
         defer { try? FileManager.default.removeItem(atPath: repo) }

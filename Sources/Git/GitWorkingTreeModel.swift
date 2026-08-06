@@ -64,6 +64,38 @@ final class GitWorkingTreeModel: ObservableObject {
         }
     }
 
+    // MARK: Batch actions
+    //
+    // Each of these is ONE `runAction`-style call: at most two git invocations,
+    // a single refresh, and a single error surface. Looping the per-file actions
+    // instead would spawn 2N processes and let a later iteration's successful
+    // refresh wipe an earlier failure's `lastErrorLine` — reporting success for
+    // a partially failed batch.
+
+    /// Stages exactly `paths` (pathspec-scoped; never `add -A`).
+    func stageFiles(_ paths: [String]) async {
+        guard !paths.isEmpty else { return }
+        await runActions([["add", "--"] + paths])
+    }
+
+    /// Unstages exactly `paths`.
+    func unstageFiles(_ paths: [String]) async {
+        guard !paths.isEmpty else { return }
+        await runActions([["restore", "--staged", "--"] + paths])
+    }
+
+    /// Discards exactly `entries`: tracked paths are restored from HEAD and
+    /// untracked paths are removed, in at most two git invocations.
+    func discardFiles(_ entries: [GitStatusEntry]) async {
+        guard !entries.isEmpty else { return }
+        let tracked = entries.filter { $0.status != .untracked }.map(\.path)
+        let untracked = entries.filter { $0.status == .untracked }.map(\.path)
+        var commands: [[String]] = []
+        if !tracked.isEmpty { commands.append(["checkout", "--"] + tracked) }
+        if !untracked.isEmpty { commands.append(["clean", "-f", "--"] + untracked) }
+        await runActions(commands)
+    }
+
     func stageAll() async { await runAction(["add", "-A"]) }
 
     func discardAll() async {
@@ -122,6 +154,31 @@ final class GitWorkingTreeModel: ObservableObject {
             lastErrorLine = message
             return nil
         }
+    }
+
+    /// Runs a batch of git commands as one logical action: stops at the first
+    /// failure, refreshes exactly once, and surfaces exactly one error line.
+    /// Returns true when every command succeeded.
+    @discardableResult
+    private func runActions(_ commands: [[String]]) async -> Bool {
+        guard !commands.isEmpty else { return true }
+        isBusy = true
+        defer { isBusy = false }
+        var failure: String?
+        for args in commands {
+            if case .failure(let message) = await Self.runGit(args, in: repoPath) {
+                failure = message
+                break
+            }
+        }
+        // Refresh first: a successful status read clears `lastErrorLine`, so the
+        // action's error must be written after it to survive.
+        await refresh()
+        if let failure {
+            lastErrorLine = failure
+            return false
+        }
+        return true
     }
 
     private enum GitResult {
