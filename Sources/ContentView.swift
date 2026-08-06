@@ -2113,10 +2113,9 @@ struct ContentView: View {
             // view draggable (which breaks drag gestures like tab reordering).
             WindowDragHandleView()
 
-            // The reader stays mounted (it also drives AppKit-side traffic-light
-            // insetting), but nothing in this view consumes the measured value any
-            // more now that the title is band-centered — sink it into a constant so
-            // each layout pass does not invalidate titlebar state.
+            // Kept mounted per the top-bar brief; currently inert. Nothing consumes
+            // the measured inset now that the title is band-centered, so the binding
+            // is a constant sink — each layout pass no longer invalidates state.
             TitlebarLeadingInsetReader(
                 inset: .constant(0),
                 baseLeadingInset: { MinimalModeTitlebarDebugSettings.trafficLightTitlebarLeadingInset() }
@@ -2211,16 +2210,22 @@ struct ContentView: View {
                     .animation(nil, value: rightSidebarWidth)
             }
             .overlay(alignment: .top) {
+                let clearance = titlebarTitleClearance
                 GeometryReader { proxy in
-                    let clearance = titlebarTitleClearance
                     let bandWidth = proxy.size.width
                     let available = max(0, bandWidth - clearance * 2)
-                    // Worst-case right edge of the centered row (it can never grow past
-                    // `available`), used to decide whether the folder icon could land
-                    // over the right sidebar's titlebar-height strip.
-                    let rowRightEdge = bandWidth / 2 + available / 2
+                    // The row is intrinsically sized and centered, and the 16pt folder
+                    // icon sits at its LEADING edge, so the icon's right edge is
+                    // `bandWidth/2 - rowWidth/2 + 16`. That is maximized when the row is
+                    // at its narrowest (icon only, rowWidth == 16), giving a hard upper
+                    // bound of `bandWidth/2 + 8` — the icon can never reach further right
+                    // than 8pt past band center regardless of title length. So it only
+                    // touches the right-sidebar strip when that sidebar covers more than
+                    // half the window, which is possible only in a very narrow window
+                    // with a very wide sidebar. Guard exactly that case (#5099).
+                    let iconMaxRightEdge = bandWidth / 2 + 8
                     let mayOverlapRightSidebar =
-                        rightSidebarWidth > 0 && rowRightEdge > bandWidth - rightSidebarWidth
+                        rightSidebarWidth > 0 && iconMaxRightEdge > bandWidth - rightSidebarWidth
                     centeredTitlebarTitle(
                         appearance: appearance,
                         allowsFolderDrag: !mayOverlapRightSidebar
@@ -2255,12 +2260,18 @@ struct ContentView: View {
                 }
             }
             .overlay(alignment: .topTrailing) {
-                if isFullScreen {
+                // Same placement values as the leading cluster, mirrored to the trailing
+                // edge, so both clusters share one source of truth for the edge inset
+                // (which `titlebarTitleClearance` also derives from).
+                if let placement = Self.fullscreenControlsPlacement(
+                    isFullScreen: isFullScreen,
+                    isSidebarVisible: sidebarState.isVisible
+                ) {
                     fullscreenControls(cluster: .trailing)
                         .environment(\.colorScheme, appearance.chromeColorScheme)
                         .frame(height: max(1, WindowChromeMetrics.appTitlebarHeight - 2), alignment: .center)
-                        .padding(.top, 2)
-                        .padding(.trailing, 10)
+                        .padding(.top, placement.topPadding)
+                        .padding(.trailing, placement.leadingPadding)
                 }
             }
     }
