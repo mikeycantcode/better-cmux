@@ -90,6 +90,35 @@ struct GitWorkingTreeModelTests {
         #expect(model.status.staged.isEmpty && model.status.modified.isEmpty)
     }
 
+    /// A fast workspace switch must converge on the *last* repoPath — an
+    /// uncancellable per-didSet refresh could land the first repo's status last.
+    @Test func rapidRepoPathSwitchLandsOnLastRepo() async throws {
+        let repoA = try makeFixtureRepo()
+        let repoB = try makeFixtureRepo()
+        defer {
+            try? FileManager.default.removeItem(atPath: repoA)
+            try? FileManager.default.removeItem(atPath: repoB)
+        }
+        try "onlyA\n".write(toFile: repoA + "/a-only.txt", atomically: true, encoding: .utf8)
+        try "onlyB\n".write(toFile: repoB + "/b-only.txt", atomically: true, encoding: .utf8)
+
+        let model = GitWorkingTreeModel(repoPath: "")
+        model.repoPath = repoA
+        model.repoPath = repoB
+
+        var untracked: [String] = []
+        for _ in 0..<40 {
+            try await Task.sleep(nanoseconds: 100_000_000)
+            untracked = model.status.untracked.map(\.path)
+            if !untracked.isEmpty { break }
+        }
+        #expect(untracked == ["b-only.txt"])
+
+        // And it stays settled: no queued stale refresh overwrites it.
+        try await Task.sleep(nanoseconds: 500_000_000)
+        #expect(model.status.untracked.map(\.path) == ["b-only.txt"])
+    }
+
     @Test func commitWithNothingStagedFails() async throws {
         let repo = try makeFixtureRepo()
         defer { try? FileManager.default.removeItem(atPath: repo) }

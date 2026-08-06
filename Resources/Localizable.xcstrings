@@ -96005,6 +96005,23 @@
         }
       }
     },
+    "gitPanel.error.detachedPush": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cannot push: detached HEAD."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "プッシュできません: HEAD が切り離されています。"
+          }
+        }
+      }
+    },
     "globalSearch.empty.noOpenPanels": {
       "extractionState": "manual",
       "localizations": {

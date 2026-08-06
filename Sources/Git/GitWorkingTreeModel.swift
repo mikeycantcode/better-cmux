@@ -8,8 +8,11 @@ final class GitWorkingTreeModel: ObservableObject {
     @Published private(set) var isBusy: Bool = false
     @Published var lastErrorLine: String?
 
+    /// Workspace root. Changing it schedules a refresh through the same
+    /// cancel-token machinery as watcher events, so rapid workspace switches
+    /// coalesce into one read and a stale result can never land over a fresh one.
     var repoPath: String {
-        didSet { if repoPath != oldValue { Task { await refresh() } } }
+        didSet { if repoPath != oldValue { scheduleDebouncedRefresh() } }
     }
 
     private var debounceTask: Task<Void, Never>?
@@ -143,9 +146,23 @@ final class GitWorkingTreeModel: ObservableObject {
                     continuation.resume(returning: .failure(String(describing: error)))
                     return
                 }
-                let stdout = String(data: out.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
-                let stderr = String(data: err.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
+                // Both pipes must be drained concurrently: a sequential
+                // read-to-EOF deadlocks as soon as the other pipe's 64KB buffer
+                // fills (realistic for `push` progress or a large `clean`).
+                var outData = Data()
+                var errData = Data()
+                let group = DispatchGroup()
+                let reader = DispatchQueue(label: "com.cmux.git.pipe-drain", attributes: .concurrent)
+                reader.async(group: group) {
+                    outData = out.fileHandleForReading.readDataToEndOfFile()
+                }
+                reader.async(group: group) {
+                    errData = err.fileHandleForReading.readDataToEndOfFile()
+                }
+                group.wait()
                 process.waitUntilExit()
+                let stdout = String(data: outData, encoding: .utf8) ?? ""
+                let stderr = String(data: errData, encoding: .utf8) ?? ""
                 if process.terminationStatus == 0 {
                     continuation.resume(returning: .success(stdout))
                 } else {
