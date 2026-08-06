@@ -8,8 +8,11 @@ nonisolated enum FilesGitTab: String, Codable {
 /// The right sidebar: a Files | Git pill header, the ~-abbreviated root path,
 /// and the active tab's content.
 struct FilesGitPanelView: View {
-    @ObservedObject var explorerState: FileExplorerState
-    @ObservedObject var gitModel: GitWorkingTreeModel
+    // Deliberately not `@ObservedObject`: neither is read in `body`, so observing them
+    // would invalidate the whole shell on every debounced git refresh for nothing.
+    // Task 6's `GitPanelView` observes `gitModel` itself.
+    let explorerState: FileExplorerState
+    let gitModel: GitWorkingTreeModel
     let rootPath: String
     let filesContent: AnyView          // FileExplorerPanelView supplied by the mount site
     let gitContent: AnyView            // GitPanelView supplied by the mount site (Task 6)
@@ -22,8 +25,10 @@ struct FilesGitPanelView: View {
         VStack(spacing: 0) {
             header
                 .padding(.vertical, 8)
-            pathLine
-                .padding(.bottom, 6)
+            if !rootPath.isEmpty {
+                pathLine
+                    .padding(.bottom, 6)
+            }
             Divider().opacity(0.35)
             switch tab {
             case .files: filesContent

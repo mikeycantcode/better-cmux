@@ -15,6 +15,7 @@ final class RightSidebarToolPanel: Panel, ObservableObject {
     private weak var sessionIndexFocusAnchorView: RightSidebarToolFocusAnchorView?
     private var fileExplorerStoreStorage: FileExplorerStore?
     private var fileExplorerStateStorage: FileExplorerState?
+    private var gitWorkingTreeModelStorage: GitWorkingTreeModel?
     private var sessionIndexStoreStorage: SessionIndexStore?
     private var workspaceObservationCancellable: AnyCancellable?
 
@@ -37,6 +38,16 @@ final class RightSidebarToolPanel: Panel, ObservableObject {
             syncFileExplorerRoot(from: workspace, store: store)
         }
         return store
+    }
+
+    /// Created on first use so panes that never show the Files shell never spawn a
+    /// git watcher. Seeded from the store's already-synced root, since
+    /// `syncFileExplorerRoot` may have run before this model existed.
+    var gitWorkingTreeModel: GitWorkingTreeModel {
+        if let model = gitWorkingTreeModelStorage { return model }
+        let model = GitWorkingTreeModel(repoPath: fileExplorerStore.rootPath)
+        gitWorkingTreeModelStorage = model
+        return model
     }
 
     var fileExplorerState: FileExplorerState {
@@ -166,15 +177,48 @@ final class RightSidebarToolPanel: Panel, ObservableObject {
         let directory = workspace.currentDirectory.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !directory.isEmpty else {
             store.applyWorkspaceRoot(.none)
+            gitWorkingTreeModelStorage?.repoPath = ""
             return
         }
 
         store.applyWorkspaceRoot(.local(workspaceId: workspace.id, path: directory))
+        gitWorkingTreeModelStorage?.repoPath = directory
     }
 
     private func syncSessionIndexRoot(from workspace: Workspace, store: SessionIndexStore) {
         let directory = workspace.currentDirectory.trimmingCharacters(in: .whitespacesAndNewlines)
         store.setCurrentDirectoryIfChanged(directory.isEmpty ? nil : directory)
+    }
+}
+
+/// Pane-hosted Files surface. Exists as its own view so the store is observed here —
+/// the path line in `FilesGitPanelView` must refresh when the workspace root changes.
+private struct PaneFilesGitShell: View {
+    let panel: RightSidebarToolPanel
+    @ObservedObject var store: FileExplorerStore
+    let onFocus: () -> Void
+
+    var body: some View {
+        FilesGitPanelView(
+            explorerState: panel.fileExplorerState,
+            gitModel: panel.gitWorkingTreeModel,
+            rootPath: store.rootPath,
+            filesContent: AnyView(
+                FileExplorerPanelView(
+                    store: store,
+                    state: panel.fileExplorerState,
+                    onOpenFilePreview: panel.openFilePreview,
+                    presentation: .files,
+                    placement: .pane,
+                    onFocus: onFocus,
+                    onContainerChange: panel.attachFileExplorerContainer
+                )
+            ),
+            // Task 6 replaces this placeholder with GitPanelView.
+            gitContent: AnyView(
+                Color.clear.frame(maxWidth: .infinity, maxHeight: .infinity)
+            )
+        )
     }
 }
 
@@ -206,14 +250,10 @@ struct RightSidebarToolPanelView: View {
     private var content: some View {
         switch panel.mode {
         case .files:
-            FileExplorerPanelView(
+            PaneFilesGitShell(
+                panel: panel,
                 store: panel.fileExplorerStore,
-                state: panel.fileExplorerState,
-                onOpenFilePreview: panel.openFilePreview,
-                presentation: .files,
-                placement: .pane,
-                onFocus: requestPanelFocusIfNeeded,
-                onContainerChange: panel.attachFileExplorerContainer
+                onFocus: requestPanelFocusIfNeeded
             )
         case .find:
             FileExplorerPanelView(

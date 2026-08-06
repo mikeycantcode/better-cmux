@@ -6,9 +6,6 @@
 	objectVersion = 60;
 	objects = {
 /* Begin PBXBuildFile section */
-		C12985000000000000000002 /* CLISocketSentryTelemetry.swift in Sources */ = {isa = PBXBuildFile; fileRef = C12985000000000000000001 /* CLISocketSentryTelemetry.swift */; };
-		5F5553CB5553CB5553CB0001 /* RightSidebarRemoteCommandTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5F5553CB5553CB5553CB0002 /* RightSidebarRemoteCommandTests.swift */; };
-		B37A0000000000000000000D /* RightSidebarRemoteCommand.swift in Sources */ = {isa = PBXBuildFile; fileRef = B37A0000000000000000000E /* RightSidebarRemoteCommand.swift */; };
 		A9E020000000000000000006 /* agent-session-react in Resources */ = {isa = PBXBuildFile; fileRef = A9E010000000000000000006 /* agent-session-react */; };
 		A9E020000000000000000007 /* agent-session-solid in Resources */ = {isa = PBXBuildFile; fileRef = A9E010000000000000000007 /* agent-session-solid */; };
 		A6E47B1A0000000000000001 /* AgentCapabilityBrief.swift in Sources */ = {isa = PBXBuildFile; fileRef = A6E47B1A0000000000000002 /* AgentCapabilityBrief.swift */; };
@@ -170,6 +167,7 @@
 		A5D41205A1B2C3D4E5F60718 /* CLINotifyProcessTestSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5D41206A1B2C3D4E5F60718 /* CLINotifyProcessTestSupport.swift */; };
 		A5D41209A1B2C3D4E5F60718 /* CLIRovoDevHookPersistenceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5D4120AA1B2C3D4E5F60718 /* CLIRovoDevHookPersistenceTests.swift */; };
 		B900004AA1B2C3D4E5F60719 /* CLISocketPathResolver.swift in Sources */ = {isa = PBXBuildFile; fileRef = B900004BA1B2C3D4E5F60719 /* CLISocketPathResolver.swift */; };
+		C12985000000000000000002 /* CLISocketSentryTelemetry.swift in Sources */ = {isa = PBXBuildFile; fileRef = C12985000000000000000001 /* CLISocketSentryTelemetry.swift */; };
 		C12984000000000000000004 /* CLIStdioSIGPIPERegressionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C12984000000000000000003 /* CLIStdioSIGPIPERegressionTests.swift */; };
 		C10D51700000000000000002 /* ClosedItemHistory.swift in Sources */ = {isa = PBXBuildFile; fileRef = C10D51700000000000000001 /* ClosedItemHistory.swift */; };
 		B9000025A1B2C3D4E5F60719 /* CloseWindowConfirmDialogUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B9000026A1B2C3D4E5F60719 /* CloseWindowConfirmDialogUITests.swift */; };
@@ -445,6 +443,8 @@
 		F11E52270000000000005227 /* FilePreviewWordWrapSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = F11E52270000000000005228 /* FilePreviewWordWrapSettings.swift */; };
 		A5001445A5001445A5001445 /* FilePreviewWorkspaceOpenSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5001444A5001444A5001444 /* FilePreviewWorkspaceOpenSupport.swift */; };
 		FE002103 /* FileSearchRipgrepParserTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE002003 /* FileSearchRipgrepParserTests.swift */; };
+		G17A00000000000000000022 /* FilesGitPanelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = G17A00000000000000000021 /* FilesGitPanelTests.swift */; };
+		G17A00000000000000000012 /* FilesGitPanelView.swift in Sources */ = {isa = PBXBuildFile; fileRef = G17A00000000000000000011 /* FilesGitPanelView.swift */; };
 		C35610000000000000000001 /* FinderFileDropRegressionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C35610000000000000000002 /* FinderFileDropRegressionTests.swift */; };
 		D0E0F0B4A1B2C3D4E5F60718 /* FindSelectionShortcutUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0E0F0B5A1B2C3D4E5F60718 /* FindSelectionShortcutUITests.swift */; };
 		F1A0C0DE0000000000000002 /* FindTextFieldSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A0C0DE0000000000000001 /* FindTextFieldSupport.swift */; };
@@ -484,6 +484,10 @@
 		D3284101A1B2C3D4E5F60718 /* GhosttyTextInputSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3284102A1B2C3D4E5F60718 /* GhosttyTextInputSupport.swift */; };
 		D7C6F5000000000000000000 /* GhosttyTitleChange.swift in Sources */ = {isa = PBXBuildFile; fileRef = D7C6F5000000000000000001 /* GhosttyTitleChange.swift */; };
 		D7C6F5010000000000000000 /* GhosttyTitleChangeSubscription.swift in Sources */ = {isa = PBXBuildFile; fileRef = D7C6F5010000000000000001 /* GhosttyTitleChangeSubscription.swift */; };
+		G17A00000000000000000002 /* GitPorcelainStatus.swift in Sources */ = {isa = PBXBuildFile; fileRef = G17A00000000000000000001 /* GitPorcelainStatus.swift */; };
+		G17A00000000000000000004 /* GitPorcelainStatusTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = G17A00000000000000000003 /* GitPorcelainStatusTests.swift */; };
+		G17A00000000000000000006 /* GitWorkingTreeModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = G17A00000000000000000005 /* GitWorkingTreeModel.swift */; };
+		G17A00000000000000000008 /* GitWorkingTreeModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = G17A00000000000000000007 /* GitWorkingTreeModelTests.swift */; };
 		3865A0023865A0023865A002 /* GlobalSearchCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3865B0023865B0023865B002 /* GlobalSearchCoordinator.swift */; };
 		3865A0073865A0073865A007 /* GlobalSearchDocuments.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3865B0073865B0073865B007 /* GlobalSearchDocuments.swift */; };
 		3865A0083865A0083865A008 /* GlobalSearchPanelCaptureManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3865B0083865B0083865B008 /* GlobalSearchPanelCaptureManager.swift */; };
@@ -530,10 +534,6 @@
 		F5168A030000000000000001 /* MarkdownFontSizeSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5168A030000000000000002 /* MarkdownFontSizeSettings.swift */; };
 		F5168A050000000000000001 /* MarkdownMaxWidthSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5168A050000000000000002 /* MarkdownMaxWidthSettings.swift */; };
 		D6069002D6069002D6069002 /* MarkdownMermaidZoomTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D6069001D6069001D6069001 /* MarkdownMermaidZoomTests.swift */; };
-		6CCC11CD8E6A30F3368E1EC4 /* MermaidDiagramModeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 403CA2D755166D6B8EFAF8B5 /* MermaidDiagramModeTests.swift */; };
-		ABF058BDBFBA0B323CA12DA8 /* MermaidDiagramFileResolverTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8FE8BD2144989A16C3636F1B /* MermaidDiagramFileResolverTests.swift */; };
-		8D90D99E7B0A4799BAA6F100 /* MermaidDiagramRoutingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E5EA053F471643CBAC80E9C5 /* MermaidDiagramRoutingTests.swift */; };
-		F876F984027F3CA4C20D7BB2 /* MermaidDiagramFileResolver.swift in Sources */ = {isa = PBXBuildFile; fileRef = C9BF96BDA2089ABA9B5E9E18 /* MermaidDiagramFileResolver.swift */; };
 		A5001420 /* MarkdownPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5001418 /* MarkdownPanel.swift */; };
 		A50014F2 /* MarkdownPanelFileLinkResolver.swift in Sources */ = {isa = PBXBuildFile; fileRef = A50014F0 /* MarkdownPanelFileLinkResolver.swift */; };
 		D3664002D3664002D3664002 /* MarkdownPanelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3664001D3664001D3664001 /* MarkdownPanelTests.swift */; };
@@ -558,6 +558,10 @@
 		C0DE70590000000000000002 /* MenuBarProfilingSubmissionActions.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0DE70590000000000000001 /* MenuBarProfilingSubmissionActions.swift */; };
 		3865A0033865A0033865A003 /* MenubarSearchPopover.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3865B0033865B0033865B003 /* MenubarSearchPopover.swift */; };
 		E1000000A1B2C3D4E5F60718 /* MenuKeyEquivalentRoutingUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1000001A1B2C3D4E5F60718 /* MenuKeyEquivalentRoutingUITests.swift */; };
+		F876F984027F3CA4C20D7BB2 /* MermaidDiagramFileResolver.swift in Sources */ = {isa = PBXBuildFile; fileRef = C9BF96BDA2089ABA9B5E9E18 /* MermaidDiagramFileResolver.swift */; };
+		ABF058BDBFBA0B323CA12DA8 /* MermaidDiagramFileResolverTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8FE8BD2144989A16C3636F1B /* MermaidDiagramFileResolverTests.swift */; };
+		6CCC11CD8E6A30F3368E1EC4 /* MermaidDiagramModeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 403CA2D755166D6B8EFAF8B5 /* MermaidDiagramModeTests.swift */; };
+		8D90D99E7B0A4799BAA6F100 /* MermaidDiagramRoutingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E5EA053F471643CBAC80E9C5 /* MermaidDiagramRoutingTests.swift */; };
 		C0DE3150A00000000000001 /* MinimalModeSidebarControls.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0DE3150A00000000000002 /* MinimalModeSidebarControls.swift */; };
 		13AB1A2E5DA6AD02DCAE971D /* MockBridgeInputCapture.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD3B5F249DECAB446CC71D32 /* MockBridgeInputCapture.swift */; };
 		BBC0DE000000000000000022 /* monaco in Resources */ = {isa = PBXBuildFile; fileRef = BBC0DE000000000000000021 /* monaco */; };
@@ -573,8 +577,6 @@
 		ED17ED17ED17ED17ED170022 /* MonacoDiffView.swift in Sources */ = {isa = PBXBuildFile; fileRef = ED17ED17ED17ED17ED170021 /* MonacoDiffView.swift */; };
 		BBC0DE000000000000000010 /* MonacoEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBC0DE00000000000000000F /* MonacoEditorView.swift */; };
 		BBC0DE00000000000000000C /* MonacoLanguageMap.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBC0DE00000000000000000B /* MonacoLanguageMap.swift */; };
-		G17A00000000000000000002 /* GitPorcelainStatus.swift in Sources */ = {isa = PBXBuildFile; fileRef = G17A00000000000000000001 /* GitPorcelainStatus.swift */; };
-		G17A00000000000000000006 /* GitWorkingTreeModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = G17A00000000000000000005 /* GitWorkingTreeModel.swift */; };
 		BBC0DE00000000000000001C /* MonacoLanguageMapTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBC0DE00000000000000001B /* MonacoLanguageMapTests.swift */; };
 		BBC0DE00000000000000000E /* MonacoWebController.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBC0DE00000000000000000D /* MonacoWebController.swift */; };
 		B9000015A1B2C3D4E5F60719 /* MultiWindowNotificationsUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B9000016A1B2C3D4E5F60719 /* MultiWindowNotificationsUITests.swift */; };
@@ -661,8 +663,9 @@
 		C3408A000000000000000003 /* RightSidebarCommandPaletteTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C3408A000000000000000004 /* RightSidebarCommandPaletteTests.swift */; };
 		B37A00000000000000000003 /* RightSidebarMode+Availability.swift in Sources */ = {isa = PBXBuildFile; fileRef = B37A00000000000000000004 /* RightSidebarMode+Availability.swift */; };
 		FE003103 /* RightSidebarPanelView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE003003 /* RightSidebarPanelView.swift */; };
-		G17A00000000000000000012 /* FilesGitPanelView.swift in Sources */ = {isa = PBXBuildFile; fileRef = G17A00000000000000000011 /* FilesGitPanelView.swift */; };
 		C57570010000000000000002 /* RightSidebarPanelViewTestSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = C57570010000000000000001 /* RightSidebarPanelViewTestSupport.swift */; };
+		B37A0000000000000000000D /* RightSidebarRemoteCommand.swift in Sources */ = {isa = PBXBuildFile; fileRef = B37A0000000000000000000E /* RightSidebarRemoteCommand.swift */; };
+		5F5553CB5553CB5553CB0001 /* RightSidebarRemoteCommandTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5F5553CB5553CB5553CB0002 /* RightSidebarRemoteCommandTests.swift */; };
 		FE0031A3 /* RightSidebarToolPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE0030A3 /* RightSidebarToolPanel.swift */; };
 		C46790000000000000000005 /* RosettaNativeRelaunch.swift in Sources */ = {isa = PBXBuildFile; fileRef = C46790000000000000000006 /* RosettaNativeRelaunch.swift */; };
 		C46790000000000000000007 /* RosettaNativeRelaunchTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C46790000000000000000008 /* RosettaNativeRelaunchTests.swift */; };
@@ -790,9 +793,6 @@
 		C06552030000000000000001 /* TabManagerTitleUpdateStalenessTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C06552030000000000000002 /* TabManagerTitleUpdateStalenessTests.swift */; };
 		C06552020000000000000001 /* TabManagerTitleUpdateTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C06552020000000000000002 /* TabManagerTitleUpdateTests.swift */; };
 		B6BF3DC98DB1495E57900199 /* TabManagerUnitTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 42092CDB2109E250F7F2A76E /* TabManagerUnitTests.swift */; };
-		G17A00000000000000000022 /* FilesGitPanelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = G17A00000000000000000021 /* FilesGitPanelTests.swift */; };
-		G17A00000000000000000004 /* GitPorcelainStatusTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = G17A00000000000000000003 /* GitPorcelainStatusTests.swift */; };
-		G17A00000000000000000008 /* GitWorkingTreeModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = G17A00000000000000000007 /* GitWorkingTreeModelTests.swift */; };
 		C7A507000000000000000002 /* TaskManagerResourcesTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C7A507000000000000000001 /* TaskManagerResourcesTests.swift */; };
 		C7A503000000000000000002 /* TaskManagerSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = C7A503000000000000000001 /* TaskManagerSnapshot.swift */; };
 		C7A504000000000000000002 /* TaskManagerTypes.swift in Sources */ = {isa = PBXBuildFile; fileRef = C7A504000000000000000001 /* TaskManagerTypes.swift */; };
@@ -1039,9 +1039,6 @@
 		};
 /* End PBXCopyFilesBuildPhase section */
 /* Begin PBXFileReference section */
-		C12985000000000000000001 /* CLISocketSentryTelemetry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CLISocketSentryTelemetry.swift; sourceTree = "<group>"; };
-		5F5553CB5553CB5553CB0002 /* RightSidebarRemoteCommandTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RightSidebarRemoteCommandTests.swift; sourceTree = "<group>"; };
-		B37A0000000000000000000E /* RightSidebarRemoteCommand.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RightSidebarRemoteCommand.swift; sourceTree = "<group>"; };
 		A9E010000000000000000006 /* agent-session-react */ = {isa = PBXFileReference; lastKnownFileType = folder; path = "agent-session-react"; sourceTree = "<group>"; };
 		A9E010000000000000000007 /* agent-session-solid */ = {isa = PBXFileReference; lastKnownFileType = folder; path = "agent-session-solid"; sourceTree = "<group>"; };
 		A6E47B1A0000000000000002 /* AgentCapabilityBrief.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentCapabilityBrief.swift; sourceTree = "<group>"; };
@@ -1201,6 +1198,7 @@
 		A5D41206A1B2C3D4E5F60718 /* CLINotifyProcessTestSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CLINotifyProcessTestSupport.swift; sourceTree = "<group>"; };
 		A5D4120AA1B2C3D4E5F60718 /* CLIRovoDevHookPersistenceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CLIRovoDevHookPersistenceTests.swift; sourceTree = "<group>"; };
 		B900004BA1B2C3D4E5F60719 /* CLISocketPathResolver.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CLISocketPathResolver.swift; sourceTree = "<group>"; };
+		C12985000000000000000001 /* CLISocketSentryTelemetry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CLISocketSentryTelemetry.swift; sourceTree = "<group>"; };
 		C12984000000000000000003 /* CLIStdioSIGPIPERegressionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CLIStdioSIGPIPERegressionTests.swift; sourceTree = "<group>"; };
 		C10D51700000000000000001 /* ClosedItemHistory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClosedItemHistory.swift; sourceTree = "<group>"; };
 		B9000026A1B2C3D4E5F60719 /* CloseWindowConfirmDialogUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CloseWindowConfirmDialogUITests.swift; sourceTree = "<group>"; };
@@ -1431,6 +1429,8 @@
 		F11E52270000000000005228 /* FilePreviewWordWrapSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Panels/FilePreviewWordWrapSettings.swift; sourceTree = "<group>"; };
 		A5001444A5001444A5001444 /* FilePreviewWorkspaceOpenSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Panels/FilePreviewWorkspaceOpenSupport.swift; sourceTree = "<group>"; };
 		FE002003 /* FileSearchRipgrepParserTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileSearchRipgrepParserTests.swift; sourceTree = "<group>"; };
+		G17A00000000000000000021 /* FilesGitPanelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilesGitPanelTests.swift; sourceTree = "<group>"; };
+		G17A00000000000000000011 /* FilesGitPanelView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilesGitPanelView.swift; sourceTree = "<group>"; };
 		C35610000000000000000002 /* FinderFileDropRegressionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FinderFileDropRegressionTests.swift; sourceTree = "<group>"; };
 		D0E0F0B5A1B2C3D4E5F60718 /* FindSelectionShortcutUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FindSelectionShortcutUITests.swift; sourceTree = "<group>"; };
 		F1A0C0DE0000000000000001 /* FindTextFieldSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Find/FindTextFieldSupport.swift; sourceTree = "<group>"; };
@@ -1471,6 +1471,10 @@
 		D3284102A1B2C3D4E5F60718 /* GhosttyTextInputSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GhosttyTextInputSupport.swift; sourceTree = "<group>"; };
 		D7C6F5000000000000000001 /* GhosttyTitleChange.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GhosttyTitleChange.swift; sourceTree = "<group>"; };
 		D7C6F5010000000000000001 /* GhosttyTitleChangeSubscription.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GhosttyTitleChangeSubscription.swift; sourceTree = "<group>"; };
+		G17A00000000000000000001 /* GitPorcelainStatus.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Git/GitPorcelainStatus.swift"; sourceTree = "<group>"; };
+		G17A00000000000000000003 /* GitPorcelainStatusTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GitPorcelainStatusTests.swift; sourceTree = "<group>"; };
+		G17A00000000000000000005 /* GitWorkingTreeModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Git/GitWorkingTreeModel.swift"; sourceTree = "<group>"; };
+		G17A00000000000000000007 /* GitWorkingTreeModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GitWorkingTreeModelTests.swift; sourceTree = "<group>"; };
 		3865B0023865B0023865B002 /* GlobalSearchCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Search/GlobalSearchCoordinator.swift; sourceTree = "<group>"; };
 		3865B0073865B0073865B007 /* GlobalSearchDocuments.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Search/GlobalSearchDocuments.swift; sourceTree = "<group>"; };
 		3865B0083865B0083865B008 /* GlobalSearchPanelCaptureManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Search/GlobalSearchPanelCaptureManager.swift; sourceTree = "<group>"; };
@@ -1516,10 +1520,6 @@
 		F5168A030000000000000002 /* MarkdownFontSizeSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Panels/MarkdownFontSizeSettings.swift; sourceTree = "<group>"; };
 		F5168A050000000000000002 /* MarkdownMaxWidthSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Panels/MarkdownMaxWidthSettings.swift; sourceTree = "<group>"; };
 		D6069001D6069001D6069001 /* MarkdownMermaidZoomTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MarkdownMermaidZoomTests.swift; sourceTree = "<group>"; };
-		403CA2D755166D6B8EFAF8B5 /* MermaidDiagramModeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MermaidDiagramModeTests.swift; sourceTree = "<group>"; };
-		8FE8BD2144989A16C3636F1B /* MermaidDiagramFileResolverTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MermaidDiagramFileResolverTests.swift; sourceTree = "<group>"; };
-		E5EA053F471643CBAC80E9C5 /* MermaidDiagramRoutingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MermaidDiagramRoutingTests.swift; sourceTree = "<group>"; };
-		C9BF96BDA2089ABA9B5E9E18 /* MermaidDiagramFileResolver.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Panels/MermaidDiagramFileResolver.swift; sourceTree = "<group>"; };
 		A5001418 /* MarkdownPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Panels/MarkdownPanel.swift; sourceTree = "<group>"; };
 		A50014F0 /* MarkdownPanelFileLinkResolver.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Panels/MarkdownPanelFileLinkResolver.swift; sourceTree = "<group>"; };
 		D3664001D3664001D3664001 /* MarkdownPanelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MarkdownPanelTests.swift; sourceTree = "<group>"; };
@@ -1543,6 +1543,10 @@
 		C0DE70590000000000000001 /* MenuBarProfilingSubmissionActions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = App/MenuBarProfilingSubmissionActions.swift; sourceTree = "<group>"; };
 		3865B0033865B0033865B003 /* MenubarSearchPopover.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Search/MenubarSearchPopover.swift; sourceTree = "<group>"; };
 		E1000001A1B2C3D4E5F60718 /* MenuKeyEquivalentRoutingUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuKeyEquivalentRoutingUITests.swift; sourceTree = "<group>"; };
+		C9BF96BDA2089ABA9B5E9E18 /* MermaidDiagramFileResolver.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Panels/MermaidDiagramFileResolver.swift; sourceTree = "<group>"; };
+		8FE8BD2144989A16C3636F1B /* MermaidDiagramFileResolverTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MermaidDiagramFileResolverTests.swift; sourceTree = "<group>"; };
+		403CA2D755166D6B8EFAF8B5 /* MermaidDiagramModeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MermaidDiagramModeTests.swift; sourceTree = "<group>"; };
+		E5EA053F471643CBAC80E9C5 /* MermaidDiagramRoutingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MermaidDiagramRoutingTests.swift; sourceTree = "<group>"; };
 		C0DE3150A00000000000002 /* MinimalModeSidebarControls.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Update/MinimalModeSidebarControls.swift; sourceTree = "<group>"; };
 		CD3B5F249DECAB446CC71D32 /* MockBridgeInputCapture.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockBridgeInputCapture.swift; sourceTree = "<group>"; };
 		BBC0DE000000000000000021 /* monaco */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = folder; path = monaco; sourceTree = "<group>"; };
@@ -1558,8 +1562,6 @@
 		ED17ED17ED17ED17ED170021 /* MonacoDiffView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Monaco/MonacoDiffView.swift"; sourceTree = "<group>"; };
 		BBC0DE00000000000000000F /* MonacoEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Monaco/MonacoEditorView.swift"; sourceTree = "<group>"; };
 		BBC0DE00000000000000000B /* MonacoLanguageMap.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Monaco/MonacoLanguageMap.swift"; sourceTree = "<group>"; };
-		G17A00000000000000000001 /* GitPorcelainStatus.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Git/GitPorcelainStatus.swift"; sourceTree = "<group>"; };
-		G17A00000000000000000005 /* GitWorkingTreeModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Git/GitWorkingTreeModel.swift"; sourceTree = "<group>"; };
 		BBC0DE00000000000000001B /* MonacoLanguageMapTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MonacoLanguageMapTests.swift; sourceTree = "<group>"; };
 		BBC0DE00000000000000000D /* MonacoWebController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Monaco/MonacoWebController.swift"; sourceTree = "<group>"; };
 		B9000016A1B2C3D4E5F60719 /* MultiWindowNotificationsUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MultiWindowNotificationsUITests.swift; sourceTree = "<group>"; };
@@ -1646,8 +1648,9 @@
 		C3408A000000000000000004 /* RightSidebarCommandPaletteTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RightSidebarCommandPaletteTests.swift; sourceTree = "<group>"; };
 		B37A00000000000000000004 /* RightSidebarMode+Availability.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "RightSidebarMode+Availability.swift"; sourceTree = "<group>"; };
 		FE003003 /* RightSidebarPanelView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RightSidebarPanelView.swift; sourceTree = "<group>"; };
-		G17A00000000000000000011 /* FilesGitPanelView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilesGitPanelView.swift; sourceTree = "<group>"; };
 		C57570010000000000000001 /* RightSidebarPanelViewTestSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RightSidebarPanelViewTestSupport.swift; sourceTree = "<group>"; };
+		B37A0000000000000000000E /* RightSidebarRemoteCommand.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RightSidebarRemoteCommand.swift; sourceTree = "<group>"; };
+		5F5553CB5553CB5553CB0002 /* RightSidebarRemoteCommandTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RightSidebarRemoteCommandTests.swift; sourceTree = "<group>"; };
 		FE0030A3 /* RightSidebarToolPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RightSidebarToolPanel.swift; sourceTree = "<group>"; };
 		C46790000000000000000006 /* RosettaNativeRelaunch.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = App/RosettaNativeRelaunch.swift; sourceTree = "<group>"; };
 		C46790000000000000000008 /* RosettaNativeRelaunchTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RosettaNativeRelaunchTests.swift; sourceTree = "<group>"; };
@@ -1774,9 +1777,6 @@
 		C06552030000000000000002 /* TabManagerTitleUpdateStalenessTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TabManagerTitleUpdateStalenessTests.swift; sourceTree = "<group>"; };
 		C06552020000000000000002 /* TabManagerTitleUpdateTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TabManagerTitleUpdateTests.swift; sourceTree = "<group>"; };
 		42092CDB2109E250F7F2A76E /* TabManagerUnitTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TabManagerUnitTests.swift; sourceTree = "<group>"; };
-		G17A00000000000000000021 /* FilesGitPanelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilesGitPanelTests.swift; sourceTree = "<group>"; };
-		G17A00000000000000000003 /* GitPorcelainStatusTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GitPorcelainStatusTests.swift; sourceTree = "<group>"; };
-		G17A00000000000000000007 /* GitWorkingTreeModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GitWorkingTreeModelTests.swift; sourceTree = "<group>"; };
 		C7A507000000000000000001 /* TaskManagerResourcesTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskManagerResourcesTests.swift; sourceTree = "<group>"; };
 		C7A503000000000000000001 /* TaskManagerSnapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskManagerSnapshot.swift; sourceTree = "<group>"; };
 		C7A504000000000000000001 /* TaskManagerTypes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskManagerTypes.swift; sourceTree = "<group>"; };
@@ -3676,6 +3676,7 @@
 				D0B10016A1B2C3D4E5F60001 /* FilePreviewTextEditor.swift in Sources */,
 					F11E52270000000000005227 /* FilePreviewWordWrapSettings.swift in Sources */,
 				A5001445A5001445A5001445 /* FilePreviewWorkspaceOpenSupport.swift in Sources */,
+				G17A00000000000000000012 /* FilesGitPanelView.swift in Sources */,
 				F1A0C0DE0000000000000002 /* FindTextFieldSupport.swift in Sources */,
 				F0C05170000000000000002 /* FocusHistory.swift in Sources */,
 				C4160A020000000000000001 /* FocusHistoryMenuInvalidator.swift in Sources */,
@@ -3697,6 +3698,8 @@
 				D3284101A1B2C3D4E5F60718 /* GhosttyTextInputSupport.swift in Sources */,
 				D7C6F5000000000000000000 /* GhosttyTitleChange.swift in Sources */,
 				D7C6F5010000000000000000 /* GhosttyTitleChangeSubscription.swift in Sources */,
+				G17A00000000000000000002 /* GitPorcelainStatus.swift in Sources */,
+				G17A00000000000000000006 /* GitWorkingTreeModel.swift in Sources */,
 					3865A0023865A0023865A002 /* GlobalSearchCoordinator.swift in Sources */,
 				3865A0073865A0073865A007 /* GlobalSearchDocuments.swift in Sources */,
 				3865A0083865A0083865A008 /* GlobalSearchPanelCaptureManager.swift in Sources */,
@@ -3723,7 +3726,6 @@
 				F5168A050000000000000001 /* MarkdownMaxWidthSettings.swift in Sources */,
 				A5001420 /* MarkdownPanel.swift in Sources */,
 				A50014F2 /* MarkdownPanelFileLinkResolver.swift in Sources */,
-				F876F984027F3CA4C20D7BB2 /* MermaidDiagramFileResolver.swift in Sources */,
 				A5001421 /* MarkdownPanelView.swift in Sources */,
 				A50014F7 /* MarkdownRemoteImageLoader.swift in Sources */,
 				F5168A020000000000000001 /* MarkdownTypographyControl.swift in Sources */,
@@ -3741,6 +3743,7 @@
 					C0DE70580000000000000002 /* MenuBarProfilingProgressWindowLayout.swift in Sources */,
 					C0DE70590000000000000002 /* MenuBarProfilingSubmissionActions.swift in Sources */,
 					3865A0033865A0033865A003 /* MenubarSearchPopover.swift in Sources */,
+				F876F984027F3CA4C20D7BB2 /* MermaidDiagramFileResolver.swift in Sources */,
 				C0DE3150A00000000000001 /* MinimalModeSidebarControls.swift in Sources */,
 				BBC0DE000000000000000004 /* MonacoAssetMime.swift in Sources */,
 				BBC0DE000000000000000006 /* MonacoAssetPath.swift in Sources */,
@@ -3751,8 +3754,6 @@
 				ED17ED17ED17ED17ED170022 /* MonacoDiffView.swift in Sources */,
 				BBC0DE000000000000000010 /* MonacoEditorView.swift in Sources */,
 				BBC0DE00000000000000000C /* MonacoLanguageMap.swift in Sources */,
-				G17A00000000000000000002 /* GitPorcelainStatus.swift in Sources */,
-				G17A00000000000000000006 /* GitWorkingTreeModel.swift in Sources */,
 				BBC0DE00000000000000000E /* MonacoWebController.swift in Sources */,
 				596100000000000000000003 /* NativeNotificationDeliveryHooks.swift in Sources */,
 				C06552010000000000000003 /* NotificationBurstCoalescer.swift in Sources */,
@@ -3806,7 +3807,7 @@
 				B7F9A604B7F9A604B7F9A604 /* RightSidebarChromeStyle.swift in Sources */,
 				B37A00000000000000000003 /* RightSidebarMode+Availability.swift in Sources */,
 				FE003103 /* RightSidebarPanelView.swift in Sources */,
-				G17A00000000000000000012 /* FilesGitPanelView.swift in Sources */,
+				B37A0000000000000000000D /* RightSidebarRemoteCommand.swift in Sources */,
 				FE0031A3 /* RightSidebarToolPanel.swift in Sources */,
 				C46790000000000000000005 /* RosettaNativeRelaunch.swift in Sources */,
 				FE003105 /* RovoDevIndex.swift in Sources */,
@@ -3821,7 +3822,6 @@
 				FE003104 /* SessionIndexStore+CodexSQL.swift in Sources */,
 				FE003101 /* SessionIndexStore.swift in Sources */,
 				FE003102 /* SessionIndexView.swift in Sources */,
-				B37A0000000000000000000D /* RightSidebarRemoteCommand.swift in Sources */,
 				A5001610 /* SessionPersistence.swift in Sources */,
 				C65930020000000000000002 /* SessionPersistencePolicy+CrashStorage.swift in Sources */,
 				A5001670 /* SessionRestoredTerminalCommandStore.swift in Sources */,
@@ -4208,6 +4208,7 @@
 				BBC0DE0000000000000000A2 /* FilePreviewTextDecodeTests.swift in Sources */,
 				C0DEFC100000000000000001 /* FilePreviewTextEditorTextKitTests.swift in Sources */,
 				FE002103 /* FileSearchRipgrepParserTests.swift in Sources */,
+				G17A00000000000000000022 /* FilesGitPanelTests.swift in Sources */,
 				C35610000000000000000001 /* FinderFileDropRegressionTests.swift in Sources */,
 				C0F15A000000000000000001 /* FishShellIntegrationTests.swift in Sources */,
 				A1B2C3D4E5F60718293A4B5C /* FloatingSidebarPointerRouteTests.swift in Sources */,
@@ -4224,6 +4225,8 @@
 				3069F1D10000000000000003 /* GhosttyPasteboardFidelityTests.swift in Sources */,
 				C13519000000000000000003 /* GhosttyTerminalStartupEnvironmentTests.swift in Sources */,
 				D7AB34400000000000000003 /* GhosttyTerminalViewVisibilityPolicyTests.swift in Sources */,
+				G17A00000000000000000004 /* GitPorcelainStatusTests.swift in Sources */,
+				G17A00000000000000000008 /* GitWorkingTreeModelTests.swift in Sources */,
 				3865A0053865A0053865A005 /* GlobalSearchShortcutSettingsTests.swift in Sources */,
 				4931A11B0000000000000002 /* HiddenRightSidebarContentMountingTests.swift in Sources */,
 				F1C1AA21B7E84D10A1C10001 /* InactivePaneFirstClickFocusTests.swift in Sources */,
@@ -4239,12 +4242,12 @@
 				17C9F5BA0DD14EDC8C3E5001 /* MainWindowVisibilityControllerTests.swift in Sources */,
 				A6D1F0100000000000000002 /* MainWindowVisibilityLifecycleTests.swift in Sources */,
 				D6069002D6069002D6069002 /* MarkdownMermaidZoomTests.swift in Sources */,
-				6CCC11CD8E6A30F3368E1EC4 /* MermaidDiagramModeTests.swift in Sources */,
-				ABF058BDBFBA0B323CA12DA8 /* MermaidDiagramFileResolverTests.swift in Sources */,
-				8D90D99E7B0A4799BAA6F100 /* MermaidDiagramRoutingTests.swift in Sources */,
 				D3664002D3664002D3664002 /* MarkdownPanelTests.swift in Sources */,
 				606500010000000000000001 /* MenuBarOnlyActivationPolicyTests.swift in Sources */,
 					C0DE70520000000000000002 /* MenuBarProfilingLauncherTests.swift in Sources */,
+				ABF058BDBFBA0B323CA12DA8 /* MermaidDiagramFileResolverTests.swift in Sources */,
+				6CCC11CD8E6A30F3368E1EC4 /* MermaidDiagramModeTests.swift in Sources */,
+				8D90D99E7B0A4799BAA6F100 /* MermaidDiagramRoutingTests.swift in Sources */,
 				13AB1A2E5DA6AD02DCAE971D /* MockBridgeInputCapture.swift in Sources */,
 				BBC0DE000000000000000018 /* MonacoAssetTests.swift in Sources */,
 				BBC0DE00000000000000001E /* MonacoAtomicTextSaverTests.swift in Sources */,
@@ -4278,6 +4281,7 @@
 					F5410006A1B2C3D4E5F60718 /* RestorableAgentSessionIndexTests.swift in Sources */,
 				C3408A000000000000000003 /* RightSidebarCommandPaletteTests.swift in Sources */,
 				C57570010000000000000002 /* RightSidebarPanelViewTestSupport.swift in Sources */,
+				5F5553CB5553CB5553CB0001 /* RightSidebarRemoteCommandTests.swift in Sources */,
 				C46790000000000000000007 /* RosettaNativeRelaunchTests.swift in Sources */,
 				F5310000A1B2C3D4E5F60718 /* RovoDevHookConfigTests.swift in Sources */,
 				F5300000A1B2C3D4E5F60718 /* RovoDevSessionIndexTests.swift in Sources */,
@@ -4323,10 +4327,6 @@
 				C06552030000000000000001 /* TabManagerTitleUpdateStalenessTests.swift in Sources */,
 				C06552020000000000000001 /* TabManagerTitleUpdateTests.swift in Sources */,
 				B6BF3DC98DB1495E57900199 /* TabManagerUnitTests.swift in Sources */,
-				G17A00000000000000000022 /* FilesGitPanelTests.swift in Sources */,
-				G17A00000000000000000004 /* GitPorcelainStatusTests.swift in Sources */,
-				G17A00000000000000000008 /* GitWorkingTreeModelTests.swift in Sources */,
-				5F5553CB5553CB5553CB0001 /* RightSidebarRemoteCommandTests.swift in Sources */,
 				C7A507000000000000000002 /* TaskManagerResourcesTests.swift in Sources */,
 				C7A507000000000000004529 /* TaskManagerViewSnapshotBoundaryTests.swift in Sources */,
 				46F6AC15863EC84DCD3770A2 /* TerminalAndGhosttyTests.swift in Sources */,
