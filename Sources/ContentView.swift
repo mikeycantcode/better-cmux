@@ -2150,10 +2150,35 @@ struct ContentView: View {
         let config = style.config
         let placement = Self.fullscreenControlsPlacement(isFullScreen: true, isSidebarVisible: false)
         let edgePadding = placement?.leadingPadding ?? 10
-        let leadingWidth = TitlebarControlsLayoutMetrics.contentSize(cluster: .leading, config: config).width
-        let trailingWidth = TitlebarControlsLayoutMetrics.contentSize(cluster: .trailing, config: config).width
-        // 8pt breathing room between the widest cluster and the title.
-        return max(leadingWidth, trailingWidth) + edgePadding + 8
+        // Match the accessory's own hint reservation rather than the API default, so a
+        // changed titlebar hint offset widens the reservation here too.
+        let hintXOffset = ShortcutHintDebugSettings.defaultTitlebarHintX
+        let leadingWidth = TitlebarControlsLayoutMetrics.contentSize(
+            cluster: .leading,
+            config: config,
+            titlebarShortcutHintXOffset: hintXOffset
+        ).width
+        let trailingWidth = TitlebarControlsLayoutMetrics.contentSize(
+            cluster: .trailing,
+            config: config,
+            titlebarShortcutHintXOffset: hintXOffset
+        ).width
+        // Outside fullscreen the leading cluster lives in the AppKit titlebar accessory,
+        // which is additionally pushed right past the traffic lights. Fullscreen hides
+        // the traffic lights, so the offset is zero there and the SwiftUI cluster sits at
+        // `edgePadding`.
+        let leadingClusterOrigin = isFullScreen
+            ? edgePadding
+            : TitlebarControlsLayoutMetrics.leadingOffset(
+                trafficLightFrame: nil,
+                debugSnapshot: titlebarDebugChromeSnapshot
+            )
+        // 8pt breathing room between the widest cluster and the title. The clearance is
+        // symmetric (max of both edges) so the title stays centered on the band; only the
+        // usable title width shrinks.
+        let leadingClearance = leadingClusterOrigin + leadingWidth + 8
+        let trailingClearance = edgePadding + trailingWidth + 8
+        return max(leadingClearance, trailingClearance)
     }
 
     /// Folder icon + focused command name, centered against the full titlebar band
