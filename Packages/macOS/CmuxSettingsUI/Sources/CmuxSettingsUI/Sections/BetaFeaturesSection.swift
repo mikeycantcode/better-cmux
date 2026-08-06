@@ -7,14 +7,10 @@ import SwiftUI
 /// off by default.
 @MainActor
 public struct BetaFeaturesSection: View {
-    @State private var feed: DefaultsValueModel<Bool>
-    @State private var dock: DefaultsValueModel<Bool>
     @State private var extensions: DefaultsValueModel<Bool>
     @State private var customSidebars: DefaultsValueModel<Bool>
 
     public init(defaultsStore: UserDefaultsSettingsStore, catalog: SettingCatalog) {
-        _feed = State(initialValue: DefaultsValueModel(store: defaultsStore, key: catalog.betaFeatures.rightSidebarFeed))
-        _dock = State(initialValue: DefaultsValueModel(store: defaultsStore, key: catalog.betaFeatures.rightSidebarDock))
         _extensions = State(initialValue: DefaultsValueModel(store: defaultsStore, key: catalog.betaFeatures.extensions))
         _customSidebars = State(initialValue: DefaultsValueModel(store: defaultsStore, key: catalog.betaFeatures.customSidebars))
     }
@@ -27,10 +23,6 @@ public struct BetaFeaturesSection: View {
                     String(localized: "settings.betaFeatures.warning", defaultValue: "These features are experimental and may change or break. Enable them only when you are testing them.")
                 )
                 SettingsCardDivider()
-                feedRow
-                SettingsCardDivider()
-                dockRow
-                SettingsCardDivider()
                 extensionsRow
                 SettingsCardDivider()
                 customSidebarsRow
@@ -41,46 +33,10 @@ public struct BetaFeaturesSection: View {
 
     private func startObservingSettings() {
         let models: [any SettingObservationStarting] = [
-            feed,
-            dock,
             extensions,
             customSidebars,
         ]
         models.forEach { $0.startObserving() }
-    }
-
-    @ViewBuilder
-    private var feedRow: some View {
-        SettingsCardRow(
-            configurationReview: .settingsOnly,
-            searchAnchorID: "setting:betaFeatures:feed",
-            String(localized: "settings.betaFeatures.feed", defaultValue: "Feed"),
-            subtitle: feed.current
-                ? String(localized: "settings.betaFeatures.feed.subtitleOn", defaultValue: "Shows Feed in the right sidebar mode switcher for inline agent decisions.")
-                : String(localized: "settings.betaFeatures.feed.subtitleOff", defaultValue: "Hides Feed from the right sidebar until you enable it here.")
-        ) {
-            Toggle("", isOn: Binding(get: { feed.current }, set: { feed.set($0) }))
-                .labelsHidden()
-                .controlSize(.small)
-                .accessibilityIdentifier("SettingsBetaFeedToggle")
-        }
-    }
-
-    @ViewBuilder
-    private var dockRow: some View {
-        SettingsCardRow(
-            configurationReview: .settingsOnly,
-            searchAnchorID: "setting:betaFeatures:dock",
-            String(localized: "settings.betaFeatures.dock", defaultValue: "Dock"),
-            subtitle: dock.current
-                ? String(localized: "settings.betaFeatures.dock.subtitleOn", defaultValue: "Shows Dock in the right sidebar mode switcher for custom terminal controls.")
-                : String(localized: "settings.betaFeatures.dock.subtitleOff", defaultValue: "Hides Dock from the right sidebar until you enable it here.")
-        ) {
-            Toggle("", isOn: Binding(get: { dock.current }, set: { dock.set($0) }))
-                .labelsHidden()
-                .controlSize(.small)
-                .accessibilityIdentifier("SettingsBetaDockToggle")
-        }
     }
 
     @ViewBuilder

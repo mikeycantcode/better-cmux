@@ -137975,57 +137975,6 @@
         }
       }
     },
-    "settings.betaFeatures.dock": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Dock"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Dock"
-          }
-        }
-      }
-    },
-    "settings.betaFeatures.dock.subtitleOff": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Hides Dock from the right sidebar until you enable it here."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ここで有効にするまで、Dock を右サイドバーから隠します。"
-          }
-        }
-      }
-    },
-    "settings.betaFeatures.dock.subtitleOn": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Shows Dock in the right sidebar mode switcher for custom terminal controls."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Dock を右サイドバーのモード切り替えに表示し、カスタム端末コントロールを使えるようにします。"
-          }
-        }
-      }
-    },
     "settings.betaFeatures.extensions": {
       "extractionState": "manual",
       "localizations": {
@@ -138073,57 +138022,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "パズルボタンとサイドバー切り替えのエクステンションメニューを表示し、サイドバーエクステンションのインストールとホストを可能にします。"
-          }
-        }
-      }
-    },
-    "settings.betaFeatures.feed": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Feed"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Feed"
-          }
-        }
-      }
-    },
-    "settings.betaFeatures.feed.subtitleOff": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Hides Feed from the right sidebar until you enable it here."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ここで有効にするまで、Feed を右サイドバーから隠します。"
-          }
-        }
-      }
-    },
-    "settings.betaFeatures.feed.subtitleOn": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Shows Feed in the right sidebar mode switcher for inline agent decisions."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Feed を右サイドバーのモード切り替えに表示し、エージェントの判断をインラインで扱えるようにします。"
           }
         }
       }

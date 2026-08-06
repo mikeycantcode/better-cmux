@@ -74,10 +74,7 @@ Values for `shortcuts.bindings.<action>`:
 - `shortcuts.bindings.toggleSidebar`
 - `shortcuts.bindings.focusRightSidebar`
 - `shortcuts.bindings.switchRightSidebarToFiles`
-- `shortcuts.bindings.switchRightSidebarToFind`
-- `shortcuts.bindings.switchRightSidebarToSessions`
-- `shortcuts.bindings.switchRightSidebarToFeed`
-- `shortcuts.bindings.switchRightSidebarToDock`
+- `shortcuts.bindings.switchRightSidebarToGit`
 - `shortcuts.bindings.nextSidebarTab`
 - `shortcuts.bindings.prevSidebarTab`
 
