@@ -32,6 +32,11 @@ struct HerdrSidebarView: View {
     let onActivateAgent: (UUID, UUID) -> Void
     /// Receives the full item so menu content can be derived from compared state.
     let onSpaceContextMenu: (HerdrSidebarSpaceItem) -> AnyView
+    /// When true, each space row publishes its frame through
+    /// `SidebarWorkspaceRowFramePreferenceKey` so the host can compute Bonsplit
+    /// tab drop targets. The host gates this on an in-flight drag; the emit is
+    /// branchless (`[:]` when disabled) so toggling never re-identifies rows.
+    var publishesRowFrameAnchors: Bool = false
 
     var body: some View {
         VStack(spacing: 0) {
@@ -63,6 +68,10 @@ struct HerdrSidebarView: View {
                             contextMenuContent: onSpaceContextMenu
                         )
                         .equatable()
+                        .sidebarWorkspaceFrameAnchor(
+                            id: item.id,
+                            isEnabled: publishesRowFrameAnchors
+                        )
                     }
                 }
             }

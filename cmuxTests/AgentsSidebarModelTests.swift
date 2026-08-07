@@ -245,6 +245,54 @@ final class AgentsSidebarModelTests: XCTestCase {
         XCTAssertEqual(result.rows.first?.id, panelId)
     }
 
+    // Renaming an agent-less workspace publishes no agent row, so the sidebar
+    // only refreshes if the invalidation revision bumps.
+    func testInvalidationRevisionBumpsOnWorkspaceRename() {
+        let manager = TabManager()
+        manager.addWorkspace(autoWelcomeIfNeeded: false)
+        manager.addWorkspace(autoWelcomeIfNeeded: false)
+        let model = AgentsSidebarModel()
+        model.attach(tabManager: manager)
+
+        let baseline = model.invalidationRevision
+        let bumped = expectation(description: "invalidationRevision bumps after rename")
+        let cancellable = model.$invalidationRevision
+            .filter { $0 != baseline }
+            .sink { _ in bumped.fulfill() }
+
+        manager.tabs[0].title = "renamed-workspace"
+
+        wait(for: [bumped], timeout: 2)
+        cancellable.cancel()
+        XCTAssertGreaterThan(model.invalidationRevision, baseline)
+    }
+
+    // No real change → no republish (equality guard; the CPU rules require it).
+    func testInvalidationKeyEqualityGuard() {
+        let workspaceId = UUID()
+        let panelId = UUID()
+        let key = AgentsSidebarInvalidationKey(
+            titlesByWorkspaceId: [workspaceId: "a"],
+            selectedWorkspaceId: workspaceId,
+            focusedPanelId: panelId
+        )
+        XCTAssertEqual(key, AgentsSidebarInvalidationKey(
+            titlesByWorkspaceId: [workspaceId: "a"],
+            selectedWorkspaceId: workspaceId,
+            focusedPanelId: panelId
+        ))
+        XCTAssertNotEqual(key, AgentsSidebarInvalidationKey(
+            titlesByWorkspaceId: [workspaceId: "b"],
+            selectedWorkspaceId: workspaceId,
+            focusedPanelId: panelId
+        ))
+        XCTAssertNotEqual(key, AgentsSidebarInvalidationKey(
+            titlesByWorkspaceId: [workspaceId: "a"],
+            selectedWorkspaceId: workspaceId,
+            focusedPanelId: UUID()
+        ))
+    }
+
     // Spaces items: flat ordered rows, rollups applied, selection flagged.
     @MainActor
     func testHerdrSpaceItemsFlattensRenderItemsInOrder() {

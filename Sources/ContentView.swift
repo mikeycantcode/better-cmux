@@ -10192,8 +10192,17 @@ struct SidebarWorkspaceTopDropIndicator: View {
 struct VerticalTabsSidebar: View {
     var updateViewModel: UpdateStateModel
     @ObservedObject var fileExplorerState: FileExplorerState
-    @ObservedObject var leftFileExplorerStore: FileExplorerStore
-    @ObservedObject var leftFileExplorerState: FileExplorerState
+    // Deliberately NOT `@ObservedObject`. Neither sidebar branch renders the
+    // left file explorer any more (the herdr layout replaced the split, and the
+    // extension branch never had it), but `FileExplorerStore` keeps publishing
+    // as the workspace root is applied on every selection change. Observing it
+    // here re-evaluated the whole sidebar body — including the workspace/space
+    // list — on every file-tree publish, for output nobody renders. They stay
+    // as plain references so the still-compiled split code (`explorerSplitDivider`)
+    // can read and write them; whichever view actually renders the explorer owns
+    // the observation.
+    let leftFileExplorerStore: FileExplorerStore
+    let leftFileExplorerState: FileExplorerState
     let onOpenFileInEditor: (String) -> Void
     @State private var explorerSplitDragStartFraction: CGFloat?
     @State private var isExplorerSplitDragging = false
@@ -10463,7 +10472,11 @@ struct VerticalTabsSidebar: View {
     /// "unable to type-check this expression in reasonable time".
     @ViewBuilder
     private func herdrSidebarContent(renderContext: WorkspaceListRenderContext) -> some View {
-        HerdrSidebarView(
+        let shouldCollectWorkspaceDropTargets = SidebarDropPlanner().shouldCollectWorkspaceDropTargets(
+            draggedTabId: dragState.draggedTabId,
+            isBonsplitWorkspaceDropActive: isBonsplitWorkspaceDropTargetCollectionActive
+        )
+        let list = HerdrSidebarView(
             spaces: HerdrSidebarView.herdrSpaceItems(
                 renderItems: renderContext.workspaceRenderItems,
                 rollups: agentsModel.workspaceRollups,
@@ -10492,11 +10505,26 @@ struct VerticalTabsSidebar: View {
                         isPinned: item.isPinned
                     )
                 )
-            }
+            },
+            publishesRowFrameAnchors: shouldCollectWorkspaceDropTargets
         )
         .padding(.top, SidebarWorkspaceScrollInsets.workspaceList.top)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .task { agentsModel.attach(tabManager: tabManager) }
+
+        // Bonsplit pane tabs can be dragged onto the sidebar to move into an
+        // existing workspace or spawn a new one. `workspaceScrollArea` used to
+        // be the only mount point for that capability, so the herdr branch
+        // re-mounts the same gated frame reader + drop-capture overlay pair.
+        rowsWithGatedDropTargetReader(
+            rows: list,
+            renderContext: renderContext,
+            shouldCollect: shouldCollectWorkspaceDropTargets
+        )
+        .overlay {
+            bonsplitWorkspaceDropOverlay()
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+        }
         // Minimal mode hides the real titlebar, so the sidebar hosts the window
         // controls. Same overlay the workspace list and the extension sidebar mount.
         .overlay(alignment: .topLeading) {
@@ -10553,7 +10581,7 @@ struct VerticalTabsSidebar: View {
     @ViewBuilder
     private func herdrSpaceContextMenu(workspaceId: UUID, isPinned: Bool) -> some View {
         Button(String(localized: "contextMenu.renameWorkspace", defaultValue: "Rename Workspace…")) {
-            promptRenameHerdrSpace(workspaceId: workspaceId)
+            WorkspaceRenamePrompt.run(workspaceId: workspaceId, in: tabManager)
         }
         Button(WorkspacePinCommands.singleWorkspaceMenuLabel(shouldPin: !isPinned)) {
             guard let pinState = WorkspaceActionDispatcher.pinState(
@@ -10569,28 +10597,6 @@ struct VerticalTabsSidebar: View {
         Button(String(localized: "contextMenu.closeWorkspace", defaultValue: "Close Workspace")) {
             tabManager.closeWorkspacesWithConfirmation([workspaceId], allowPinned: true)
         }
-    }
-
-    /// Same modal shape (and localization keys) as `TabItemView.promptRename`.
-    private func promptRenameHerdrSpace(workspaceId: UUID) {
-        guard let workspace = tabManager.tabs.first(where: { $0.id == workspaceId }) else { return }
-        let alert = NSAlert()
-        alert.messageText = String(localized: "alert.renameWorkspace.title", defaultValue: "Rename Workspace")
-        alert.informativeText = String(localized: "alert.renameWorkspace.message", defaultValue: "Enter a custom name for this workspace.")
-        let input = NSTextField(string: workspace.customTitle ?? workspace.title)
-        input.placeholderString = String(localized: "alert.renameWorkspace.placeholder", defaultValue: "Workspace name")
-        input.frame = NSRect(x: 0, y: 0, width: 240, height: 22)
-        alert.accessoryView = input
-        alert.addButton(withTitle: String(localized: "alert.renameWorkspace.rename", defaultValue: "Rename"))
-        alert.addButton(withTitle: String(localized: "alert.renameWorkspace.cancel", defaultValue: "Cancel"))
-        let alertWindow = alert.window
-        alertWindow.initialFirstResponder = input
-        DispatchQueue.main.async {
-            alertWindow.makeFirstResponder(input)
-            input.selectText(nil)
-        }
-        guard alert.runModal() == .alertFirstButtonReturn else { return }
-        tabManager.setCustomTitle(tabId: workspace.id, title: input.stringValue)
     }
 
     private var sidebarTopScrimHeight: CGFloat {
@@ -15180,24 +15186,7 @@ struct TabItemView: View, Equatable {
     }
 
     private func promptRename() {
-        let alert = NSAlert()
-        alert.messageText = String(localized: "alert.renameWorkspace.title", defaultValue: "Rename Workspace")
-        alert.informativeText = String(localized: "alert.renameWorkspace.message", defaultValue: "Enter a custom name for this workspace.")
-        let input = NSTextField(string: tab.customTitle ?? tab.title)
-        input.placeholderString = String(localized: "alert.renameWorkspace.placeholder", defaultValue: "Workspace name")
-        input.frame = NSRect(x: 0, y: 0, width: 240, height: 22)
-        alert.accessoryView = input
-        alert.addButton(withTitle: String(localized: "alert.renameWorkspace.rename", defaultValue: "Rename"))
-        alert.addButton(withTitle: String(localized: "alert.renameWorkspace.cancel", defaultValue: "Cancel"))
-        let alertWindow = alert.window
-        alertWindow.initialFirstResponder = input
-        DispatchQueue.main.async {
-            alertWindow.makeFirstResponder(input)
-            input.selectText(nil)
-        }
-        let response = alert.runModal()
-        guard response == .alertFirstButtonReturn else { return }
-        tabManager.setCustomTitle(tabId: tab.id, title: input.stringValue)
+        WorkspaceRenamePrompt.run(workspaceId: tab.id, in: tabManager)
     }
 
     private func beginWorkspaceDescriptionEditFromContextMenu() {

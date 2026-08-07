@@ -43,15 +43,33 @@ struct AgentsSidebarWorkspaceInput: Sendable {
     let panelLifecycles: [UUID: [String: AgentHibernationLifecycleState]]
 }
 
+/// The workspace-derived state the herdr sidebar renders but does **not**
+/// observe on its own: titles come off individual `Workspace` objects, and
+/// `focusedPanelId` forwards to `WorkspaceSurfaceListModel`, whose derivation
+/// reads an `@ObservationIgnored` tree seam. Neither invalidates a view that
+/// only observes `TabManager`, so `AgentsSidebarModel` watches them centrally
+/// (out of the rows, coalesced, equality-guarded) and republishes a revision.
+struct AgentsSidebarInvalidationKey: Equatable, Sendable {
+    let titlesByWorkspaceId: [UUID: String]
+    let selectedWorkspaceId: UUID?
+    let focusedPanelId: UUID?
+}
+
 @MainActor
 final class AgentsSidebarModel: ObservableObject {
     @Published private(set) var agentRows: [AgentRowSnapshot] = []
     @Published private(set) var workspaceRollups: [UUID: AgentSidebarStatus] = [:]
+    /// Bumped only when ``AgentsSidebarInvalidationKey`` actually changes. The
+    /// sidebar observes this object, so the bump is what refreshes space titles
+    /// and the selected agent row after a rename or a focus move.
+    @Published private(set) var invalidationRevision: Int = 0
 
     private var changeDates: [UUID: (AgentSidebarStatus, Date)] = [:]
     private var tabsCancellable: AnyCancellable?
+    private var focusCancellable: AnyCancellable?
     private var workspaceCancellables: [AnyCancellable] = []
     private weak var attachedTabManager: TabManager?
+    private var invalidationKey: AgentsSidebarInvalidationKey?
 
     // MARK: - Pure core
 
@@ -157,7 +175,39 @@ final class AgentsSidebarModel: ObservableObject {
                 // the emitted array, never by re-reading the (still stale) property.
                 self?.resubscribe(to: tabs)
                 self?.rebuild(workspaces: tabs)
+                self?.refreshInvalidationKey(workspaces: tabs)
             }
+        // `focusedPanelId` has no publisher of its own — it is derived from the
+        // bonsplit tree behind an `@ObservationIgnored` seam. The already
+        // coalesced/deferred `.ghosttyDidFocusSurface` broadcast
+        // (`FocusSurfaceBroadcaster`) is the signal that it may have moved.
+        focusCancellable = NotificationCenter.default
+            .publisher(for: .ghosttyDidFocusSurface)
+            .debounce(for: .milliseconds(40), scheduler: RunLoop.main)
+            .sink { [weak self] _ in
+                MainActor.assumeIsolated {
+                    guard let self, let tabManager = self.attachedTabManager else { return }
+                    self.refreshInvalidationKey(workspaces: tabManager.tabs)
+                }
+            }
+        refreshInvalidationKey(workspaces: tabManager.tabs)
+    }
+
+    /// Recomputes the invalidation key and republishes only on a real change.
+    private func refreshInvalidationKey(workspaces: [Workspace]) {
+        guard let tabManager = attachedTabManager else { return }
+        let selectedWorkspaceId = tabManager.selectedTabId
+        let key = AgentsSidebarInvalidationKey(
+            titlesByWorkspaceId: Dictionary(
+                workspaces.map { ($0.id, $0.title) },
+                uniquingKeysWith: { _, last in last }
+            ),
+            selectedWorkspaceId: selectedWorkspaceId,
+            focusedPanelId: workspaces.first { $0.id == selectedWorkspaceId }?.focusedPanelId
+        )
+        guard key != invalidationKey else { return }
+        invalidationKey = key
+        invalidationRevision &+= 1
     }
 
     private func resubscribe(to workspaces: [Workspace]) {
@@ -172,6 +222,10 @@ final class AgentsSidebarModel: ObservableObject {
                     MainActor.assumeIsolated {
                         guard let self, let tabManager = self.attachedTabManager else { return }
                         self.rebuild(workspaces: tabManager.tabs)
+                        // A rename on an agent-less workspace changes no agent
+                        // row, so `rebuild` publishes nothing; the key bump is
+                        // what refreshes that workspace's space row.
+                        self.refreshInvalidationKey(workspaces: tabManager.tabs)
                     }
                 }
             workspaceCancellables.append(cancellable)

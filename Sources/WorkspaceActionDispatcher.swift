@@ -1,3 +1,4 @@
+import AppKit
 import Foundation
 
 enum WorkspaceActionDispatcher {
@@ -95,6 +96,36 @@ enum WorkspaceActionDispatcher {
         }
 
         return resolved
+    }
+}
+
+/// The single "rename this workspace" modal, shared by every sidebar surface
+/// that offers it (the rich `TabItemView` context menu and the herdr sidebar's
+/// space context menu). Shared-behavior policy: one path, not one copy per
+/// entrypoint.
+enum WorkspaceRenamePrompt {
+    /// Runs the modal for `workspaceId` and, on confirmation, writes the custom
+    /// title through `TabManager`. No-op if the workspace is gone.
+    @MainActor
+    static func run(workspaceId: UUID, in tabManager: TabManager) {
+        guard let workspace = tabManager.tabs.first(where: { $0.id == workspaceId }) else { return }
+        let alert = NSAlert()
+        alert.messageText = String(localized: "alert.renameWorkspace.title", defaultValue: "Rename Workspace")
+        alert.informativeText = String(localized: "alert.renameWorkspace.message", defaultValue: "Enter a custom name for this workspace.")
+        let input = NSTextField(string: workspace.customTitle ?? workspace.title)
+        input.placeholderString = String(localized: "alert.renameWorkspace.placeholder", defaultValue: "Workspace name")
+        input.frame = NSRect(x: 0, y: 0, width: 240, height: 22)
+        alert.accessoryView = input
+        alert.addButton(withTitle: String(localized: "alert.renameWorkspace.rename", defaultValue: "Rename"))
+        alert.addButton(withTitle: String(localized: "alert.renameWorkspace.cancel", defaultValue: "Cancel"))
+        let alertWindow = alert.window
+        alertWindow.initialFirstResponder = input
+        DispatchQueue.main.async {
+            alertWindow.makeFirstResponder(input)
+            input.selectText(nil)
+        }
+        guard alert.runModal() == .alertFirstButtonReturn else { return }
+        tabManager.setCustomTitle(tabId: workspaceId, title: input.stringValue)
     }
 }
 
