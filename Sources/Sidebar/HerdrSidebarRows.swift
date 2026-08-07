@@ -5,9 +5,10 @@ import SwiftUI
 
 /// Shared visual constants for the herdr left sidebar.
 ///
-/// Fonts are exposed both as plain `Font` values (for callers that need a value,
-/// and for tests) and as size/weight/design triples so views can apply the
-/// magnification-aware `.cmuxFont(size:weight:design:)` *modifier* instead.
+/// Typography is exposed as size/weight/design constants only — never as a
+/// prebuilt `Font`. Consumers must apply the magnification-aware
+/// `.cmuxFont(size:weight:design:)` *modifier*, so every herdr label honors the
+/// global font magnification setting.
 enum HerdrSidebarStyle {
 
     // MARK: - Palette
@@ -47,15 +48,12 @@ enum HerdrSidebarStyle {
     static let rowFontWeight: Font.Weight = .semibold
     static let subFontSize: CGFloat = 12
     static let subFontWeight: Font.Weight = .regular
-
-    static let headerFont: Font = .system(size: 13, weight: .semibold, design: .monospaced)
-    static let rowFont: Font = .system(size: 13, weight: .semibold, design: .monospaced)
-    static let subFont: Font = .system(size: 12, weight: .regular, design: .monospaced)
+    /// Shared font design for every herdr sidebar label.
+    static let fontDesign: Font.Design = .monospaced
 
     // MARK: - Metrics
 
     static let rowHeight: CGFloat = 28
-    static let agentRowHeight: CGFloat = 40
     static let horizontalPadding: CGFloat = 8
     static let glyphSize: CGFloat = 12
     static let glyphSpacing: CGFloat = 6
@@ -96,7 +94,7 @@ struct AgentStatusGlyph: View {
     private var blockedGlyph: some View {
         ZStack {
             Circle()
-                .stroke(color, lineWidth: max(1, size * 0.12))
+                .strokeBorder(color, lineWidth: max(1, size * 0.12))
             Circle()
                 .fill(color)
                 .frame(width: size * 0.45, height: size * 0.45)
@@ -187,7 +185,7 @@ struct SpacesRowView: View, Equatable {
                 .cmuxFont(
                     size: HerdrSidebarStyle.rowFontSize,
                     weight: HerdrSidebarStyle.rowFontWeight,
-                    design: .monospaced
+                    design: HerdrSidebarStyle.fontDesign
                 )
                 .foregroundStyle(isSelected ? Color.primary : Color.secondary)
                 .lineLimit(1)
@@ -242,7 +240,7 @@ struct AgentRowView: View, Equatable {
             .cmuxFont(
                 size: HerdrSidebarStyle.subFontSize,
                 weight: HerdrSidebarStyle.subFontWeight,
-                design: .monospaced
+                design: HerdrSidebarStyle.fontDesign
             )
             .foregroundStyle(Color(nsColor: .tertiaryLabelColor))
             .lineLimit(1)
@@ -274,7 +272,7 @@ struct AgentRowView: View, Equatable {
         .cmuxFont(
             size: HerdrSidebarStyle.rowFontSize,
             weight: HerdrSidebarStyle.rowFontWeight,
-            design: .monospaced
+            design: HerdrSidebarStyle.fontDesign
         )
     }
 }
