@@ -10457,6 +10457,88 @@ struct VerticalTabsSidebar: View {
         )
     }
 
+    /// Herdr sidebar body, extracted out of `sidebarContent`. Kept as its own
+    /// function so the surrounding `body` expression stays inside the Swift
+    /// type-checker's budget — inlined, it intermittently tripped
+    /// "unable to type-check this expression in reasonable time".
+    @ViewBuilder
+    private func herdrSidebarContent(renderContext: WorkspaceListRenderContext) -> some View {
+        HerdrSidebarView(
+            spaces: HerdrSidebarView.herdrSpaceItems(
+                renderItems: renderContext.workspaceRenderItems,
+                rollups: agentsModel.workspaceRollups,
+                selectedWorkspaceId: tabManager.selectedTabId,
+                pinnedWorkspaceIds: Set(
+                    tabManager.tabs.lazy.filter(\.isPinned).map(\.id)
+                )
+            ),
+            agents: agentsModel.agentRows,
+            selectedPanelId: tabManager.selectedWorkspace?.focusedPanelId,
+            onSelectSpace: { workspaceId in
+                guard let workspace = tabManager.tabs.first(where: { $0.id == workspaceId }) else { return }
+                tabManager.selectWorkspace(workspace)
+            },
+            onActivateAgent: { workspaceId, panelId in
+                if let workspace = tabManager.tabs.first(where: { $0.id == workspaceId }) {
+                    tabManager.selectWorkspace(workspace)
+                }
+                tabManager.focusPanel(workspaceId: workspaceId, panelId: panelId)
+                tabManager.triggerFocusFlash(workspaceId: workspaceId, panelId: panelId)
+            },
+            onSpaceContextMenu: { item in
+                AnyView(
+                    herdrSpaceContextMenu(
+                        workspaceId: item.id,
+                        isPinned: item.isPinned
+                    )
+                )
+            }
+        )
+        .padding(.top, SidebarWorkspaceScrollInsets.workspaceList.top)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .task { agentsModel.attach(tabManager: tabManager) }
+        // Minimal mode hides the real titlebar, so the sidebar hosts the window
+        // controls. Same overlay the workspace list and the extension sidebar mount.
+        .overlay(alignment: .topLeading) {
+            if isMinimalMode {
+                HiddenTitlebarSidebarControlsView(
+                    notificationStore: notificationStore,
+                    onToggleSidebar: onToggleSidebar,
+                    onToggleNotifications: { anchorView in
+                        AppDelegate.shared?.toggleNotificationsPopover(
+                            animated: true,
+                            anchorView: anchorView
+                        )
+                    },
+                    onNewTab: onNewTab,
+                    onFocusHistoryBack: {
+                        if !tabManager.navigateBack() {
+                            NSSound.beep()
+                        }
+                    },
+                    onFocusHistoryForward: {
+                        if !tabManager.navigateForward() {
+                            NSSound.beep()
+                        }
+                    }
+                )
+                .padding(
+                    .leading,
+                    CGFloat(titlebarDebugChromeSnapshot.leftControlsLeadingInset)
+                )
+                .padding(
+                    .top,
+                    minimalModeSidebarTitlebarControlsTopPadding
+                )
+            }
+        }
+        .overlay(alignment: .top) {
+            WindowDragHandleView()
+                .frame(height: sidebarTitlebarInteractionHeight)
+                .background(TitlebarDoubleClickMonitorView())
+        }
+    }
+
     /// Minimal per-space context menu for the herdr sidebar: rename, pin/unpin,
     /// close. Routed through the same `WorkspaceActionDispatcher` /
     /// `TabManager` entry points the rich `TabItemView` menu uses, and reusing
@@ -10689,81 +10771,7 @@ struct VerticalTabsSidebar: View {
         Group {
             if CmuxExtensionSidebarSelection.resolvesToDefaultSidebar(effectiveProviderId: effectiveExtensionSidebarProviderId) {
                 VStack(spacing: 0) {
-                    HerdrSidebarView(
-                        spaces: HerdrSidebarView.herdrSpaceItems(
-                            renderItems: renderContext.workspaceRenderItems,
-                            rollups: agentsModel.workspaceRollups,
-                            selectedWorkspaceId: tabManager.selectedTabId,
-                            pinnedWorkspaceIds: Set(
-                                tabManager.tabs.lazy.filter(\.isPinned).map(\.id)
-                            )
-                        ),
-                        agents: agentsModel.agentRows,
-                        selectedPanelId: tabManager.selectedWorkspace?.focusedPanelId,
-                        onSelectSpace: { workspaceId in
-                            guard let workspace = tabManager.tabs.first(where: { $0.id == workspaceId }) else { return }
-                            tabManager.selectWorkspace(workspace)
-                        },
-                        onActivateAgent: { workspaceId, panelId in
-                            if let workspace = tabManager.tabs.first(where: { $0.id == workspaceId }) {
-                                tabManager.selectWorkspace(workspace)
-                            }
-                            tabManager.focusPanel(workspaceId: workspaceId, panelId: panelId)
-                            tabManager.triggerFocusFlash(workspaceId: workspaceId, panelId: panelId)
-                        },
-                        onSpaceContextMenu: { item in
-                            AnyView(
-                                herdrSpaceContextMenu(
-                                    workspaceId: item.id,
-                                    isPinned: item.isPinned
-                                )
-                            )
-                        }
-                    )
-                    .padding(.top, SidebarWorkspaceScrollInsets.workspaceList.top)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .task { agentsModel.attach(tabManager: tabManager) }
-                    // Minimal mode hides the real titlebar, so the sidebar
-                    // hosts the window controls. Same overlay the workspace
-                    // list and the extension sidebar mount.
-                    .overlay(alignment: .topLeading) {
-                        if isMinimalMode {
-                            HiddenTitlebarSidebarControlsView(
-                                notificationStore: notificationStore,
-                                onToggleSidebar: onToggleSidebar,
-                                onToggleNotifications: { anchorView in
-                                    AppDelegate.shared?.toggleNotificationsPopover(
-                                        animated: true,
-                                        anchorView: anchorView
-                                    )
-                                },
-                                onNewTab: onNewTab,
-                                onFocusHistoryBack: {
-                                    if !tabManager.navigateBack() {
-                                        NSSound.beep()
-                                    }
-                                },
-                                onFocusHistoryForward: {
-                                    if !tabManager.navigateForward() {
-                                        NSSound.beep()
-                                    }
-                                }
-                            )
-                            .padding(
-                                .leading,
-                                CGFloat(titlebarDebugChromeSnapshot.leftControlsLeadingInset)
-                            )
-                            .padding(
-                                .top,
-                                minimalModeSidebarTitlebarControlsTopPadding
-                            )
-                        }
-                    }
-                    .overlay(alignment: .top) {
-                        WindowDragHandleView()
-                            .frame(height: sidebarTitlebarInteractionHeight)
-                            .background(TitlebarDoubleClickMonitorView())
-                    }
+                    herdrSidebarContent(renderContext: renderContext)
                     SidebarFooter(updateViewModel: updateViewModel, fileExplorerState: fileExplorerState, onSendFeedback: onSendFeedback)
                         .frame(maxWidth: .infinity, alignment: .leading)
                 }
