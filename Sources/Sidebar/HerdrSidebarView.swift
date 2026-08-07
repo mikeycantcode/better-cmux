@@ -1,3 +1,4 @@
+import CmuxWorkspaces
 import Foundation
 import SwiftUI
 
@@ -151,6 +152,45 @@ struct HerdrSidebarView: View {
             .padding(.horizontal, HerdrSidebarStyle.horizontalPadding)
             .padding(.vertical, 8)
             .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
+// MARK: - Space item projection
+
+extension HerdrSidebarView {
+    /// Flattens the sidebar's render items into the herdr spaces list.
+    ///
+    /// Pure projection (no store reads beyond the passed-in items), so the
+    /// caller can build it once per body pass and hand rows immutable values.
+    /// Group headers contribute a single row for their anchor workspace — the
+    /// anchor has no `.workspace` render item of its own, and the existing
+    /// sidebar header displays the group's name, so that is the row's title.
+    /// Plain workspaces use `workspace.title`, matching
+    /// `SidebarWorkspaceSnapshotBuilder.Snapshot.title`.
+    @MainActor
+    static func herdrSpaceItems(
+        renderItems: [SidebarWorkspaceRenderItem],
+        rollups: [UUID: AgentSidebarStatus],
+        selectedWorkspaceId: UUID?
+    ) -> [HerdrSidebarSpaceItem] {
+        renderItems.map { item in
+            let id: UUID
+            let title: String
+            switch item {
+            case .groupHeader(let group, _):
+                id = group.anchorWorkspaceId
+                title = group.name
+            case .workspace(let workspace):
+                id = workspace.id
+                title = workspace.title
+            }
+            return HerdrSidebarSpaceItem(
+                id: id,
+                title: title,
+                rollup: rollups[id],
+                isSelected: id == selectedWorkspaceId
+            )
+        }
     }
 }
 

@@ -10226,6 +10226,9 @@ struct VerticalTabsSidebar: View {
         initialSidebarFontSize: GhosttyConfig.load().sidebarFontSize
     )
     @ObservedObject private var keyboardShortcutSettingsObserver = KeyboardShortcutSettingsObserver.shared
+    /// Agent projection backing the herdr sidebar's agents region. Owned here so
+    /// it lives exactly as long as the sidebar; `attach` is idempotent.
+    @StateObject private var agentsModel = AgentsSidebarModel()
     @State var dragState = SidebarDragState()
     // Bonsplit tab drags arrive through AppKit pasteboard callbacks, not
     // `SidebarDragState`, so they need a separate transient collection flag.
@@ -10454,6 +10457,56 @@ struct VerticalTabsSidebar: View {
         )
     }
 
+    /// Minimal per-space context menu for the herdr sidebar: rename, pin/unpin,
+    /// close. Routed through the same `WorkspaceActionDispatcher` /
+    /// `TabManager` entry points the rich `TabItemView` menu uses, and reusing
+    /// its localization keys. Drag-to-reorder and the long-tail items are
+    /// deliberately not carried over in this pass.
+    @ViewBuilder
+    private func herdrSpaceContextMenu(workspaceId: UUID) -> some View {
+        let pinState = WorkspaceActionDispatcher.pinState(
+            in: tabManager,
+            target: .single(workspaceId)
+        )
+        Button(String(localized: "contextMenu.renameWorkspace", defaultValue: "Rename Workspace…")) {
+            promptRenameHerdrSpace(workspaceId: workspaceId)
+        }
+        Button(WorkspacePinCommands.singleWorkspaceMenuLabel(shouldPin: pinState?.pinned ?? true)) {
+            guard let pinState else {
+                NSSound.beep()
+                return
+            }
+            WorkspaceActionDispatcher.performPinAction(pinState, in: tabManager)
+        }
+        .disabled(pinState == nil)
+        Divider()
+        Button(String(localized: "contextMenu.closeWorkspace", defaultValue: "Close Workspace")) {
+            tabManager.closeWorkspacesWithConfirmation([workspaceId], allowPinned: true)
+        }
+    }
+
+    /// Same modal shape (and localization keys) as `TabItemView.promptRename`.
+    private func promptRenameHerdrSpace(workspaceId: UUID) {
+        guard let workspace = tabManager.tabs.first(where: { $0.id == workspaceId }) else { return }
+        let alert = NSAlert()
+        alert.messageText = String(localized: "alert.renameWorkspace.title", defaultValue: "Rename Workspace")
+        alert.informativeText = String(localized: "alert.renameWorkspace.message", defaultValue: "Enter a custom name for this workspace.")
+        let input = NSTextField(string: workspace.customTitle ?? workspace.title)
+        input.placeholderString = String(localized: "alert.renameWorkspace.placeholder", defaultValue: "Workspace name")
+        input.frame = NSRect(x: 0, y: 0, width: 240, height: 22)
+        alert.accessoryView = input
+        alert.addButton(withTitle: String(localized: "alert.renameWorkspace.rename", defaultValue: "Rename"))
+        alert.addButton(withTitle: String(localized: "alert.renameWorkspace.cancel", defaultValue: "Cancel"))
+        let alertWindow = alert.window
+        alertWindow.initialFirstResponder = input
+        DispatchQueue.main.async {
+            alertWindow.makeFirstResponder(input)
+            input.selectText(nil)
+        }
+        guard alert.runModal() == .alertFirstButtonReturn else { return }
+        tabManager.setCustomTitle(tabId: workspace.id, title: input.stringValue)
+    }
+
     private var sidebarTopScrimHeight: CGFloat {
         SidebarWorkspaceListMetrics.topScrimHeight
     }
@@ -10632,25 +10685,72 @@ struct VerticalTabsSidebar: View {
         Group {
             if CmuxExtensionSidebarSelection.resolvesToDefaultSidebar(effectiveProviderId: effectiveExtensionSidebarProviderId) {
                 VStack(spacing: 0) {
-                    GeometryReader { proxy in
-                        let available = proxy.size.height
-                        let sessionFraction = SidebarExplorerSplit.clampedSessionFraction(
-                            leftFileExplorerState.dividerPosition,
-                            availableHeight: available
-                        )
-                        VStack(spacing: 0) {
-                            workspaceScrollArea(renderContext: renderContext)
-                                .frame(maxHeight: leftFileExplorerState.isVisible ? available * sessionFraction : .infinity)
-                            if leftFileExplorerState.isVisible {
-                                explorerSplitDivider(availableHeight: available)
+                    HerdrSidebarView(
+                        spaces: HerdrSidebarView.herdrSpaceItems(
+                            renderItems: renderContext.workspaceRenderItems,
+                            rollups: agentsModel.workspaceRollups,
+                            selectedWorkspaceId: tabManager.selectedTabId
+                        ),
+                        agents: agentsModel.agentRows,
+                        selectedPanelId: tabManager.selectedWorkspace?.focusedPanelId,
+                        onSelectSpace: { workspaceId in
+                            guard let workspace = tabManager.tabs.first(where: { $0.id == workspaceId }) else { return }
+                            tabManager.selectWorkspace(workspace)
+                        },
+                        onActivateAgent: { workspaceId, panelId in
+                            if let workspace = tabManager.tabs.first(where: { $0.id == workspaceId }) {
+                                tabManager.selectWorkspace(workspace)
                             }
-                            SidebarFileExplorerPanel(
-                                store: leftFileExplorerStore,
-                                state: leftFileExplorerState,
-                                onOpenFile: onOpenFileInEditor
-                            )
-                            .frame(maxWidth: .infinity, maxHeight: leftFileExplorerState.isVisible ? .infinity : nil)
+                            tabManager.focusPanel(workspaceId: workspaceId, panelId: panelId)
+                            tabManager.triggerFocusFlash(workspaceId: workspaceId, panelId: panelId)
+                        },
+                        onSpaceContextMenu: { workspaceId in
+                            AnyView(herdrSpaceContextMenu(workspaceId: workspaceId))
                         }
+                    )
+                    .padding(.top, SidebarWorkspaceScrollInsets.workspaceList.top)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .task { agentsModel.attach(tabManager: tabManager) }
+                    // Minimal mode hides the real titlebar, so the sidebar
+                    // hosts the window controls. Same overlay the workspace
+                    // list and the extension sidebar mount.
+                    .overlay(alignment: .topLeading) {
+                        if isMinimalMode {
+                            HiddenTitlebarSidebarControlsView(
+                                notificationStore: notificationStore,
+                                onToggleSidebar: onToggleSidebar,
+                                onToggleNotifications: { anchorView in
+                                    AppDelegate.shared?.toggleNotificationsPopover(
+                                        animated: true,
+                                        anchorView: anchorView
+                                    )
+                                },
+                                onNewTab: onNewTab,
+                                onFocusHistoryBack: {
+                                    if !tabManager.navigateBack() {
+                                        NSSound.beep()
+                                    }
+                                },
+                                onFocusHistoryForward: {
+                                    if !tabManager.navigateForward() {
+                                        NSSound.beep()
+                                    }
+                                }
+                            )
+                            .padding(
+                                .leading,
+                                CGFloat(titlebarDebugChromeSnapshot.leftControlsLeadingInset)
+                            )
+                            .padding(
+                                .top,
+                                minimalModeSidebarTitlebarControlsTopPadding
+                            )
+                        }
+                    }
+                    .overlay(alignment: .top) {
+                        WindowDragHandleView()
+                            .frame(height: sidebarTitlebarInteractionHeight)
+                            .background(TitlebarDoubleClickMonitorView())
                     }
                     SidebarFooter(updateViewModel: updateViewModel, fileExplorerState: fileExplorerState, onSendFeedback: onSendFeedback)
                         .frame(maxWidth: .infinity, alignment: .leading)

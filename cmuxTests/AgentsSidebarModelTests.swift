@@ -1,6 +1,7 @@
 import AppKit
 import CmuxAppKitSupportUI
 import CmuxFoundation
+import CmuxWorkspaces
 import SwiftUI
 import XCTest
 
@@ -242,6 +243,44 @@ final class AgentsSidebarModelTests: XCTestCase {
             now: now
         )
         XCTAssertEqual(result.rows.first?.id, panelId)
+    }
+
+    // Spaces items: flat ordered rows, rollups applied, selection flagged.
+    @MainActor
+    func testHerdrSpaceItemsFlattensRenderItemsInOrder() {
+        let anchor = Workspace()
+        anchor.title = "anchor"
+        let member = Workspace()
+        member.title = "member"
+        let plain = Workspace()
+        plain.title = "plain"
+
+        let group = WorkspaceGroup(
+            id: UUID(),
+            name: "Group Name",
+            isCollapsed: false,
+            isPinned: false,
+            anchorWorkspaceId: anchor.id,
+            customColor: nil,
+            iconSymbol: nil
+        )
+
+        let renderItems: [SidebarWorkspaceRenderItem] = [
+            .groupHeader(group, memberWorkspaceIds: [anchor.id, member.id]),
+            .workspace(member),
+            .workspace(plain),
+        ]
+
+        let items = HerdrSidebarView.herdrSpaceItems(
+            renderItems: renderItems,
+            rollups: [anchor.id: .blocked, plain.id: .working],
+            selectedWorkspaceId: member.id
+        )
+
+        XCTAssertEqual(items.map(\.id), [anchor.id, member.id, plain.id])
+        XCTAssertEqual(items.map(\.title), ["Group Name", "member", "plain"])
+        XCTAssertEqual(items.map(\.rollup), [.blocked, nil, .working])
+        XCTAssertEqual(items.map(\.isSelected), [false, true, false])
     }
 
     // Spaces region grows with content: n rows + (n-1) gaps, zero when empty.
