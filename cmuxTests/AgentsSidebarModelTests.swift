@@ -274,13 +274,39 @@ final class AgentsSidebarModelTests: XCTestCase {
         let items = HerdrSidebarView.herdrSpaceItems(
             renderItems: renderItems,
             rollups: [anchor.id: .blocked, plain.id: .working],
-            selectedWorkspaceId: member.id
+            selectedWorkspaceId: member.id,
+            pinnedWorkspaceIds: [anchor.id, plain.id]
         )
 
         XCTAssertEqual(items.map(\.id), [anchor.id, member.id, plain.id])
         XCTAssertEqual(items.map(\.title), ["Group Name", "member", "plain"])
         XCTAssertEqual(items.map(\.rollup), [.blocked, nil, .working])
         XCTAssertEqual(items.map(\.isSelected), [false, true, false])
+        // Pin state must be part of the item: the row container's == compares
+        // the item and skips body, so the menu label rides on this value.
+        XCTAssertEqual(items.map(\.isPinned), [true, false, true])
+    }
+
+    // A pin toggle must change the compared value, or the cached context menu
+    // keeps its stale Pin/Unpin label.
+    @MainActor
+    func testHerdrSpaceItemsPinChangeBreaksEquality() {
+        let workspace = Workspace()
+        workspace.title = "w"
+        let renderItems: [SidebarWorkspaceRenderItem] = [.workspace(workspace)]
+        let unpinned = HerdrSidebarView.herdrSpaceItems(
+            renderItems: renderItems,
+            rollups: [:],
+            selectedWorkspaceId: nil,
+            pinnedWorkspaceIds: []
+        )
+        let pinned = HerdrSidebarView.herdrSpaceItems(
+            renderItems: renderItems,
+            rollups: [:],
+            selectedWorkspaceId: nil,
+            pinnedWorkspaceIds: [workspace.id]
+        )
+        XCTAssertNotEqual(unpinned, pinned)
     }
 
     // Spaces region grows with content: n rows + (n-1) gaps, zero when empty.

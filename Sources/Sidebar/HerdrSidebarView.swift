@@ -12,6 +12,11 @@ struct HerdrSidebarSpaceItem: Identifiable, Equatable {
     /// `nil` means the workspace has no agents → dim dot.
     let rollup: AgentSidebarStatus?
     let isSelected: Bool
+    /// Drives the Pin/Unpin context-menu label. It must live on the item (and
+    /// therefore inside the compared value) because `HerdrSpacesRowContainer`'s
+    /// `==` skips the body — a menu built from state that is not compared here
+    /// would keep showing a stale label after pinning or unpinning.
+    let isPinned: Bool
 }
 
 /// Layout container for the herdr left sidebar.
@@ -25,7 +30,8 @@ struct HerdrSidebarView: View {
     let selectedPanelId: UUID?
     let onSelectSpace: (UUID) -> Void
     let onActivateAgent: (UUID, UUID) -> Void
-    let onSpaceContextMenu: (UUID) -> AnyView
+    /// Receives the full item so menu content can be derived from compared state.
+    let onSpaceContextMenu: (HerdrSidebarSpaceItem) -> AnyView
 
     var body: some View {
         VStack(spacing: 0) {
@@ -171,7 +177,8 @@ extension HerdrSidebarView {
     static func herdrSpaceItems(
         renderItems: [SidebarWorkspaceRenderItem],
         rollups: [UUID: AgentSidebarStatus],
-        selectedWorkspaceId: UUID?
+        selectedWorkspaceId: UUID?,
+        pinnedWorkspaceIds: Set<UUID>
     ) -> [HerdrSidebarSpaceItem] {
         renderItems.map { item in
             let id: UUID
@@ -188,7 +195,8 @@ extension HerdrSidebarView {
                 id: id,
                 title: title,
                 rollup: rollups[id],
-                isSelected: id == selectedWorkspaceId
+                isSelected: id == selectedWorkspaceId,
+                isPinned: pinnedWorkspaceIds.contains(id)
             )
         }
     }
@@ -207,7 +215,7 @@ extension HerdrSidebarView {
 private struct HerdrSpacesRowContainer: View, Equatable {
     let item: HerdrSidebarSpaceItem
     let onSelect: (UUID) -> Void
-    let contextMenuContent: (UUID) -> AnyView
+    let contextMenuContent: (HerdrSidebarSpaceItem) -> AnyView
 
     /// Closures are identity-less; equality is the value snapshot only —
     /// same contract as `SpacesRowView` / `AgentRowView`.
@@ -221,7 +229,7 @@ private struct HerdrSpacesRowContainer: View, Equatable {
             onSelect: { onSelect(item.id) }
         )
         .equatable()
-        .contextMenu { contextMenuContent(item.id) }
+        .contextMenu { contextMenuContent(item) }
     }
 }
 
@@ -239,7 +247,8 @@ private struct HerdrSpacesRowContainer: View, Equatable {
                 id: pair.0,
                 title: pair.1.0,
                 rollup: pair.1.1,
-                isSelected: index == 0
+                isSelected: index == 0,
+                isPinned: index == 1
             )
         },
         agents: zip(workspaceIds, zip(titles, statuses)).map { workspaceId, pair in

@@ -10462,23 +10462,27 @@ struct VerticalTabsSidebar: View {
     /// `TabManager` entry points the rich `TabItemView` menu uses, and reusing
     /// its localization keys. Drag-to-reorder and the long-tail items are
     /// deliberately not carried over in this pass.
+    ///
+    /// The Pin/Unpin label comes from the caller's `isPinned` snapshot, not from
+    /// a fresh dispatcher read: `HerdrSpacesRowContainer` compares the item and
+    /// skips its body, so a label derived from uncompared state would go stale
+    /// after a pin toggle. The dispatcher is still the authority for the action
+    /// itself, resolved at invocation time.
     @ViewBuilder
-    private func herdrSpaceContextMenu(workspaceId: UUID) -> some View {
-        let pinState = WorkspaceActionDispatcher.pinState(
-            in: tabManager,
-            target: .single(workspaceId)
-        )
+    private func herdrSpaceContextMenu(workspaceId: UUID, isPinned: Bool) -> some View {
         Button(String(localized: "contextMenu.renameWorkspace", defaultValue: "Rename Workspace…")) {
             promptRenameHerdrSpace(workspaceId: workspaceId)
         }
-        Button(WorkspacePinCommands.singleWorkspaceMenuLabel(shouldPin: pinState?.pinned ?? true)) {
-            guard let pinState else {
+        Button(WorkspacePinCommands.singleWorkspaceMenuLabel(shouldPin: !isPinned)) {
+            guard let pinState = WorkspaceActionDispatcher.pinState(
+                in: tabManager,
+                target: .single(workspaceId)
+            ) else {
                 NSSound.beep()
                 return
             }
             WorkspaceActionDispatcher.performPinAction(pinState, in: tabManager)
         }
-        .disabled(pinState == nil)
         Divider()
         Button(String(localized: "contextMenu.closeWorkspace", defaultValue: "Close Workspace")) {
             tabManager.closeWorkspacesWithConfirmation([workspaceId], allowPinned: true)
@@ -10689,7 +10693,10 @@ struct VerticalTabsSidebar: View {
                         spaces: HerdrSidebarView.herdrSpaceItems(
                             renderItems: renderContext.workspaceRenderItems,
                             rollups: agentsModel.workspaceRollups,
-                            selectedWorkspaceId: tabManager.selectedTabId
+                            selectedWorkspaceId: tabManager.selectedTabId,
+                            pinnedWorkspaceIds: Set(
+                                tabManager.tabs.lazy.filter(\.isPinned).map(\.id)
+                            )
                         ),
                         agents: agentsModel.agentRows,
                         selectedPanelId: tabManager.selectedWorkspace?.focusedPanelId,
@@ -10704,8 +10711,13 @@ struct VerticalTabsSidebar: View {
                             tabManager.focusPanel(workspaceId: workspaceId, panelId: panelId)
                             tabManager.triggerFocusFlash(workspaceId: workspaceId, panelId: panelId)
                         },
-                        onSpaceContextMenu: { workspaceId in
-                            AnyView(herdrSpaceContextMenu(workspaceId: workspaceId))
+                        onSpaceContextMenu: { item in
+                            AnyView(
+                                herdrSpaceContextMenu(
+                                    workspaceId: item.id,
+                                    isPinned: item.isPinned
+                                )
+                            )
                         }
                     )
                     .padding(.top, SidebarWorkspaceScrollInsets.workspaceList.top)
