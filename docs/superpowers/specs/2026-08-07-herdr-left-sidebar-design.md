@@ -67,8 +67,10 @@ re-solves resize/persistence/provider routing for no visible gain.
 - Row = state dot + workspace title. Dot color from the workspace rollup:
   blocked = red/pink, working = yellow, idle = green, none/unknown = dim
   gray. Selected workspace gets the subtle full-width highlight.
-- Click selects the workspace (existing selection path). Existing context
-  menu, drag-to-reorder, and rename affordances survive on the new rows.
+- Click selects the workspace (existing selection path). Rows carry a
+  minimal context menu (Rename, Pin/Unpin, Close) via the existing
+  dispatcher; drag-to-reorder and the full context menu are deferred to a
+  later pass (ruled by Mike 2026-08-07).
 - Removed from the sidebar: unread count badges, latest-notification text,
   git branch/PR/ports metadata rows, compact-row status dot machinery,
   media-activity chips, and the left explorer split entry points. The
