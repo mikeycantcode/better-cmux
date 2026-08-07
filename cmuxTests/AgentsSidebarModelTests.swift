@@ -257,4 +257,16 @@ final class AgentsSidebarModelTests: XCTestCase {
             3 * HerdrSidebarStyle.rowHeight + 4
         )
     }
+
+    // Agents region keeps a usable floor (header + up to 3 rows) whenever it has
+    // rows, so a long spaces list can't collapse it via layoutPriority.
+    @MainActor
+    func testAgentsMinHeightFloor() {
+        XCTAssertEqual(HerdrSidebarView.agentsMinHeight(rowCount: 0), 0)
+        let three = HerdrSidebarView.agentsMinHeight(rowCount: 3)
+        XCTAssertGreaterThan(HerdrSidebarView.agentsMinHeight(rowCount: 1), 0)
+        XCTAssertGreaterThan(three, HerdrSidebarView.agentsMinHeight(rowCount: 1))
+        // Caps at three rows: 30 agents must not demand more floor than 3 do.
+        XCTAssertEqual(HerdrSidebarView.agentsMinHeight(rowCount: 30), three)
+    }
 }

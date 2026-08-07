@@ -33,7 +33,10 @@ struct HerdrSidebarView: View {
             Divider()
                 .opacity(0.4)
             agentsRegion
-                .frame(maxHeight: .infinity)
+                .frame(
+                    minHeight: Self.agentsMinHeight(rowCount: agents.count),
+                    maxHeight: .infinity
+                )
         }
     }
 
@@ -45,16 +48,14 @@ struct HerdrSidebarView: View {
                 String(localized: "herdr.section.spaces", defaultValue: "spaces")
             )
             ScrollView {
-                LazyVStack(spacing: 2) {
+                LazyVStack(spacing: Self.rowSpacing) {
                     ForEach(spaces) { item in
-                        SpacesRowView(
-                            title: item.title,
-                            rollup: item.rollup,
-                            isSelected: item.isSelected,
-                            onSelect: { onSelectSpace(item.id) }
+                        HerdrSpacesRowContainer(
+                            item: item,
+                            onSelect: onSelectSpace,
+                            contextMenuContent: onSpaceContextMenu
                         )
                         .equatable()
-                        .contextMenu { onSpaceContextMenu(item.id) }
                     }
                 }
             }
@@ -69,12 +70,34 @@ struct HerdrSidebarView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
+    /// Single source of truth for `LazyVStack` row spacing in both regions;
+    /// `spacesContentHeight` depends on it, so it must not be inlined.
+    static let rowSpacing: CGFloat = 2
+
+    /// Approximate height of one `AgentRowView` (title line + sub line + its 4pt
+    /// vertical padding). `AgentRowView` is intrinsically sized, so this is only
+    /// used to compute the agents region's minimum-height floor — a slight
+    /// under- or over-estimate shifts that floor, it never clips a row.
+    static let agentRowHeightEstimate: CGFloat =
+        HerdrSidebarStyle.rowFontSize + HerdrSidebarStyle.subFontSize + 1 + 8
+
     /// Intrinsic height of the spaces list: `n` rows plus inter-row spacing.
     static func spacesContentHeight(rowCount: Int) -> CGFloat {
         guard rowCount > 0 else { return 0 }
-        let spacing: CGFloat = 2
         return CGFloat(rowCount) * HerdrSidebarStyle.rowHeight
-            + CGFloat(rowCount - 1) * spacing
+            + CGFloat(rowCount - 1) * rowSpacing
+    }
+
+    /// Height the agents region is guaranteed to keep whenever it has rows:
+    /// its header plus roughly three agent rows. Without this floor, a long
+    /// spaces list (whose content cap then exceeds the available height) lets
+    /// `layoutPriority(1)` win again and collapses agents toward zero.
+    static func agentsMinHeight(rowCount: Int) -> CGFloat {
+        guard rowCount > 0 else { return 0 }
+        let headerHeight = HerdrSidebarStyle.headerFontSize + 16
+        let rows = CGFloat(min(rowCount, 3))
+        return headerHeight + rows * Self.agentRowHeightEstimate
+            + max(0, rows - 1) * rowSpacing
     }
 
     // MARK: - Agents
@@ -91,13 +114,13 @@ struct HerdrSidebarView: View {
             .cmuxFont(
                 size: HerdrSidebarStyle.headerFontSize,
                 weight: HerdrSidebarStyle.headerFontWeight,
-                design: .monospaced
+                design: HerdrSidebarStyle.fontDesign
             )
             .padding(.horizontal, HerdrSidebarStyle.horizontalPadding)
             .padding(.vertical, 8)
 
             ScrollView {
-                LazyVStack(spacing: 2) {
+                LazyVStack(spacing: Self.rowSpacing) {
                     ForEach(agents) { snapshot in
                         AgentRowView(
                             snapshot: snapshot,
@@ -122,12 +145,43 @@ struct HerdrSidebarView: View {
             .cmuxFont(
                 size: HerdrSidebarStyle.headerFontSize,
                 weight: HerdrSidebarStyle.headerFontWeight,
-                design: .monospaced
+                design: HerdrSidebarStyle.fontDesign
             )
             .foregroundStyle(Color.secondary)
             .padding(.horizontal, HerdrSidebarStyle.horizontalPadding)
             .padding(.vertical, 8)
             .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
+// MARK: - Spaces row container
+
+/// Wraps `SpacesRowView` + its context menu behind an `Equatable` boundary.
+///
+/// Attaching `.contextMenu { onSpaceContextMenu(id) }` directly at the `ForEach`
+/// call site invokes the `AnyView`-producing closure on every evaluation of the
+/// spaces list body — building menu content for every row on every render and
+/// defeating the row's own `.equatable()`. Hoisting it into this container means
+/// the closure is only called from *this* view's `body`, which SwiftUI skips
+/// entirely while `item` is unchanged.
+private struct HerdrSpacesRowContainer: View, Equatable {
+    let item: HerdrSidebarSpaceItem
+    let onSelect: (UUID) -> Void
+    let contextMenuContent: (UUID) -> AnyView
+
+    /// Closures are identity-less; equality is the value snapshot only —
+    /// same contract as `SpacesRowView` / `AgentRowView`.
+    static func == (lhs: Self, rhs: Self) -> Bool { lhs.item == rhs.item }
+
+    var body: some View {
+        SpacesRowView(
+            title: item.title,
+            rollup: item.rollup,
+            isSelected: item.isSelected,
+            onSelect: { onSelect(item.id) }
+        )
+        .equatable()
+        .contextMenu { contextMenuContent(item.id) }
     }
 }
 
