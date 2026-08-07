@@ -2359,6 +2359,9 @@ final class Workspace: Identifiable, ObservableObject {
     var agentPIDPanelIdsByKey: [String: UUID] = [:]
     var agentPIDKeysByPanelId: [UUID: Set<String>] = [:]
     var agentLifecycleStatesByPanelId: [UUID: [String: AgentHibernationLifecycleState]] = [:]
+    /// Bumped whenever `agentLifecycleStatesByPanelId` is mutated, so observers
+    /// (e.g. `AgentsSidebarModel`) can coalesce rebuilds without diffing the dict.
+    @Published private(set) var agentLifecycleRevision: Int = 0
     var restoredTerminalScrollbackByPanelId: [UUID: String] = [:]
 #if DEBUG
     var debugSessionSnapshotScrollbackFallbackPanelIds: Set<UUID> = []
@@ -4311,6 +4314,7 @@ final class Workspace: Identifiable, ObservableObject {
         guard let targetPanelId, panels[targetPanelId] != nil else { return }
         agentLifecycleStatesByPanelId[targetPanelId, default: [:]][key] = lifecycle
         recordAgentLifecycleChange(panelId: targetPanelId)
+        agentLifecycleRevision &+= 1
     }
 
     @discardableResult
@@ -4326,12 +4330,14 @@ final class Workspace: Identifiable, ObservableObject {
             didClear = true
             recordAgentLifecycleChange(panelId: panelId)
         }
+        if didClear { agentLifecycleRevision &+= 1 }
         return didClear
     }
 
     func clearAgentLifecycleStates(panelId: UUID) {
         guard agentLifecycleStatesByPanelId.removeValue(forKey: panelId) != nil else { return }
         recordAgentLifecycleChange(panelId: panelId)
+        agentLifecycleRevision &+= 1
     }
 
     func clearAllAgentLifecycleStates() {
@@ -4341,6 +4347,7 @@ final class Workspace: Identifiable, ObservableObject {
         for panelId in panelIds {
             recordAgentLifecycleChange(panelId: panelId)
         }
+        agentLifecycleRevision &+= 1
     }
 
     private func recordAgentLifecycleChange(panelId: UUID) {

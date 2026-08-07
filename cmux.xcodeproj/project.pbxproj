@@ -44,6 +44,8 @@
 		A9E050000000000000000002 /* AgentSessionWebRendererTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A9E050000000000000000001 /* AgentSessionWebRendererTests.swift */; };
 		A9E02000000000000000000D /* AgentSessionWebTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = A9E01000000000000000000D /* AgentSessionWebTheme.swift */; };
 		A9F200000000000000000014 /* AgentSessionWebView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A9F100000000000000000014 /* AgentSessionWebView.swift */; };
+		08A4795ADC5FB484B4BE5C86 /* AgentsSidebarModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 12DC04990DF5011FC071AF0C /* AgentsSidebarModel.swift */; };
+		677063616FFAC2E98BDDE300 /* AgentsSidebarModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C6573A196CFAF9FE762743DF /* AgentsSidebarModelTests.swift */; };
 		F4350A110000000000000001 /* AppBundleIconPersistencePolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = F4350A130000000000000001 /* AppBundleIconPersistencePolicy.swift */; };
 		F4350A120000000000000001 /* AppBundleIconPersistencePolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = F4350A130000000000000001 /* AppBundleIconPersistencePolicy.swift */; };
 		C4160A030000000000000001 /* AppDelegate+ClosedItemHistory.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4160A030000000000000002 /* AppDelegate+ClosedItemHistory.swift */; };
@@ -1079,6 +1081,8 @@
 		A9E050000000000000000001 /* AgentSessionWebRendererTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentSessionWebRendererTests.swift; sourceTree = "<group>"; };
 		A9E01000000000000000000D /* AgentSessionWebTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Panels/AgentSessionWebTheme.swift; sourceTree = "<group>"; };
 		A9F100000000000000000014 /* AgentSessionWebView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Panels/AgentSessionWebView.swift; sourceTree = "<group>"; };
+		12DC04990DF5011FC071AF0C /* AgentsSidebarModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sidebar/AgentsSidebarModel.swift; sourceTree = "<group>"; };
+		C6573A196CFAF9FE762743DF /* AgentsSidebarModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentsSidebarModelTests.swift; sourceTree = "<group>"; };
 		F4350A130000000000000001 /* AppBundleIconPersistencePolicy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = App/AppBundleIconPersistencePolicy.swift; sourceTree = "<group>"; };
 		C4160A030000000000000002 /* AppDelegate+ClosedItemHistory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppDelegate+ClosedItemHistory.swift"; sourceTree = "<group>"; };
 		C3677004000000000000002 /* AppDelegate+CmuxSSHURL.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppDelegate+CmuxSSHURL.swift"; sourceTree = "<group>"; };
@@ -2251,6 +2255,7 @@
 				6042D0046042D0046042D004 /* ShortcutHintTitlebarPolicy.swift */,
 				6042D0056042D0056042D005 /* WindowScopedShortcutHintModifierMonitor.swift */,
 				A5001901A1B2C3D4E5F60718 /* WindowBackgroundComposition.swift */,
+				12DC04990DF5011FC071AF0C /* AgentsSidebarModel.swift */,
 				D1614EAD3CCF70A177A51BD1 /* SidebarState.swift */,
 				80AA3D446C3C40608134B994 /* SidebarFloatingPanelMetrics.swift */,
 				C0DEFF200000000000000002 /* CommandPaletteOverlay.swift */,
@@ -2965,6 +2970,7 @@
 				C06552030000000000000002 /* TabManagerTitleUpdateStalenessTests.swift */,
 				C06552020000000000000002 /* TabManagerTitleUpdateTests.swift */,
 				42092CDB2109E250F7F2A76E /* TabManagerUnitTests.swift */,
+				C6573A196CFAF9FE762743DF /* AgentsSidebarModelTests.swift */,
 				C87EFE5E96786984BC5E9B12 /* TitlebarControlsClusterTests.swift */,
 				G17A00000000000000000021 /* FilesGitPanelTests.swift */,
 				G17A00000000000000000003 /* GitPorcelainStatusTests.swift */,
@@ -3491,6 +3497,7 @@
 				A9E02000000000000000000C /* AgentSessionWebRendererSession.swift in Sources */,
 				A9E02000000000000000000D /* AgentSessionWebTheme.swift in Sources */,
 				A9F200000000000000000014 /* AgentSessionWebView.swift in Sources */,
+				08A4795ADC5FB484B4BE5C86 /* AgentsSidebarModel.swift in Sources */,
 				F4350A110000000000000001 /* AppBundleIconPersistencePolicy.swift in Sources */,
 				C4160A030000000000000001 /* AppDelegate+ClosedItemHistory.swift in Sources */,
 				C3677004000000000000001 /* AppDelegate+CmuxSSHURL.swift in Sources */,
@@ -4116,6 +4123,7 @@
 				D3610B020000000000000001 /* AgentSessionAutoResumeSwiftTests.swift in Sources */,
 				A9E030000000000000000002 /* AgentSessionSocketSurfaceTests.swift in Sources */,
 				A9E050000000000000000002 /* AgentSessionWebRendererTests.swift in Sources */,
+				677063616FFAC2E98BDDE300 /* AgentsSidebarModelTests.swift in Sources */,
 				725746692D9647948561044D /* AppDelegateBareSpaceShortcutRoutingTests.swift in Sources */,
 				E3309A09 /* AppDelegateEqualizeSplitsShortcutTests.swift in Sources */,
 				F5996001A1B2C3D4E5F60001 /* AppDelegateFileExplorerShortcutRoutingTests.swift in Sources */,
