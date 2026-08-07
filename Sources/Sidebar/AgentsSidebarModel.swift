@@ -152,8 +152,11 @@ final class AgentsSidebarModel: ObservableObject {
         workspaceCancellables.removeAll()
         tabsCancellable = tabManager.tabsPublisher
             .sink { [weak self] tabs in
+                // `tabsPublisher` emits from `workspaceTabsWillChange`, i.e. during
+                // willSet before `tabManager.tabs` storage updates — so rebuild from
+                // the emitted array, never by re-reading the (still stale) property.
                 self?.resubscribe(to: tabs)
-                self?.rebuild()
+                self?.rebuild(workspaces: tabs)
             }
     }
 
@@ -166,15 +169,17 @@ final class AgentsSidebarModel: ObservableObject {
                 .merge(with: titles)
                 .debounce(for: .milliseconds(40), scheduler: RunLoop.main)
                 .sink { [weak self] _ in
-                    MainActor.assumeIsolated { self?.rebuild() }
+                    MainActor.assumeIsolated {
+                        guard let self, let tabManager = self.attachedTabManager else { return }
+                        self.rebuild(workspaces: tabManager.tabs)
+                    }
                 }
             workspaceCancellables.append(cancellable)
         }
     }
 
-    private func rebuild() {
-        guard let tabManager = attachedTabManager else { return }
-        let inputs = tabManager.tabs.map { workspace in
+    private func rebuild(workspaces: [Workspace]) {
+        let inputs = workspaces.map { workspace in
             AgentsSidebarWorkspaceInput(
                 workspaceId: workspace.id,
                 title: workspace.title,

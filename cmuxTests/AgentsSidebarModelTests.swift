@@ -128,6 +128,32 @@ final class AgentsSidebarModelTests: XCTestCase {
         XCTAssertEqual(result.rows.map(\.panelId), [blocked, workingNew, workingOld, idle])
     }
 
+    // (d2) ties in both status and statusChangedAt fall back to uuidString order
+    func testSortTieBreaksOnPanelIdUUIDString() {
+        let workspaceId = UUID()
+        let sameDate = now.addingTimeInterval(-60)
+        // Three panels, identical status and statusChangedAt.
+        let panelIds = (0..<3).map { _ in UUID() }
+        var previous: [UUID: (AgentSidebarStatus, Date)] = [:]
+        var panels: [UUID: [String: AgentHibernationLifecycleState]] = [:]
+        for panelId in panelIds {
+            previous[panelId] = (.working, sameDate)
+            panels[panelId] = ["codex": .running]
+        }
+
+        let result = AgentsSidebarModel.buildRows(
+            workspaces: [input(workspaceId: workspaceId, title: "W", panels: panels)],
+            previousChangeDates: previous,
+            now: now
+        )
+
+        XCTAssertEqual(result.rows.map(\.statusChangedAt), Array(repeating: sameDate, count: 3))
+        XCTAssertEqual(
+            result.rows.map(\.panelId),
+            panelIds.sorted { $0.uuidString < $1.uuidString }
+        )
+    }
+
     // (e) statusChangedAt preservation / reset
     func testStatusChangedAtPreservedAndReset() {
         let workspaceId = UUID()
