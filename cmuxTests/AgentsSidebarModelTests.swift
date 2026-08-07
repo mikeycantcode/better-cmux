@@ -243,4 +243,18 @@ final class AgentsSidebarModelTests: XCTestCase {
         )
         XCTAssertEqual(result.rows.first?.id, panelId)
     }
+
+    // Spaces region grows with content: n rows + (n-1) gaps, zero when empty.
+    @MainActor
+    func testSpacesContentHeightGrowsWithRowCount() {
+        XCTAssertEqual(HerdrSidebarView.spacesContentHeight(rowCount: 0), 0)
+        XCTAssertEqual(
+            HerdrSidebarView.spacesContentHeight(rowCount: 1),
+            HerdrSidebarStyle.rowHeight
+        )
+        XCTAssertEqual(
+            HerdrSidebarView.spacesContentHeight(rowCount: 3),
+            3 * HerdrSidebarStyle.rowHeight + 4
+        )
+    }
 }
