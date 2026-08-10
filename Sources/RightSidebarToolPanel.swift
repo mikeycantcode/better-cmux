@@ -29,11 +29,9 @@ final class RightSidebarToolPanel: Panel, ObservableObject {
         if let store = fileExplorerStoreStorage { return store }
         let store = FileExplorerStore()
         store.showHiddenFiles = true
-        // Watcher events keep the Git tab and Changes panel current without a
-        // manual refresh. Never force-creates a git model.
-        store.onDirectoryDidChange = { [weak self] in
-            self?.workspace?.existingGitWorkingTreeModel?.scheduleDebouncedRefresh()
-        }
+        // No git poke here: the store's watcher already pokes the root's shared
+        // `GitStatusMonitor`, which the Git tab and Changes panel ride. Poking
+        // the model too would spend a second `git status` on the same burst.
         fileExplorerStoreStorage = store
         if let workspace {
             syncFileExplorerRoot(from: workspace, store: store)

@@ -304,7 +304,10 @@ struct FileExplorerPanelView: NSViewRepresentable {
                 cellView = FileExplorerCellView(identifier: identifier)
             }
 
+            // A directory with dirty descendants keeps the old "modified" tint
+            // until Task 3 gives folders their own VS Code decoration.
             let gitStatus = store.gitStatusByPath[node.path]
+                ?? (node.isDirectory && store.directoryHasChanges.contains(node.path) ? .modified : nil)
             cellView.configure(with: node, gitStatus: gitStatus, isIgnored: store.isIgnored(node.path))
             cellView.onHover = { [weak self] isHovering in
                 guard let self else { return }

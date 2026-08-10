@@ -2458,16 +2458,11 @@ struct ContentView: View {
 
     private func syncFileExplorerDirectory() {
         leftFileExplorerStore.showHiddenFiles = true
-        // Bind the sidebar explorer's watcher to the selected workspace's model
-        // (created here, outside any view body). Never force-creates a model for
-        // a workspace with no git surface.
+        // The explorer's watcher pokes the root's shared `GitStatusMonitor`,
+        // which the workspace's git model mirrors — so no separate poke is
+        // needed here. Creating the model is still done outside any view body.
         if let selectedWorkspace = tabManager.selectedWorkspace {
             _ = selectedWorkspace.gitWorkingTreeModel
-            fileExplorerStore.onDirectoryDidChange = { [weak selectedWorkspace] in
-                selectedWorkspace?.existingGitWorkingTreeModel?.scheduleDebouncedRefresh()
-            }
-        } else {
-            fileExplorerStore.onDirectoryDidChange = nil
         }
         defer { syncLeftFileExplorerDirectory() }
         guard let selectedId = tabManager.selectedTabId,

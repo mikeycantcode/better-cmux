@@ -1,54 +1,72 @@
+import Combine
 import Foundation
 
 /// Working-tree git state + actions for one repository root.
 /// All git invocations run off-main; published state mutates on the main actor.
+///
+/// Status itself is *not* read here: it is mirrored from the per-root
+/// ``GitStatusMonitor`` that the file explorer also reads, so one change burst
+/// costs one `git status` for both surfaces. This model keeps ownership of the
+/// mutating actions and their error surface.
 @MainActor
 final class GitWorkingTreeModel: ObservableObject {
     @Published private(set) var status: GitPorcelainStatus = .empty
     @Published private(set) var isBusy: Bool = false
     @Published var lastErrorLine: String?
 
-    /// Workspace root. Changing it schedules a refresh through the same
-    /// cancel-token machinery as watcher events, so rapid workspace switches
-    /// coalesce into one read and a stale result can never land over a fresh one.
+    /// Workspace root. Changing it rebinds to that root's monitor and schedules
+    /// a refresh through the monitor's cancel-token machinery, so rapid
+    /// workspace switches coalesce into one read and a stale result can never
+    /// land over a fresh one.
     var repoPath: String {
-        didSet { if repoPath != oldValue { scheduleDebouncedRefresh() } }
+        didSet {
+            guard repoPath != oldValue else { return }
+            bindMonitor()
+            scheduleDebouncedRefresh()
+        }
     }
 
-    private var debounceTask: Task<Void, Never>?
+    private var monitor: GitStatusMonitor
+    private var monitorCancellable: AnyCancellable?
 
     init(repoPath: String) {
         self.repoPath = repoPath
+        self.monitor = GitStatusMonitor.shared(forRepoRoot: repoPath)
+        bindMonitor()
+    }
+
+    /// Mirrors the monitor's porcelain into `status` so `GitPanelView` and the
+    /// Changes webview keep reading this model unchanged.
+    private func bindMonitor() {
+        monitorCancellable = nil
+        monitor = GitStatusMonitor.shared(forRepoRoot: repoPath)
+        status = monitor.porcelain
+        lastErrorLine = monitor.lastErrorLine
+        monitorCancellable = monitor.$porcelain
+            .sink { [weak self] newStatus in
+                guard let self else { return }
+                self.status = newStatus
+                self.lastErrorLine = self.monitor.lastErrorLine
+            }
     }
 
     // MARK: - Refresh
 
     func refresh() async {
-        let path = repoPath
-        guard !path.isEmpty else {
+        guard !repoPath.isEmpty else {
             status = .empty
             return
         }
-        let result = await Self.runGit(["status", "--porcelain=v2", "--branch"], in: path)
-        switch result {
-        case .success(let output):
-            status = GitPorcelainStatus.parse(output)
-            lastErrorLine = nil
-        case .failure(let message):
-            // Not a repo (or git missing): show empty state, keep the reason.
-            status = .empty
-            lastErrorLine = message.isEmpty ? nil : message
-        }
+        await monitor.refreshNow()
+        // `$porcelain` only emits on change, so mirror unconditionally here:
+        // a refresh that confirms the current value must still settle `status`.
+        status = monitor.porcelain
+        lastErrorLine = monitor.lastErrorLine
     }
 
     /// Coalesces watcher bursts into one refresh ~300 ms after the last event.
     func scheduleDebouncedRefresh() {
-        debounceTask?.cancel()
-        debounceTask = Task { [weak self] in
-            try? await Task.sleep(nanoseconds: 300_000_000)
-            guard !Task.isCancelled else { return }
-            await self?.refresh()
-        }
+        monitor.scheduleRefresh()
     }
 
     // MARK: - Actions

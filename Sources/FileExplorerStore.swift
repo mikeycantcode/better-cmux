@@ -178,7 +178,7 @@ enum FileExplorerStyle: Int, CaseIterable {
         }
     }
 
-    func gitColor(for status: GitFileStatus) -> NSColor {
+    func gitColor(for status: GitEntryStatus) -> NSColor {
         switch self {
         case .liquidGlass:
             switch status {
@@ -355,7 +355,10 @@ final class FileExplorerStore: ObservableObject {
     @Published var rootPath: String = ""
     @Published var rootNodes: [FileExplorerNode] = []
     @Published private(set) var isRootLoading: Bool = false
-    @Published private(set) var gitStatusByPath: [String: GitFileStatus] = [:]
+    /// Mirrored from the root's ``GitStatusMonitor`` — never read directly here.
+    @Published private(set) var gitStatusByPath: [String: GitEntryStatus] = [:]
+    /// Absolute directory paths with at least one dirty descendant.
+    @Published private(set) var directoryHasChanges: Set<String> = []
     /// Absolute paths that git reports as ignored. Populated lazily as directories load.
     @Published private(set) var ignoredPaths: Set<String> = []
     @Published private(set) var contentRevision = 0
@@ -384,10 +387,6 @@ final class FileExplorerStore: ObservableObject {
 
     /// Watches the root directory for filesystem changes (local only).
     private var directoryWatcher: FileWatcher?
-    /// Called on the main actor for each (already throttled) directory-watch
-    /// event. Owners use it to nudge a git model's debounced refresh so the Git
-    /// tab and Changes panel track edits and commits without a manual refresh.
-    var onDirectoryDidChange: (@MainActor () -> Void)?
     private var directoryWatchTask: Task<Void, Never>?
     private var directoryWatchPath: String?
 
@@ -414,6 +413,10 @@ final class FileExplorerStore: ObservableObject {
 
     /// Prefetch debounce: path -> work item
     private var prefetchWorkItems: [String: DispatchWorkItem] = [:]
+
+    /// The shared status monitor for `rootPath` (nil when there is no root).
+    private var gitStatusMonitor: GitStatusMonitor?
+    private var gitStatusCancellables: Set<AnyCancellable> = []
 
     var displayRootPath: String {
         FileExplorerRootResolver.displayPath(for: rootPath, homePath: provider?.homePath)
@@ -456,7 +459,7 @@ final class FileExplorerStore: ObservableObject {
         rootPath = path
         ignoredPaths = []
         reload()
-        refreshGitStatus()
+        bindGitStatusMonitor()
         updateDirectoryWatcher()
     }
 
@@ -546,19 +549,41 @@ final class FileExplorerStore: ObservableObject {
         return filterSubtreeMatch[node.path] == true
     }
 
-    func refreshGitStatus() {
+    /// Subscribes this store's decorations to the root's shared status monitor —
+    /// the same instance the Git tab reads — and asks it for a fresh read.
+    ///
+    /// Not a git repo → the monitor publishes empty and no decorations show.
+    private func bindGitStatusMonitor() {
+        gitStatusCancellables = []
+        gitStatusByPath = [:]
+        directoryHasChanges = []
         guard !rootPath.isEmpty else {
-            gitStatusByPath = [:]
+            gitStatusMonitor = nil
             ignoredPaths = []
             return
         }
-        let path = rootPath
-        DispatchQueue.global(qos: .utility).async {
-            let status = GitStatusProvider.fetchStatus(directory: path)
-            DispatchQueue.main.async { [weak self] in
-                self?.gitStatusByPath = status
-            }
+        // Documented main-thread-only store; the monitor is main-actor isolated.
+        MainActor.assumeIsolated {
+            let monitor = GitStatusMonitor.shared(forRepoRoot: rootPath)
+            gitStatusMonitor = monitor
+            gitStatusByPath = monitor.statusByPath
+            directoryHasChanges = monitor.directoryHasChanges
+            monitor.$statusByPath
+                .sink { [weak self] in self?.gitStatusByPath = $0 }
+                .store(in: &gitStatusCancellables)
+            monitor.$directoryHasChanges
+                .sink { [weak self] in self?.directoryHasChanges = $0 }
+                .store(in: &gitStatusCancellables)
+            monitor.scheduleRefresh()
         }
+    }
+
+    /// Pokes the shared monitor. Every explorer-side trigger (root change,
+    /// watcher event, manual reload button) funnels through here so a change
+    /// burst still costs exactly one `git status`.
+    func refreshGitStatus() {
+        guard let gitStatusMonitor else { return }
+        MainActor.assumeIsolated { gitStatusMonitor.scheduleRefresh() }
     }
 
     /// Serializes `git check-ignore` batches: directory loads (especially expanded-state
@@ -655,8 +680,9 @@ final class FileExplorerStore: ObservableObject {
                 for await _ in events {
                     guard let self else { break }
                     self.reload()
+                    // One poke, one `git status`: the Git tab and Changes panel
+                    // ride the same monitor as the explorer's decorations.
                     self.refreshGitStatus()
-                    self.onDirectoryDidChange?()
                 }
             }
         } else {
@@ -913,99 +939,4 @@ final class FileExplorerStore: ObservableObject {
     deinit {
         directoryWatchTask?.cancel()
     }
-}
-
-// MARK: - Git Status
-
-enum GitFileStatus {
-    case modified, added, deleted, renamed, untracked
-}
-
-/// Runs `git status --porcelain` and parses results into a path-to-status map.
-enum GitStatusProvider {
-
-    static func fetchStatus(directory: String) -> [String: GitFileStatus] {
-        guard let repoRoot = gitRepoRoot(for: directory) else { return [:] }
-        return parseGitStatus(
-            output: runGit(in: repoRoot, arguments: ["status", "--porcelain"]),
-            repoRoot: repoRoot,
-            explorerRoot: directory
-        )
-    }
-
-    private static func parseGitStatus(
-        output: String?, repoRoot: String, explorerRoot: String
-    ) -> [String: GitFileStatus] {
-        guard let output, !output.isEmpty else { return [:] }
-        var statusMap: [String: GitFileStatus] = [:]
-
-        for line in output.components(separatedBy: "\n") where line.count >= 4 {
-            let indexStatus = line[line.startIndex]
-            let workTreeStatus = line[line.index(after: line.startIndex)]
-            var path = String(line.dropFirst(3))
-                .trimmingCharacters(in: .whitespaces)
-                .replacingOccurrences(of: "\"", with: "")
-
-            if path.contains(" -> ") {
-                path = String(path.split(separator: " -> ").last ?? Substring(path))
-            }
-
-            guard let status = parseStatusChars(index: indexStatus, workTree: workTreeStatus) else { continue }
-
-            let absolutePath = repoRoot.hasSuffix("/") ? repoRoot + path : repoRoot + "/" + path
-            guard absolutePath.hasPrefix(explorerRoot) else { continue }
-
-            statusMap[absolutePath] = status
-            markParentDirectories(absolutePath: absolutePath, explorerRoot: explorerRoot, status: status, in: &statusMap)
-        }
-        return statusMap
-    }
-
-    private static func parseStatusChars(index: Character, workTree: Character) -> GitFileStatus? {
-        if index == "?" && workTree == "?" { return .untracked }
-        if index == "A" || workTree == "A" { return .added }
-        if index == "D" || workTree == "D" { return .deleted }
-        if index == "R" || workTree == "R" { return .renamed }
-        if index == "M" || workTree == "M" { return .modified }
-        return nil
-    }
-
-    private static func markParentDirectories(
-        absolutePath: String, explorerRoot: String,
-        status: GitFileStatus, in map: inout [String: GitFileStatus]
-    ) {
-        let dirStatus: GitFileStatus = (status == .untracked) ? .untracked : .modified
-        var current = (absolutePath as NSString).deletingLastPathComponent
-        while current.hasPrefix(explorerRoot) && current != explorerRoot {
-            if map[current] == nil {
-                map[current] = dirStatus
-            }
-            current = (current as NSString).deletingLastPathComponent
-        }
-    }
-
-    private static func gitRepoRoot(for directory: String) -> String? {
-        runGit(in: directory, arguments: ["rev-parse", "--show-toplevel"])?
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-    }
-
-    private static func runGit(in directory: String, arguments: [String]) -> String? {
-        let process = Process()
-        process.executableURL = URL(fileURLWithPath: "/usr/bin/git")
-        process.arguments = arguments
-        process.currentDirectoryURL = URL(fileURLWithPath: directory)
-        let pipe = Pipe()
-        process.standardOutput = pipe
-        process.standardError = FileHandle.nullDevice
-        do {
-            try process.run()
-            let data = pipe.fileHandleForReading.readDataToEndOfFileOrEmpty()
-            process.waitUntilExit()
-            guard process.terminationStatus == 0 else { return nil }
-            return String(data: data, encoding: .utf8)
-        } catch {
-            return nil
-        }
-    }
-
 }
