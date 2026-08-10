@@ -41,6 +41,29 @@ final class FileExplorerCellView: NSTableCellView {
     private static let chevronColumnWidth: CGFloat = 16
     private static let folderDotSize: CGFloat = 6
 
+    /// Trailing status-letter column. The badge font is magnified, so the column it
+    /// sits in must be too — a fixed 14pt truncated "M" at 150% magnification.
+    static func statusLetterBadgeWidth(magnifiedBy scale: (CGFloat) -> CGFloat = GlobalFontMagnification.scaledSize) -> CGFloat {
+        scale(14)
+    }
+
+    /// The two chevron glyphs, built once instead of per configure (i.e. per
+    /// scroll-recycle). Fixed 16pt medium, independent of font magnification, so
+    /// there is nothing to invalidate.
+    private static let chevronImages: [Bool: NSImage] = {
+        let config = NSImage.SymbolConfiguration(pointSize: 16, weight: .medium)
+        var images: [Bool: NSImage] = [:]
+        for expanded in [false, true] {
+            if let image = NSImage(
+                systemSymbolName: FileExplorerStyle.chevronSymbolName(expanded: expanded),
+                accessibilityDescription: nil
+            )?.withSymbolConfiguration(config) {
+                images[expanded] = image
+            }
+        }
+        return images
+    }()
+
     private func setupViews() {
         iconView.translatesAutoresizingMaskIntoConstraints = false
         iconView.imageScaling = .scaleProportionallyDown
@@ -251,11 +274,7 @@ final class FileExplorerCellView: NSTableCellView {
         }
         chevronWidthConstraint.constant = Self.chevronColumnWidth
         chevronButton.isHidden = false
-        let config = NSImage.SymbolConfiguration(pointSize: 16, weight: .medium)
-        chevronButton.image = NSImage(
-            systemSymbolName: FileExplorerStyle.chevronSymbolName(expanded: isExpanded),
-            accessibilityDescription: nil
-        )?.withSymbolConfiguration(config)
+        chevronButton.image = Self.chevronImages[isExpanded]
         chevronButton.contentTintColor = .secondaryLabelColor
     }
 
@@ -276,7 +295,7 @@ final class FileExplorerCellView: NSTableCellView {
                     defaultValue: "Git status \(letter)"
                 )
             )
-            badgeWidthConstraint.constant = 14
+            badgeWidthConstraint.constant = Self.statusLetterBadgeWidth()
             nameLabelTrailingToContainerConstraint.isActive = false
             nameLabelTrailingToBadgeConstraint.isActive = true
         case .folderDot where !isLoading:

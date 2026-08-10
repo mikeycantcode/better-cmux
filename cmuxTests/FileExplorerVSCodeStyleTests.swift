@@ -181,6 +181,49 @@ import Testing
         }
     }
 
+    // MARK: - Debug style picker
+
+    @Test func pickerShowsVSCodeSelectedWhenNothingWasEverChosen() {
+        // @AppStorage can't express "key absent", so the picker stores a sentinel and
+        // must resolve it the same way the store does.
+        #expect(
+            FileExplorerStylePickerModel.selectedStyle(
+                storedRawValue: FileExplorerStylePickerModel.unsetSentinel
+            ) == .vscode
+        )
+    }
+
+    @Test func pickerSentinelIsNotAValidStyleRawValue() {
+        let sentinel = FileExplorerStylePickerModel.unsetSentinel
+        #expect(FileExplorerStyle.allCases.allSatisfy { $0.rawValue != sentinel })
+    }
+
+    @Test func pickerHonorsEveryExplicitlyChosenStyle() {
+        for style in FileExplorerStyle.allCases {
+            #expect(FileExplorerStylePickerModel.selectedStyle(storedRawValue: style.rawValue) == style)
+        }
+    }
+
+    @Test func pickerAgreesWithStoreResolution() {
+        // A fresh install must not show one style selected while rendering another.
+        #expect(
+            FileExplorerStylePickerModel.selectedStyle(
+                storedRawValue: FileExplorerStylePickerModel.unsetSentinel
+            ) == FileExplorerStyle.resolve(rawValue: nil)
+        )
+    }
+
+    // MARK: - Badge metrics
+
+    @Test func statusLetterBadgeWidthScalesWithFontMagnification() {
+        #expect(FileExplorerCellView.statusLetterBadgeWidth(magnifiedBy: { $0 }) == 14)
+        #expect(FileExplorerCellView.statusLetterBadgeWidth(magnifiedBy: { $0 * 1.5 }) == 21)
+        // The real column must track GlobalFontMagnification, since the badge font does.
+        #expect(
+            FileExplorerCellView.statusLetterBadgeWidth() == GlobalFontMagnification.scaledSize(14)
+        )
+    }
+
     // MARK: - Chevron
 
     @Test func chevronSymbolFollowsExpansion() {

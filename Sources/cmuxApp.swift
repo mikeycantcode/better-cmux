@@ -2329,11 +2329,26 @@ private struct AcknowledgmentsView: View {
 
 // MARK: - File Explorer Style Debug
 
+/// Pure selection logic for the debug style picker.
+///
+/// `@AppStorage` cannot express "key absent", so the picker stores a sentinel and
+/// routes the unset case through the same `FileExplorerStyle.resolve` the store uses.
+/// Without this the picker showed `.liquidGlass` (raw value 0) selected on a fresh
+/// install while the explorer actually rendered `.vscode`.
+enum FileExplorerStylePickerModel {
+    static let unsetSentinel = -1
+
+    static func selectedStyle(storedRawValue: Int) -> FileExplorerStyle {
+        FileExplorerStyle.resolve(rawValue: storedRawValue == unsetSentinel ? nil : storedRawValue)
+    }
+}
+
 private struct FileExplorerStyleDebugView: View {
-    @AppStorage("fileExplorer.style") private var styleRawValue: Int = 0
+    @AppStorage("fileExplorer.style") private var styleRawValue: Int =
+        FileExplorerStylePickerModel.unsetSentinel
 
     private var currentStyle: FileExplorerStyle {
-        FileExplorerStyle.resolve(rawValue: styleRawValue)
+        FileExplorerStylePickerModel.selectedStyle(storedRawValue: styleRawValue)
     }
 
     var body: some View {
@@ -2349,8 +2364,8 @@ private struct FileExplorerStyleDebugView: View {
                         NotificationCenter.default.post(name: .fileExplorerStyleDidChange, object: nil)
                     }) {
                         HStack(spacing: 8) {
-                            Image(systemName: styleRawValue == style.rawValue ? "checkmark.circle.fill" : "circle")
-                                .foregroundColor(styleRawValue == style.rawValue ? .accentColor : .secondary)
+                            Image(systemName: currentStyle == style ? "checkmark.circle.fill" : "circle")
+                                .foregroundColor(currentStyle == style ? .accentColor : .secondary)
                                 .frame(width: 16)
                             VStack(alignment: .leading, spacing: 2) {
                                 Text(style.label)
@@ -2365,7 +2380,7 @@ private struct FileExplorerStyleDebugView: View {
                         .padding(.horizontal, 8)
                         .background(
                             RoundedRectangle(cornerRadius: 6)
-                                .fill(styleRawValue == style.rawValue
+                                .fill(currentStyle == style
                                     ? Color.accentColor.opacity(0.1)
                                     : Color.clear)
                         )
