@@ -34,9 +34,10 @@ struct ScmRowSnapshot: Identifiable, Equatable {
 /// the `ForEach`; rows receive `ScmRowSnapshot` values plus closures.
 struct GitPanelView: View {
     @ObservedObject var model: GitWorkingTreeModel
-    /// Receives an absolute path; the mount site converts from repo-relative.
+    /// Receives the row's repo-relative path; the mount site resolves it against
+    /// the repo root and routes it to the Changes panel or a file preview.
     let openFile: (String) -> Void
-    /// nil until Task 8 lands `GitChangesPanel`; the affordance stays hidden.
+    /// nil where no Changes panel is available; the affordance stays hidden.
     let openChanges: (() -> Void)?
 
     /// Exactly one confirmation can be pending. Two stacked
@@ -64,6 +65,46 @@ struct GitPanelView: View {
         var isBatch: Bool {
             if case .discardEntries = self { return true }
             return false
+        }
+    }
+
+    /// Which confirmation wording a pending discard needs. Untracked entries are
+    /// deleted from disk (`git clean -fd`), not reverted, so their count is
+    /// called out separately and explicitly.
+    enum DiscardConfirmVariant: Equatable {
+        case singleFile
+        case tracked(Int)
+        case trackedAndUntracked(tracked: Int, untracked: Int)
+    }
+
+    static func discardConfirmVariant(for pending: PendingConfirm) -> DiscardConfirmVariant {
+        guard pending.isBatch else { return .singleFile }
+        let entries = pending.entries
+        let untracked = entries.filter { $0.status == .untracked }.count
+        let tracked = entries.count - untracked
+        return untracked > 0
+            ? .trackedAndUntracked(tracked: tracked, untracked: untracked)
+            : .tracked(tracked)
+    }
+
+    static func discardConfirmMessage(for pending: PendingConfirm) -> String {
+        switch discardConfirmVariant(for: pending) {
+        case .singleFile:
+            return String(
+                localized: "gitPanel.discardFile.confirm",
+                defaultValue: "Discard changes to this file? This cannot be undone."
+            )
+        case .tracked(let count):
+            return String(
+                localized: "gitPanel.discardAll.confirm.tracked",
+                defaultValue: "Discard changes to \(count) files? This cannot be undone."
+            )
+        case .trackedAndUntracked(let tracked, let untracked):
+            return String(
+                localized: "gitPanel.discardAll.confirm.withUntracked",
+                defaultValue:
+                    "Discard changes to \(tracked) files and DELETE \(untracked) untracked files? This cannot be undone."
+            )
         }
     }
 
@@ -149,12 +190,8 @@ struct GitPanelView: View {
             }
         }
         .confirmationDialog(
-            pendingConfirm?.isBatch == true
-                ? String(
-                    localized: "gitPanel.discardAll.confirm",
-                    defaultValue: "Discard all changes? This cannot be undone."
-                )
-                : String(
+            pendingConfirm.map(Self.discardConfirmMessage(for:))
+                ?? String(
                     localized: "gitPanel.discardFile.confirm",
                     defaultValue: "Discard changes to this file? This cannot be undone."
                 ),
@@ -271,8 +308,13 @@ struct GitPanelView: View {
                     systemName: "arrow.uturn.backward.circle",
                     help: String(localized: "gitPanel.action.discardAll", defaultValue: "Discard All Changes"),
                     perform: {
-                        // Scoped to this section: `model.discardAll()` would also
-                        // touch anything not listed here.
+                        // VS Code's "Discard All Changes" covers everything this
+                        // section lists, so untracked files are included and are
+                        // DELETED (`git clean -fd`) rather than reverted. The
+                        // confirmation states both counts separately for exactly
+                        // that reason. Entries are passed explicitly instead of
+                        // calling `model.discardAll()` so the scope can never
+                        // exceed what the user sees here.
                         pendingConfirm = .discardEntries(model.status.modified + model.status.untracked)
                     }
                 ),

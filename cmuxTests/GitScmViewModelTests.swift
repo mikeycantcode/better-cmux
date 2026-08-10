@@ -94,6 +94,39 @@ import Testing
         #expect(rows.staged[0].id != rows.changes[0].id)
     }
 
+    @Test func discardVariantForASingleFile() {
+        let pending = GitPanelView.PendingConfirm.discardFile(entry("a.swift", .modified))
+        #expect(GitPanelView.discardConfirmVariant(for: pending) == .singleFile)
+    }
+
+    @Test func discardVariantForTrackedOnlyBatchCountsFiles() {
+        let pending = GitPanelView.PendingConfirm.discardEntries([
+            entry("a.swift", .modified),
+            entry("b.swift", .deleted),
+        ])
+        #expect(GitPanelView.discardConfirmVariant(for: pending) == .tracked(2))
+    }
+
+    @Test func discardVariantSplitsTrackedAndUntrackedCounts() {
+        let pending = GitPanelView.PendingConfirm.discardEntries([
+            entry("a.swift", .modified),
+            entry("b.swift", .untracked),
+            entry("c.swift", .untracked),
+        ])
+        #expect(
+            GitPanelView.discardConfirmVariant(for: pending)
+                == .trackedAndUntracked(tracked: 1, untracked: 2)
+        )
+    }
+
+    @Test func discardVariantWithOnlyUntrackedStillReportsDeletion() {
+        let pending = GitPanelView.PendingConfirm.discardEntries([entry("b.swift", .untracked)])
+        #expect(
+            GitPanelView.discardConfirmVariant(for: pending)
+                == .trackedAndUntracked(tracked: 0, untracked: 1)
+        )
+    }
+
     @Test func statusColorsMatchTheExplorerVSCodePalette() {
         let rows = GitPanelView.scmRows(
             from: status(
