@@ -7,6 +7,63 @@ import WebKit
 /// The controller is owned by the panel (not the SwiftUI wrapper) so the web view
 /// survives SwiftUI re-creating its `NSViewRepresentable` during split/workspace
 /// churn — the same ownership model ``MarkdownWebRenderer`` uses for its session.
+/// The `WKWebView` subclass hosting Monaco.
+///
+/// cmux re-parents panes by `removeFromSuperview` → `addSubview` (bonsplit
+/// splits, pane drags, workspace switches). While a `WKWebView` is out of a
+/// window WebKit suspends painting — and can reclaim the WebContent process —
+/// which previously left the editor permanently black with no user-facing
+/// reload. This drives WebKit's in-window lifecycle out on detach and back in
+/// on re-entry, mirroring ``MarkdownWebView``.
+@MainActor
+final class MonacoWebView: WKWebView {
+    /// Invoked when the view leaves its window (the detach half of a re-parent).
+    var onLeaveWindow: (() -> Void)?
+    /// Invoked when the view re-enters a window after being detached.
+    var onReenterWindow: (() -> Void)?
+
+    private var needsRenderingReattach = false
+
+    override func viewDidMoveToWindow() {
+        super.viewDidMoveToWindow()
+        if window == nil {
+            needsRenderingReattach = true
+            callVoidSelectorIfAvailable("viewDidHide")
+            callVoidSelectorIfAvailable("_exitInWindow")
+            onLeaveWindow?()
+        } else {
+            reattachRenderingState()
+            onReenterWindow?()
+        }
+    }
+
+    /// Resumes WebKit's rendering after the view re-enters a window: nudges the
+    /// in-window lifecycle back on and forces a layout/display pass so the live
+    /// document repaints instead of staying blank.
+    private func reattachRenderingState() {
+        guard needsRenderingReattach else { return }
+        needsRenderingReattach = false
+        callVoidSelectorIfAvailable("viewDidUnhide")
+        callVoidSelectorIfAvailable("_enterInWindow")
+        callVoidSelectorIfAvailable("_endDeferringViewInWindowChangesSync")
+        needsLayout = true
+        needsDisplay = true
+        setNeedsDisplay(bounds)
+        layoutSubtreeIfNeeded()
+        displayIfNeeded()
+    }
+
+    /// Calls a private `WKWebView` lifecycle selector when present. Guarded by
+    /// `responds(to:)` so it degrades to a no-op if the selector is removed.
+    private func callVoidSelectorIfAvailable(_ rawSelector: String) {
+        let selector = NSSelectorFromString(rawSelector)
+        guard responds(to: selector) else { return }
+        typealias Fn = @convention(c) (AnyObject, Selector) -> Void
+        let fn = unsafeBitCast(method(for: selector), to: Fn.self)
+        fn(self, selector)
+    }
+}
+
 @MainActor
 final class MonacoWebController: NSObject, WKNavigationDelegate, WKScriptMessageHandler {
     /// The hosted web view, created lazily by ``makeWebView()``.
@@ -26,6 +83,9 @@ final class MonacoWebController: NSObject, WKNavigationDelegate, WKScriptMessage
     // SwiftUI's repeated `updateNSView` does not re-run `monaco.editor.setTheme`
     // on every keystroke's round-trip.
     private var lastAppliedTheme: String?
+    /// Whether the shell was ready at the moment the host view left its window,
+    /// used to tell a pane-reparent artifact apart from a genuinely broken load.
+    private var shellWasHealthyWhenDetached = false
 
     /// Called with the full buffer when Monaco reports a debounced content change.
     var onChange: ((String) -> Void)?
@@ -41,7 +101,14 @@ final class MonacoWebController: NSObject, WKNavigationDelegate, WKScriptMessage
 
     /// Returns the hosted web view, creating and loading it on first call.
     func makeWebView() -> WKWebView {
-        if let webView { return webView }
+        if let webView {
+            // SwiftUI recreates the representable (and a fresh host view) when the
+            // pane hierarchy changes — e.g. a bonsplit split. Detach the retained
+            // web view from its stale host first so it is re-parented cleanly,
+            // mirroring `MarkdownWebRenderer.makeNSView`'s reuse path.
+            if webView.superview != nil { webView.removeFromSuperview() }
+            return webView
+        }
         let config = WKWebViewConfiguration()
         config.setURLSchemeHandler(MonacoAssetURLSchemeHandler(), forURLScheme: MonacoAssetURLSchemeHandler.scheme)
         // Register through a weak trampoline so `userContentController` does not
@@ -52,8 +119,9 @@ final class MonacoWebController: NSObject, WKNavigationDelegate, WKScriptMessage
             WeakMonacoScriptMessageHandler(self),
             name: "cmuxMonacoBridge"
         )
-        let wv = WKWebView(frame: .zero, configuration: config)
+        let wv = MonacoWebView(frame: .zero, configuration: config)
         wv.navigationDelegate = self
+        bindWindowLifecycle(wv)
         wv.setValue(false, forKey: "drawsBackground")
         wv.allowsBackForwardNavigationGestures = false
         wv.allowsLinkPreview = false
@@ -63,6 +131,31 @@ final class MonacoWebController: NSObject, WKNavigationDelegate, WKScriptMessage
         webView = wv
         load(request: shellRequest())
         return wv
+    }
+
+    /// Wires the host view's window-detach/re-entry hooks so a pane re-parent
+    /// (bonsplit split, drag, workspace switch) cannot leave the editor blank.
+    private func bindWindowLifecycle(_ wv: MonacoWebView) {
+        wv.onLeaveWindow = { [weak self] in
+            guard let self else { return }
+            self.shellWasHealthyWhenDetached = self.isReady
+        }
+        wv.onReenterWindow = { [weak self] in
+            guard let self else { return }
+            // A still-ready document is alive but merely unpainted; the host
+            // view's repaint nudge in `viewDidMoveToWindow` handles that case.
+            guard !self.isReady else { return }
+            // Only recover a document that was healthy before the detach, so a
+            // shell that failed while attached is not retried on every re-parent.
+            guard self.shellWasHealthyWhenDetached else { return }
+            self.shellWasHealthyWhenDetached = false
+            // Seed the replay from the last applied buffer before `load(request:)`
+            // clears it, so the recovered editor repopulates on `ready`.
+            if self.pendingLoad == nil, let last = self.lastAppliedContent {
+                self.pendingLoad = (last.text, last.language, self.lastAppliedTheme ?? "cmux-dark")
+            }
+            self.load(request: self.shellRequest())
+        }
     }
 
     private func shellRequest() -> URLRequest {
@@ -210,6 +303,10 @@ final class MonacoWebController: NSObject, WKNavigationDelegate, WKScriptMessage
         webView?.stopLoading()
         webView?.configuration.userContentController.removeScriptMessageHandler(forName: "cmuxMonacoBridge")
         webView?.navigationDelegate = nil
+        if let hosted = webView as? MonacoWebView {
+            hosted.onLeaveWindow = nil
+            hosted.onReenterWindow = nil
+        }
         webView = nil
         isReady = false
         lastAppliedContent = nil
