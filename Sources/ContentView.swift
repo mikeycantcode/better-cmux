@@ -10466,6 +10466,10 @@ struct VerticalTabsSidebar: View {
         )
     }
 
+    /// Shared coordinate space between the herdr space-row frame reader and the
+    /// Bonsplit drop overlay's NSView bounds.
+    private static let herdrDropCoordinateSpace = "cmux.herdrSidebar.bonsplitDrop"
+
     /// Herdr sidebar body, extracted out of `sidebarContent`. Kept as its own
     /// function so the surrounding `body` expression stays inside the Swift
     /// type-checker's budget — inlined, it intermittently tripped
@@ -10516,6 +10520,19 @@ struct VerticalTabsSidebar: View {
                 ? { anchors in
                     AnyView(
                         GeometryReader { proxy in
+                            // `proxy[anchor]` resolves in this reader's own
+                            // space, which sits inside the spaces ScrollView —
+                            // offset from the drop view by the top padding, the
+                            // section header, and the live scroll offset.
+                            // `proxy.frame(in:)` against the named space that
+                            // wraps the drop overlay gives exactly that delta
+                            // (and tracks scrolling, since this reader scrolls
+                            // with the content), so translating by its origin
+                            // lands every target in the drop view's own
+                            // coordinates — what `localPoint(_:)` hit-tests.
+                            let readerOrigin = proxy
+                                .frame(in: .named(Self.herdrDropCoordinateSpace))
+                                .origin
                             SidebarBonsplitTabWorkspaceDropOverlay.TargetWriter(
                                 targetBridge: bonsplitWorkspaceDropTargetBridge,
                                 targets: renderContext.tabs.compactMap { tab in
@@ -10523,7 +10540,10 @@ struct VerticalTabsSidebar: View {
                                     return SidebarDropPlanner.WorkspaceDropTarget(
                                         workspaceId: tab.id,
                                         isPinned: tab.isPinned,
-                                        frame: proxy[anchor]
+                                        frame: proxy[anchor].offsetBy(
+                                            dx: readerOrigin.x,
+                                            dy: readerOrigin.y
+                                        )
                                     )
                                 }
                             )
@@ -10541,6 +10561,10 @@ struct VerticalTabsSidebar: View {
             bonsplitWorkspaceDropOverlay()
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
+        // Names the drop view's own bounds so the row-frame reader inside the
+        // spaces ScrollView can convert into it. Applied to the node the drop
+        // overlay covers, so the two spaces coincide at every scroll position.
+        .coordinateSpace(name: Self.herdrDropCoordinateSpace)
         // Minimal mode hides the real titlebar, so the sidebar hosts the window
         // controls. Same overlay the workspace list and the extension sidebar mount.
         .overlay(alignment: .topLeading) {

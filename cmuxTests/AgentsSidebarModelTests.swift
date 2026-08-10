@@ -302,11 +302,19 @@ final class AgentsSidebarModelTests: XCTestCase {
     /// the settled value.
     private func drainUntilQuiescent(_ model: AgentsSidebarModel) -> Int {
         var previous = model.invalidationRevision
-        for _ in 0..<20 {
+        var stableSamples = 0
+        for _ in 0..<30 {
             RunLoop.current.run(until: Date().addingTimeInterval(0.1))
             let current = model.invalidationRevision
-            if current == previous { return current }
-            previous = current
+            if current == previous {
+                stableSamples += 1
+                // Two consecutive stable samples: one is not enough, since a
+                // debounced sink can land between any two reads.
+                if stableSamples >= 2 { return current }
+            } else {
+                stableSamples = 0
+                previous = current
+            }
         }
         return previous
     }
