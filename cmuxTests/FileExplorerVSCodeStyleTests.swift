@@ -458,4 +458,19 @@ import Testing
         // The root itself is implicit and never stored as an expanded path.
         #expect(!store.expandedPaths.contains(dir))
     }
+
+    // MARK: - Header section title
+
+    @Test func sectionTitleIsTheUppercasedRootFolderName() {
+        #expect(FileExplorerHeaderView.sectionTitle(forDisplayPath: "~/code/my-app") == "MY-APP")
+        #expect(FileExplorerHeaderView.sectionTitle(forDisplayPath: "/Users/x/Repo/") == "REPO")
+        #expect(FileExplorerHeaderView.sectionTitle(forDisplayPath: "  /tmp/scratch  ") == "SCRATCH")
+    }
+
+    @Test func sectionTitleFallsBackToExplorerWithoutARoot() {
+        let fallback = String(localized: "sidebar.fileExplorer.title", defaultValue: "Explorer").uppercased()
+        #expect(FileExplorerHeaderView.sectionTitle(forDisplayPath: "") == fallback)
+        #expect(FileExplorerHeaderView.sectionTitle(forDisplayPath: "   ") == fallback)
+        #expect(FileExplorerHeaderView.sectionTitle(forDisplayPath: "/") == fallback)
+    }
 }

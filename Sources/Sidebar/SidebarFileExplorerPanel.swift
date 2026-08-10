@@ -19,7 +19,9 @@ struct SidebarFileExplorerPanel: View {
                 isExpanded: state.isVisible,
                 onToggle: { state.isVisible.toggle() }
             )
-            .frame(height: FileExplorerHeaderView.rowHeight)
+            // No explicit height: the hosted view's own magnification-aware height
+            // constraint drives the size, so the row tracks font magnification live.
+            .frame(maxWidth: .infinity)
             .accessibilityLabel(
                 state.isVisible
                     ? String(localized: "sidebar.fileExplorer.collapse", defaultValue: "Collapse file explorer")

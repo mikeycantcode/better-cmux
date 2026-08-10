@@ -45,6 +45,10 @@ final class FileExplorerHeaderView: NSView {
     private var isSectionExpanded = true
     private var isHovering = false
     private var trackingArea: NSTrackingArea?
+    /// Keeps the row height and label font tracking magnification changes on their
+    /// own, so the header is correct wherever it is mounted (the right sidebar's
+    /// container also drives `applyFonts()`; the call is idempotent).
+    private var fontMagnificationObserver: GlobalFontMagnificationChangeObserver?
 
     /// Set by the mounting surface. Buttons no-op until this is assigned.
     var actions: FileExplorerHeaderActions?
@@ -139,6 +143,9 @@ final class FileExplorerHeaderView: NSView {
         }
 
         NSLayoutConstraint.activate(constraints)
+        fontMagnificationObserver = GlobalFontMagnificationChangeObserver { [weak self] in
+            self?.applyFonts()
+        }
         applyFonts()
         applyHoverState()
         applyHeaderState()
@@ -245,11 +252,13 @@ final class FileExplorerHeaderView: NSView {
         applyHoverState()
     }
 
+    /// Reveal is purely visual: the buttons stay enabled so VoiceOver and
+    /// full-keyboard-access users (who never generate `mouseEntered`) can still
+    /// reach them, and a lagging tracking update can't swallow the first click.
     private func applyHoverState() {
         let alpha: CGFloat = isHovering ? 1 : 0
         for button in actionButtons {
             button.alphaValue = alpha
-            button.isEnabled = isHovering
         }
     }
 
@@ -278,21 +287,31 @@ struct FileExplorerSectionHeader: NSViewRepresentable {
     let isExpanded: Bool
     let onToggle: () -> Void
 
+    /// Holds the store the mounted view's action bundle is bound to, so the bundle
+    /// is rebuilt only when the store instance changes rather than on every update.
+    final class Coordinator {
+        weak var actionsStore: FileExplorerStore?
+    }
+
+    func makeCoordinator() -> Coordinator { Coordinator() }
+
     func makeNSView(context: Context) -> FileExplorerHeaderView {
         let view = FileExplorerHeaderView()
-        apply(to: view)
+        apply(to: view, context: context)
         return view
     }
 
     func updateNSView(_ nsView: FileExplorerHeaderView, context: Context) {
-        apply(to: nsView)
+        apply(to: nsView, context: context)
     }
 
-    private func apply(to view: FileExplorerHeaderView) {
-        view.actions = FileExplorerHeaderActionRunner.actions(for: store, toggleSection: onToggle)
+    private func apply(to view: FileExplorerHeaderView, context: Context) {
+        if context.coordinator.actionsStore !== store {
+            context.coordinator.actionsStore = store
+            view.actions = FileExplorerHeaderActionRunner.actions(for: store, toggleSection: onToggle)
+        }
         view.update(displayPath: store.displayRootPath)
         view.updateSectionExpanded(isExpanded)
-        view.applyFonts()
     }
 }
 
