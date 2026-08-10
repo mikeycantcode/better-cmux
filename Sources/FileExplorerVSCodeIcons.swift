@@ -19,6 +19,18 @@ enum VSCodeFileIcon {
     static let defaultFolderIconName = "folder"
     static let defaultFolderOpenIconName = "folder-open"
 
+    /// Raw, unvalidated tables. Exposed so tests can assert that every authored mapping value
+    /// is genuinely bundled — asserting over the validated tables below would be tautological,
+    /// since `validated(_:)` rewrites unbundled values by construction.
+    static var rawTablesForTesting: (
+        extensions: [String: String],
+        fileNames: [String: String],
+        folders: [String: FolderIconVariant],
+        prefixes: [String: String]
+    ) {
+        (rawExtensionIconNames, rawFileNameIconNames, rawFolderIconNames, rawPrefixIconNames)
+    }
+
     /// Extension (without dot, lowercased) -> icon filename (without .svg)
     static let extensionIconNames: [String: String] = validated(rawExtensionIconNames)
 
@@ -119,13 +131,6 @@ enum VSCodeFileIcon {
 
     /// Cache of loaded icon images keyed by "name@size".
     private static var iconCache: [String: NSImage] = [:]
-
-    /// Returns the icon for a file extension, or nil if unavailable.
-    static func icon(forExtension ext: String, size: CGFloat = 16) -> NSImage? {
-        let lower = ext.lowercased()
-        let iconName = extensionIconNames[lower] ?? lower
-        return loadIcon(named: iconName, size: size)
-    }
 
     /// Returns the icon for a full file name. Always resolves (falls back to the generic document icon).
     static func icon(forFileName name: String, size: CGFloat = 16) -> NSImage? {

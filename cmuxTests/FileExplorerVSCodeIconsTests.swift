@@ -12,10 +12,16 @@ final class FileExplorerVSCodeIconsTests: XCTestCase {
         Bundle.main.url(forResource: name, withExtension: "svg", subdirectory: "FileTypeIcons") != nil
     }
 
-    // MARK: - (a) every mapping value resolves to a bundled SVG
+    // MARK: - (a) every AUTHORED mapping value resolves to a bundled SVG
+    //
+    // These assert over the RAW tables on purpose. The production tables run through
+    // `validated(_:)` / `validatedFolders(_:)`, which rewrite or drop unbundled values by
+    // construction — asserting over those would be tautological and would stay green even if
+    // an SVG were deleted from the bundle. Validation remains the runtime degrade-never-break
+    // net; these tests assert that the net is never actually needed.
 
-    func testEveryExtensionMappingValueResolvesToBundledSVG() {
-        let mapping = VSCodeFileIcon.extensionIconNames
+    func testEveryAuthoredExtensionMappingValueIsBundled() {
+        let mapping = VSCodeFileIcon.rawTablesForTesting.extensions
         XCTAssertGreaterThan(mapping.count, 120, "extension table should cover the expanded set")
         for (ext, iconName) in mapping {
             XCTAssertTrue(
@@ -25,8 +31,8 @@ final class FileExplorerVSCodeIconsTests: XCTestCase {
         }
     }
 
-    func testEveryFileNameMappingValueResolvesToBundledSVG() {
-        let mapping = VSCodeFileIcon.fileNameIconNames
+    func testEveryAuthoredFileNameMappingValueIsBundled() {
+        let mapping = VSCodeFileIcon.rawTablesForTesting.fileNames
         XCTAssertGreaterThan(mapping.count, 60, "filename table should cover the expanded set")
         for (name, iconName) in mapping {
             XCTAssertTrue(
@@ -36,8 +42,10 @@ final class FileExplorerVSCodeIconsTests: XCTestCase {
         }
     }
 
-    func testEveryFolderMappingValueResolvesToBundledSVG() {
-        for (folder, variant) in VSCodeFileIcon.folderIconNames {
+    func testEveryAuthoredFolderMappingValueIsBundled() {
+        let mapping = VSCodeFileIcon.rawTablesForTesting.folders
+        XCTAssertGreaterThan(mapping.count, 20, "folder table should cover the expanded set")
+        for (folder, variant) in mapping {
             XCTAssertTrue(
                 bundledIconExists(variant.collapsed),
                 "folder \"\(folder)\" maps to missing icon \"\(variant.collapsed).svg\""
@@ -47,6 +55,31 @@ final class FileExplorerVSCodeIconsTests: XCTestCase {
                 "folder \"\(folder)\" maps to missing icon \"\(variant.expanded).svg\""
             )
         }
+    }
+
+    func testEveryAuthoredPrefixRuleValueIsBundled() {
+        for (prefix, iconName) in VSCodeFileIcon.rawTablesForTesting.prefixes {
+            XCTAssertTrue(
+                bundledIconExists(iconName),
+                "prefix \"\(prefix)\" maps to missing icon \"\(iconName).svg\""
+            )
+        }
+    }
+
+    /// Validation must be a no-op today: no authored value should be silently degraded.
+    func testValidationNetIsCurrentlyUnused() {
+        XCTAssertEqual(
+            VSCodeFileIcon.extensionIconNames,
+            VSCodeFileIcon.rawTablesForTesting.extensions
+        )
+        XCTAssertEqual(
+            VSCodeFileIcon.fileNameIconNames,
+            VSCodeFileIcon.rawTablesForTesting.fileNames
+        )
+        XCTAssertEqual(
+            VSCodeFileIcon.folderIconNames,
+            VSCodeFileIcon.rawTablesForTesting.folders
+        )
     }
 
     func testGenericDocumentFallbackIconIsBundled() {
@@ -162,8 +195,10 @@ final class FileExplorerVSCodeIconsTests: XCTestCase {
     // MARK: - loader still works
 
     func testLoaderProducesImagesForMappedNames() {
-        XCTAssertNotNil(VSCodeFileIcon.icon(forExtension: "swift", size: 16))
+        XCTAssertNotNil(VSCodeFileIcon.icon(forFileName: "Main.swift", size: 16))
+        XCTAssertNotNil(VSCodeFileIcon.icon(forFileName: "mystery.qzxwv", size: 16))
         XCTAssertNotNil(VSCodeFileIcon.folderIcon(size: 16))
+        XCTAssertNotNil(VSCodeFileIcon.folderIcon(forFolderName: "src", expanded: true, size: 16))
     }
 
     func testLicenseIsBundledAlongsideIcons() {
