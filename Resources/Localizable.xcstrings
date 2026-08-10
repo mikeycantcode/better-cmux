@@ -96715,13 +96715,19 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Discard All"
+            "value": "Discard All Changes"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "すべて破棄"
+            "value": "すべての変更を破棄"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "모든 변경 사항 취소"
           }
         }
       }
@@ -96732,13 +96738,19 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Stage All"
+            "value": "Stage All Changes"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "すべてステージ"
+            "value": "すべての変更をステージ"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "모든 변경 사항 스테이징"
           }
         }
       }
@@ -96757,39 +96769,11 @@
             "state": "translated",
             "value": "すべてアンステージ"
           }
-        }
-      }
-    },
-    "gitPanel.commit": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Commit"
-          }
         },
-        "ja": {
+        "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "コミット"
-          }
-        }
-      }
-    },
-    "gitPanel.commitMessage.placeholder": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Commit message…"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "コミットメッセージ…"
+            "value": "모두 스테이징 해제"
           }
         }
       }
@@ -96808,6 +96792,12 @@
             "state": "translated",
             "value": "デタッチ状態"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "분리됨"
+          }
         }
       }
     },
@@ -96824,6 +96814,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "すべての変更を破棄しますか？この操作は取り消せません。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "모든 변경 사항을 취소할까요? 이 작업은 되돌릴 수 없습니다."
           }
         }
       }
@@ -96842,6 +96838,12 @@
             "state": "translated",
             "value": "すべて破棄"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "모두 취소"
+          }
         }
       }
     },
@@ -96859,6 +96861,12 @@
             "state": "translated",
             "value": "このファイルの変更を破棄しますか？この操作は取り消せません。"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이 파일의 변경 사항을 취소할까요? 이 작업은 되돌릴 수 없습니다."
+          }
         }
       }
     },
@@ -96875,6 +96883,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "破棄"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "취소"
           }
         }
       }
@@ -96909,6 +96923,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "変更を開く"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "변경 사항 열기"
           }
         }
       }
@@ -96961,6 +96981,12 @@
             "state": "translated",
             "value": "更新"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "새로 고침"
+          }
         }
       }
     },
@@ -96977,6 +97003,35 @@
           "stringUnit": {
             "state": "translated",
             "value": "破棄"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "취소"
+          }
+        }
+      }
+    },
+    "gitPanel.row.openFile": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open File"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ファイルを開く"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "파일 열기"
           }
         }
       }
@@ -96995,6 +97050,12 @@
             "state": "translated",
             "value": "ステージ"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "스테이징"
+          }
         }
       }
     },
@@ -97012,16 +97073,22 @@
             "state": "translated",
             "value": "アンステージ"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "스테이징 해제"
+          }
         }
       }
     },
-    "gitPanel.section.modified": {
+    "gitPanel.section.changes": {
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "MODIFIED"
+            "value": "Changes"
           }
         },
         "ja": {
@@ -97029,39 +97096,34 @@
             "state": "translated",
             "value": "変更"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "변경 사항"
+          }
         }
       }
     },
-    "gitPanel.section.staged": {
+    "gitPanel.section.stagedChanges": {
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "STAGED"
+            "value": "Staged Changes"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "ステージ済み"
-          }
-        }
-      }
-    },
-    "gitPanel.section.untracked": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "UNTRACKED"
+            "value": "ステージされた変更"
           }
         },
-        "ja": {
+        "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "未追跡"
+            "value": "스테이징된 변경 사항"
           }
         }
       }

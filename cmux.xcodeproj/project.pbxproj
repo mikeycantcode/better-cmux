@@ -493,6 +493,7 @@
 		G17A00000000000000000018 /* GitPanelViewTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = G17A00000000000000000017 /* GitPanelViewTests.swift */; };
 		G17A00000000000000000002 /* GitPorcelainStatus.swift in Sources */ = {isa = PBXBuildFile; fileRef = G17A00000000000000000001 /* GitPorcelainStatus.swift */; };
 		G17A00000000000000000004 /* GitPorcelainStatusTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = G17A00000000000000000003 /* GitPorcelainStatusTests.swift */; };
+		D62D707607A4786FD0EEB887 /* GitScmViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2433BC9E1839DD6BCD304903 /* GitScmViewModelTests.swift */; };
 		AAD8A9928D5109B3DD5A797B /* GitStatusMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60ACCE9D051F0E283CDE347A /* GitStatusMonitor.swift */; };
 		A56E5D30B2F9A3E92570AFCA /* GitStatusMonitorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 08382A216C0B6F43AFE40641 /* GitStatusMonitorTests.swift */; };
 		G17A00000000000000000006 /* GitWorkingTreeModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = G17A00000000000000000005 /* GitWorkingTreeModel.swift */; };
@@ -1492,6 +1493,7 @@
 		G17A00000000000000000017 /* GitPanelViewTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GitPanelViewTests.swift; sourceTree = "<group>"; };
 		G17A00000000000000000001 /* GitPorcelainStatus.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Git/GitPorcelainStatus.swift"; sourceTree = "<group>"; };
 		G17A00000000000000000003 /* GitPorcelainStatusTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GitPorcelainStatusTests.swift; sourceTree = "<group>"; };
+		2433BC9E1839DD6BCD304903 /* GitScmViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GitScmViewModelTests.swift; sourceTree = "<group>"; };
 		60ACCE9D051F0E283CDE347A /* GitStatusMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Git/GitStatusMonitor.swift"; sourceTree = "<group>"; };
 		08382A216C0B6F43AFE40641 /* GitStatusMonitorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GitStatusMonitorTests.swift; sourceTree = "<group>"; };
 		G17A00000000000000000005 /* GitWorkingTreeModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Git/GitWorkingTreeModel.swift"; sourceTree = "<group>"; };
@@ -2991,6 +2993,7 @@
 				067A48254F7E85442E1C1D84 /* FileExplorerVSCodeIconsTests.swift */,
 				1C20B173068FAEFDF4AE42EC /* FileExplorerVSCodeStyleTests.swift */,
 				C87EFE5E96786984BC5E9B12 /* TitlebarControlsClusterTests.swift */,
+				2433BC9E1839DD6BCD304903 /* GitScmViewModelTests.swift */,
 				08382A216C0B6F43AFE40641 /* GitStatusMonitorTests.swift */,
 				C0E9304916F57F79106A64F9 /* HerdrSidebarRowsTests.swift */,
 				G17A00000000000000000021 /* FilesGitPanelTests.swift */,
@@ -4271,6 +4274,7 @@
 				D7AB34400000000000000003 /* GhosttyTerminalViewVisibilityPolicyTests.swift in Sources */,
 				G17A00000000000000000018 /* GitPanelViewTests.swift in Sources */,
 				G17A00000000000000000004 /* GitPorcelainStatusTests.swift in Sources */,
+				D62D707607A4786FD0EEB887 /* GitScmViewModelTests.swift in Sources */,
 				A56E5D30B2F9A3E92570AFCA /* GitStatusMonitorTests.swift in Sources */,
 				G17A00000000000000000008 /* GitWorkingTreeModelTests.swift in Sources */,
 				3865A0053865A0053865A005 /* GlobalSearchShortcutSettingsTests.swift in Sources */,
