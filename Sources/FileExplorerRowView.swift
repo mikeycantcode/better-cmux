@@ -36,7 +36,7 @@ final class FileExplorerRowView: NSTableRowView {
     override func drawBackground(in dirtyRect: NSRect) {
         super.drawBackground(in: dirtyRect)
         guard isHovered, !isSelected else { return }
-        let style = FileExplorerStyle.current
+        let style = FileExplorerStyle.cachedCurrent
         let inset = style.selectionInset
         let insetRect = bounds.insetBy(dx: inset, dy: inset > 0 ? 1 : 0)
         let path = NSBezierPath(
@@ -50,7 +50,7 @@ final class FileExplorerRowView: NSTableRowView {
 
     override func drawSelection(in dirtyRect: NSRect) {
         guard isSelected else { return }
-        let style = FileExplorerStyle.current
+        let style = FileExplorerStyle.cachedCurrent
         let focused = isKeyboardFocusActive
         let inset = style.selectionInset
         let insetRect = bounds.insetBy(dx: inset, dy: inset > 0 ? 1 : 0)

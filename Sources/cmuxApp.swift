@@ -2333,7 +2333,7 @@ private struct FileExplorerStyleDebugView: View {
     @AppStorage("fileExplorer.style") private var styleRawValue: Int = 0
 
     private var currentStyle: FileExplorerStyle {
-        FileExplorerStyle(rawValue: styleRawValue) ?? .liquidGlass
+        FileExplorerStyle.resolve(rawValue: styleRawValue)
     }
 
     var body: some View {
@@ -2397,6 +2397,7 @@ private struct FileExplorerStyleDebugView: View {
         case .finder: return "Finder sidebar, filled icons, hover tint"
         case .vscodeIcons: return "Material icons, per-extension file type icons"
         case .codika: return "Airy rows, in-tree filter, subtle hover"
+        case .vscode: return "VS Code explorer: 22pt rows, chevrons, git decorations"
         }
     }
 }

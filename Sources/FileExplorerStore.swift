@@ -15,6 +15,7 @@ enum FileExplorerStyle: Int, CaseIterable {
     case finder = 4
     case vscodeIcons = 5
     case codika = 6
+    case vscode = 7
 
     var label: String {
         switch self {
@@ -25,6 +26,7 @@ enum FileExplorerStyle: Int, CaseIterable {
         case .finder: return "Finder"
         case .vscodeIcons: return "VS Code Icons"
         case .codika: return "Codika"
+        case .vscode: return "VS Code"
         }
     }
 
@@ -38,6 +40,7 @@ enum FileExplorerStyle: Int, CaseIterable {
         case .finder: baseHeight = 26
         case .vscodeIcons: baseHeight = 24
         case .codika: baseHeight = 34
+        case .vscode: baseHeight = 22
         }
         return GlobalFontMagnification.scaledSize(baseHeight)
     }
@@ -51,6 +54,7 @@ enum FileExplorerStyle: Int, CaseIterable {
         case .finder: return 18
         case .vscodeIcons: return 16
         case .codika: return 16
+        case .vscode: return 8
         }
     }
 
@@ -63,6 +67,7 @@ enum FileExplorerStyle: Int, CaseIterable {
         case .finder: return 18
         case .vscodeIcons: return 16
         case .codika: return 16
+        case .vscode: return 16
         }
     }
 
@@ -75,6 +80,7 @@ enum FileExplorerStyle: Int, CaseIterable {
         case .finder: return .medium
         case .vscodeIcons: return .regular
         case .codika: return .regular
+        case .vscode: return .regular
         }
     }
 
@@ -87,6 +93,7 @@ enum FileExplorerStyle: Int, CaseIterable {
         case .finder: return GlobalFontMagnification.systemFont(ofSize: 13, weight: .regular)
         case .vscodeIcons: return GlobalFontMagnification.systemFont(ofSize: 12, weight: .regular)
         case .codika: return GlobalFontMagnification.systemFont(ofSize: 13, weight: .regular)
+        case .vscode: return GlobalFontMagnification.systemFont(ofSize: 13, weight: .regular)
         }
     }
 
@@ -99,6 +106,7 @@ enum FileExplorerStyle: Int, CaseIterable {
         case .finder: return 6
         case .vscodeIcons: return 6
         case .codika: return 8
+        case .vscode: return 6
         }
     }
 
@@ -111,6 +119,7 @@ enum FileExplorerStyle: Int, CaseIterable {
         case .finder: return 4
         case .vscodeIcons: return 4
         case .codika: return 6
+        case .vscode: return 0
         }
     }
 
@@ -123,6 +132,7 @@ enum FileExplorerStyle: Int, CaseIterable {
         case .finder: return 5
         case .vscodeIcons: return 5
         case .codika: return 6
+        case .vscode: return 0
         }
     }
 
@@ -135,6 +145,7 @@ enum FileExplorerStyle: Int, CaseIterable {
         case .finder: return .controlAccentColor.withAlphaComponent(0.15)
         case .vscodeIcons: return .controlAccentColor.withAlphaComponent(0.15)
         case .codika: return .controlAccentColor.withAlphaComponent(0.15)
+        case .vscode: return .controlAccentColor.withAlphaComponent(0.15)
         }
     }
 
@@ -147,6 +158,7 @@ enum FileExplorerStyle: Int, CaseIterable {
         case .finder: return .labelColor.withAlphaComponent(0.04)
         case .vscodeIcons: return .labelColor.withAlphaComponent(0.05)
         case .codika: return .labelColor.withAlphaComponent(0.05)
+        case .vscode: return .white.withAlphaComponent(0.07)
         }
     }
 
@@ -163,6 +175,7 @@ enum FileExplorerStyle: Int, CaseIterable {
         case .finder: return NSColor(white: 0.55, alpha: 1.0)
         case .vscodeIcons: return .secondaryLabelColor
         case .codika: return .secondaryLabelColor
+        case .vscode: return .secondaryLabelColor
         }
     }
 
@@ -175,6 +188,7 @@ enum FileExplorerStyle: Int, CaseIterable {
         case .finder: return .systemBlue
         case .vscodeIcons: return .white
         case .codika: return .secondaryLabelColor
+        case .vscode: return .secondaryLabelColor
         }
     }
 
@@ -228,15 +242,167 @@ enum FileExplorerStyle: Int, CaseIterable {
             case .renamed: return .systemBlue
             case .untracked: return .tertiaryLabelColor
             }
+        case .vscode:
+            // VS Code's `gitDecoration.*ResourceForeground` palette, verbatim.
+            switch status {
+            case .modified: return .fileExplorerHex(0xE2C08D)
+            case .added: return .fileExplorerHex(0x81B88B)
+            case .deleted: return .fileExplorerHex(0xC74E39)
+            // git reports a rename as "a new path appeared"; VS Code gives it the
+            // same green it gives untracked paths.
+            case .renamed: return .fileExplorerHex(0x73C991)
+            case .untracked: return .fileExplorerHex(0x73C991)
+            }
         }
+    }
+
+    /// `gitDecoration.conflictingResourceForeground`. No `GitEntryStatus` case maps to it
+    /// yet; kept here so the palette stays in one place when conflicts land.
+    static let vscodeConflictColor: NSColor = .fileExplorerHex(0xE4676B)
+
+    /// Opacity applied to git-ignored entries in every style.
+    static let ignoredAlpha: CGFloat = 0.4
+
+    /// `.vscode` draws its own chevron in the cell instead of the outline view's
+    /// stock disclosure triangle.
+    var usesCustomChevron: Bool { self == .vscode }
+
+    static func chevronSymbolName(expanded: Bool) -> String {
+        expanded ? "chevron.down" : "chevron.right"
+    }
+
+    // MARK: - Defaults resolution
+
+    static let defaultsKey = "fileExplorer.style"
+
+    /// Pure migration rule: no stored preference (or a raw value from a future
+    /// build) means the VS Code explorer; an explicit choice is always honored.
+    static func resolve(rawValue: Int?) -> FileExplorerStyle {
+        guard let rawValue else { return .vscode }
+        return FileExplorerStyle(rawValue: rawValue) ?? .vscode
     }
 
     static var current: FileExplorerStyle {
         let defaults = UserDefaults.standard
-        if defaults.object(forKey: "fileExplorer.style") == nil {
-            return .codika
+        let raw = defaults.object(forKey: defaultsKey) as? Int
+        return resolve(rawValue: raw)
+    }
+
+    /// `current` without the `UserDefaults` round-trip. Row height and cell configuration
+    /// run once per visible row per reload, so they read this instead.
+    ///
+    /// Main-thread only for reads; invalidated whenever the defaults key changes.
+    static var cachedCurrent: FileExplorerStyle {
+        _ = cachedCurrentInvalidationObservers
+        if let cachedStyle { return cachedStyle }
+        let resolved = current
+        cachedStyle = resolved
+        return resolved
+    }
+
+    static func invalidateCachedCurrent() {
+        if Thread.isMainThread {
+            cachedStyle = nil
+        } else {
+            DispatchQueue.main.async { cachedStyle = nil }
         }
-        return FileExplorerStyle(rawValue: defaults.integer(forKey: "fileExplorer.style")) ?? .codika
+    }
+
+    nonisolated(unsafe) private static var cachedStyle: FileExplorerStyle?
+
+    /// Installed on first `cachedCurrent` read. `queue: nil` keeps delivery synchronous on
+    /// the posting thread, so a defaults write is visible to the very next read.
+    nonisolated(unsafe) private static let cachedCurrentInvalidationObservers: [NSObjectProtocol] = {
+        let center = NotificationCenter.default
+        return [
+            center.addObserver(forName: UserDefaults.didChangeNotification, object: nil, queue: nil) { _ in
+                FileExplorerStyle.invalidateCachedCurrent()
+            },
+            center.addObserver(forName: .fileExplorerStyleDidChange, object: nil, queue: nil) { _ in
+                FileExplorerStyle.invalidateCachedCurrent()
+            },
+        ]
+    }()
+}
+
+// MARK: - Row Decoration
+
+/// The trailing git decoration a row carries. VS Code shows a letter for files and a
+/// filled dot for directories with dirty descendants.
+enum FileRowDecorationBadge: Equatable {
+    case none
+    case statusLetter(String)
+    case folderDot
+}
+
+/// Pure, testable description of a row's git decoration. AppKit layout consumes it;
+/// nothing in here touches a view.
+struct FileRowDecoration: Equatable {
+    var badge: FileRowDecorationBadge
+    /// Name/badge tint, or nil to keep the default label color.
+    var tint: NSColor?
+    var alpha: CGFloat
+
+    static let plain = FileRowDecoration(badge: .none, tint: nil, alpha: 1.0)
+
+    static func make(
+        style: FileExplorerStyle,
+        isDirectory: Bool,
+        gitStatus: GitEntryStatus?,
+        directoryHasChanges: Bool,
+        isIgnored: Bool
+    ) -> FileRowDecoration {
+        let alpha = isIgnored ? FileExplorerStyle.ignoredAlpha : 1.0
+
+        guard style == .vscode else {
+            // Every other style keeps its pre-existing behavior: tint the name from the
+            // entry's own status, no badges, and no directory roll-up.
+            return FileRowDecoration(
+                badge: .none,
+                tint: gitStatus.map { style.gitColor(for: $0) },
+                alpha: alpha
+            )
+        }
+
+        if let gitStatus {
+            return FileRowDecoration(
+                badge: .statusLetter(String(gitStatus.rawValue)),
+                tint: style.gitColor(for: gitStatus),
+                alpha: alpha
+            )
+        }
+        if isDirectory, directoryHasChanges {
+            return FileRowDecoration(
+                badge: .folderDot,
+                tint: style.gitColor(for: .modified),
+                alpha: alpha
+            )
+        }
+        return FileRowDecoration(badge: .none, tint: nil, alpha: alpha)
+    }
+}
+
+// MARK: - Hex color helpers
+
+extension NSColor {
+    /// 0xRRGGBB in sRGB.
+    static func fileExplorerHex(_ hex: UInt32) -> NSColor {
+        NSColor(
+            srgbRed: CGFloat((hex >> 16) & 0xFF) / 255.0,
+            green: CGFloat((hex >> 8) & 0xFF) / 255.0,
+            blue: CGFloat(hex & 0xFF) / 255.0,
+            alpha: 1.0
+        )
+    }
+
+    /// Uppercase `RRGGBB`, or nil for colors with no sRGB representation (dynamic
+    /// system colors resolved outside a drawing context).
+    var fileExplorerHexString: String? {
+        guard let srgb = usingColorSpace(.sRGB) else { return nil }
+        let r = Int((srgb.redComponent * 255).rounded())
+        let g = Int((srgb.greenComponent * 255).rounded())
+        let b = Int((srgb.blueComponent * 255).rounded())
+        return String(format: "%02X%02X%02X", r, g, b)
     }
 }
 

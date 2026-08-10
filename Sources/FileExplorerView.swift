@@ -108,7 +108,7 @@ struct FileExplorerPanelView: NSViewRepresentable {
                 forName: .fileExplorerStyleDidChange, object: nil, queue: .main
             ) { [weak self] _ in
                 guard let self, let outlineView = self.outlineView else { return }
-                let style = FileExplorerStyle.current
+                let style = FileExplorerStyle.cachedCurrent
                 self.withProgrammaticOutlineUpdate {
                     outlineView.indentationPerLevel = style.indentation
                     outlineView.noteHeightOfRows(withIndexesChanged: IndexSet(0..<outlineView.numberOfRows))
@@ -283,6 +283,9 @@ struct FileExplorerPanelView: NSViewRepresentable {
 
         func outlineView(_ outlineView: NSOutlineView, shouldShowOutlineCellForItem item: Any) -> Bool {
             guard let node = item as? FileExplorerNode else { return false }
+            // `.vscode` draws its own chevron inside the cell, so the stock
+            // disclosure triangle is suppressed for that style only.
+            guard !FileExplorerStyle.cachedCurrent.usesCustomChevron else { return false }
             return node.isDirectory
         }
 
@@ -304,11 +307,28 @@ struct FileExplorerPanelView: NSViewRepresentable {
                 cellView = FileExplorerCellView(identifier: identifier)
             }
 
-            // A directory with dirty descendants keeps the old "modified" tint
-            // until Task 3 gives folders their own VS Code decoration.
-            let gitStatus = store.gitStatusByPath[node.path]
-                ?? (node.isDirectory && store.directoryHasChanges.contains(node.path) ? .modified : nil)
-            cellView.configure(with: node, gitStatus: gitStatus, isIgnored: store.isIgnored(node.path))
+            let decoration = FileRowDecoration.make(
+                style: FileExplorerStyle.cachedCurrent,
+                isDirectory: node.isDirectory,
+                gitStatus: store.gitStatusByPath[node.path],
+                directoryHasChanges: node.isDirectory && store.directoryHasChanges.contains(node.path),
+                isIgnored: store.isIgnored(node.path)
+            )
+            cellView.configure(
+                with: node,
+                decoration: decoration,
+                isExpanded: outlineView.isItemExpanded(node)
+            )
+            cellView.onToggleExpansion = { [weak outlineView] in
+                guard let outlineView else { return }
+                if outlineView.isItemExpanded(node) {
+                    outlineView.collapseItem(node)
+                } else {
+                    outlineView.expandItem(node)
+                }
+                // Re-runs `viewFor:` so the chevron and folder icon pick up the new state.
+                outlineView.reloadItem(node)
+            }
             cellView.onHover = { [weak self] isHovering in
                 guard let self else { return }
                 if isHovering {
@@ -362,7 +382,7 @@ struct FileExplorerPanelView: NSViewRepresentable {
         }
 
         func outlineView(_ outlineView: NSOutlineView, heightOfRowByItem item: Any) -> CGFloat {
-            FileExplorerStyle.current.rowHeight
+            FileExplorerStyle.cachedCurrent.rowHeight
         }
 
         // MARK: - Path-Owned Navigation
@@ -870,7 +890,7 @@ final class FileExplorerContainerView: NSView {
         outlineView.style = .plain
         outlineView.selectionHighlightStyle = .regular
         outlineView.rowSizeStyle = .default
-        outlineView.indentationPerLevel = FileExplorerStyle.current.indentation
+        outlineView.indentationPerLevel = FileExplorerStyle.cachedCurrent.indentation
         outlineView.allowsMultipleSelection = true
         outlineView.autoresizesOutlineColumn = true
         outlineView.floatsGroupRows = false
