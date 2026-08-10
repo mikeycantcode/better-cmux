@@ -490,6 +490,39 @@ final class LocalFileExplorerProvider: FileExplorerProvider {
     }
 }
 
+/// Why a new-file / new-folder request was rejected.
+enum FileExplorerCreateError: LocalizedError, Equatable {
+    case emptyName
+    case invalidName
+    case alreadyExists(String)
+    case writeFailed(String)
+
+    var errorDescription: String? {
+        switch self {
+        case .emptyName:
+            return String(
+                localized: "fileExplorer.create.error.emptyName",
+                defaultValue: "Enter a name."
+            )
+        case .invalidName:
+            return String(
+                localized: "fileExplorer.create.error.invalidName",
+                defaultValue: "That name is not allowed. Names cannot contain “/” or “:”."
+            )
+        case .alreadyExists(let name):
+            return String(
+                localized: "fileExplorer.create.error.alreadyExists",
+                defaultValue: "“\(name)” already exists in this folder."
+            )
+        case .writeFailed(let name):
+            return String(
+                localized: "fileExplorer.create.error.writeFailed",
+                defaultValue: "Could not create “\(name)”."
+            )
+        }
+    }
+}
+
 enum FileExplorerError: LocalizedError {
     case providerUnavailable
 
@@ -1093,6 +1126,106 @@ final class FileExplorerStore: ObservableObject {
             return candidate.hasPrefix("/")
         }
         return candidate == root || candidate.hasPrefix(root + "/")
+    }
+
+    // MARK: - Entry Creation
+
+    /// Validates a user-typed name for a new file or folder in `directory`.
+    ///
+    /// Pure apart from the on-disk existence check, so it is exercised directly
+    /// against real temp directories in tests. Returns the trimmed name.
+    static func validateNewEntryName(
+        _ rawName: String,
+        inDirectory directory: String,
+        fileManager: FileManager = .default
+    ) -> Result<String, FileExplorerCreateError> {
+        let name = rawName.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !name.isEmpty else { return .failure(.emptyName) }
+        guard !name.contains("/"), !name.contains(":"), name != ".", name != ".." else {
+            return .failure(.invalidName)
+        }
+        let candidate = (directory as NSString).appendingPathComponent(name)
+        guard !fileManager.fileExists(atPath: candidate) else { return .failure(.alreadyExists(name)) }
+        return .success(name)
+    }
+
+    /// Creates an empty file named `name` inside `directory`. Returns its absolute path.
+    func createFile(named name: String, inDirectory directory: String) -> Result<String, Error> {
+        createEntry(named: name, inDirectory: directory, isDirectory: false)
+    }
+
+    /// Creates a folder named `name` inside `directory`. Returns its absolute path.
+    func createFolder(named name: String, inDirectory directory: String) -> Result<String, Error> {
+        createEntry(named: name, inDirectory: directory, isDirectory: true)
+    }
+
+    private func createEntry(
+        named name: String,
+        inDirectory directory: String,
+        isDirectory: Bool
+    ) -> Result<String, Error> {
+        guard provider is LocalFileExplorerProvider else {
+            return .failure(FileExplorerError.providerUnavailable)
+        }
+        let validated: String
+        switch Self.validateNewEntryName(name, inDirectory: directory) {
+        case .success(let value): validated = value
+        case .failure(let error): return .failure(error)
+        }
+        let path = (directory as NSString).appendingPathComponent(validated)
+        do {
+            if isDirectory {
+                try FileManager.default.createDirectory(atPath: path, withIntermediateDirectories: false)
+            } else {
+                guard FileManager.default.createFile(atPath: path, contents: nil) else {
+                    return .failure(FileExplorerCreateError.writeFailed(validated))
+                }
+            }
+            return .success(path)
+        } catch {
+            return .failure(error)
+        }
+    }
+
+    /// Directory new entries should be created in: the selected folder, the parent of
+    /// the selected file, or the root when there is no usable selection.
+    func createTargetDirectory(fileManager: FileManager = .default) -> String? {
+        guard !rootPath.isEmpty else { return nil }
+        guard let selectedPath, Self.path(selectedPath, isContainedIn: rootPath) else { return rootPath }
+        var isDirectory: ObjCBool = false
+        guard fileManager.fileExists(atPath: selectedPath, isDirectory: &isDirectory) else { return rootPath }
+        if isDirectory.boolValue { return selectedPath }
+        let parent = (selectedPath as NSString).deletingLastPathComponent
+        guard !parent.isEmpty, fileManager.fileExists(atPath: parent) else { return rootPath }
+        return parent
+    }
+
+    /// Expands every ancestor of `path` under the root and makes it the selection.
+    /// The outline mirrors this on its next reload pass.
+    func revealAndSelect(path: String) {
+        guard Self.path(path, isContainedIn: rootPath) else { return }
+        var ancestor = (path as NSString).deletingLastPathComponent
+        while !ancestor.isEmpty, ancestor != rootPath, Self.path(ancestor, isContainedIn: rootPath) {
+            expandedPaths.insert(ancestor)
+            ancestor = (ancestor as NSString).deletingLastPathComponent
+        }
+        selectedPath = path
+        selectedPaths = [path]
+        pendingDescendIntoFirstChildPath = nil
+        objectWillChange.send()
+    }
+
+    // MARK: - Collapse All
+
+    /// Bumped by ``requestCollapseAll()``. The outline coordinator watches this on the
+    /// same `objectWillChange` path reloads already travel and collapses every row.
+    @Published private(set) var collapseAllRequestToken = 0
+
+    /// Clears the logical expansion state and asks the outline to collapse everything.
+    func requestCollapseAll() {
+        expandedPaths.removeAll()
+        pendingDescendIntoFirstChildPath = nil
+        collapseAllRequestToken &+= 1
     }
 
     private static func normalizedRootPath(_ path: String?) -> String? {

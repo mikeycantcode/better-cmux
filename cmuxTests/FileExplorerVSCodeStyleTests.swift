@@ -256,4 +256,206 @@ import Testing
         #expect(NSColor.fileExplorerHex(0x000000).fileExplorerHexString == "000000")
         #expect(NSColor.fileExplorerHex(0xFFFFFF).fileExplorerHexString == "FFFFFF")
     }
+
+    // MARK: - Header create: name validation
+
+    private func makeTempDirectory() throws -> String {
+        let path = (NSTemporaryDirectory() as NSString)
+            .appendingPathComponent("cmux-explorer-create-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(atPath: path, withIntermediateDirectories: true)
+        return path
+    }
+
+    @Test func validationRejectsEmptyAndWhitespaceOnlyNames() throws {
+        let dir = try makeTempDirectory()
+        defer { try? FileManager.default.removeItem(atPath: dir) }
+
+        #expect(FileExplorerStore.validateNewEntryName("", inDirectory: dir) == .failure(.emptyName))
+        #expect(FileExplorerStore.validateNewEntryName("   ", inDirectory: dir) == .failure(.emptyName))
+    }
+
+    @Test func validationRejectsPathSeparatorsAndDotNames() throws {
+        let dir = try makeTempDirectory()
+        defer { try? FileManager.default.removeItem(atPath: dir) }
+
+        #expect(FileExplorerStore.validateNewEntryName("/", inDirectory: dir) == .failure(.invalidName))
+        #expect(FileExplorerStore.validateNewEntryName("a/b", inDirectory: dir) == .failure(.invalidName))
+        #expect(FileExplorerStore.validateNewEntryName(".", inDirectory: dir) == .failure(.invalidName))
+        #expect(FileExplorerStore.validateNewEntryName("..", inDirectory: dir) == .failure(.invalidName))
+    }
+
+    @Test func validationRejectsNamesAlreadyPresentInDirectory() throws {
+        let dir = try makeTempDirectory()
+        defer { try? FileManager.default.removeItem(atPath: dir) }
+        let existing = (dir as NSString).appendingPathComponent("taken.txt")
+        #expect(FileManager.default.createFile(atPath: existing, contents: nil))
+
+        #expect(
+            FileExplorerStore.validateNewEntryName("taken.txt", inDirectory: dir)
+                == .failure(.alreadyExists("taken.txt"))
+        )
+        // Existing directories collide too.
+        try FileManager.default.createDirectory(
+            atPath: (dir as NSString).appendingPathComponent("sub"),
+            withIntermediateDirectories: false
+        )
+        #expect(
+            FileExplorerStore.validateNewEntryName("sub", inDirectory: dir) == .failure(.alreadyExists("sub"))
+        )
+    }
+
+    @Test func validationTrimsAndAcceptsFreeNames() throws {
+        let dir = try makeTempDirectory()
+        defer { try? FileManager.default.removeItem(atPath: dir) }
+
+        #expect(FileExplorerStore.validateNewEntryName("  notes.md ", inDirectory: dir) == .success("notes.md"))
+        #expect(FileExplorerStore.validateNewEntryName(".hidden", inDirectory: dir) == .success(".hidden"))
+    }
+
+    // MARK: - Header create: real FileManager creation
+
+    private func makeLocalStore(root: String) -> FileExplorerStore {
+        let store = FileExplorerStore()
+        store.provider = LocalFileExplorerProvider()
+        store.rootPath = root
+        return store
+    }
+
+    @Test func createFileWritesAnEmptyFileAndReturnsItsPath() throws {
+        let dir = try makeTempDirectory()
+        defer { try? FileManager.default.removeItem(atPath: dir) }
+        let store = makeLocalStore(root: dir)
+
+        let result = store.createFile(named: "hello.swift", inDirectory: dir)
+        let created = try #require(try? result.get())
+        #expect(created == (dir as NSString).appendingPathComponent("hello.swift"))
+
+        var isDirectory: ObjCBool = true
+        #expect(FileManager.default.fileExists(atPath: created, isDirectory: &isDirectory))
+        #expect(isDirectory.boolValue == false)
+    }
+
+    @Test func createFolderMakesADirectory() throws {
+        let dir = try makeTempDirectory()
+        defer { try? FileManager.default.removeItem(atPath: dir) }
+        let store = makeLocalStore(root: dir)
+
+        let created = try #require(try? store.createFolder(named: "Sources", inDirectory: dir).get())
+        var isDirectory: ObjCBool = false
+        #expect(FileManager.default.fileExists(atPath: created, isDirectory: &isDirectory))
+        #expect(isDirectory.boolValue)
+    }
+
+    @Test func createRejectsDuplicatesWithoutOverwriting() throws {
+        let dir = try makeTempDirectory()
+        defer { try? FileManager.default.removeItem(atPath: dir) }
+        let store = makeLocalStore(root: dir)
+        let path = (dir as NSString).appendingPathComponent("keep.txt")
+        try "original".write(toFile: path, atomically: true, encoding: .utf8)
+
+        let result = store.createFile(named: "keep.txt", inDirectory: dir)
+        switch result {
+        case .success:
+            Issue.record("expected duplicate name to fail")
+        case .failure(let error):
+            #expect(error as? FileExplorerCreateError == .alreadyExists("keep.txt"))
+        }
+        #expect(try String(contentsOfFile: path, encoding: .utf8) == "original")
+    }
+
+    @Test func createFailsWhenProviderIsNotLocal() throws {
+        let dir = try makeTempDirectory()
+        defer { try? FileManager.default.removeItem(atPath: dir) }
+        let store = FileExplorerStore()
+        store.rootPath = dir
+
+        switch store.createFile(named: "nope.txt", inDirectory: dir) {
+        case .success:
+            Issue.record("expected creation to fail without a local provider")
+        case .failure:
+            break
+        }
+        #expect(!FileManager.default.fileExists(atPath: (dir as NSString).appendingPathComponent("nope.txt")))
+    }
+
+    // MARK: - Create target directory resolution
+
+    @Test func createTargetIsRootWhenNothingIsSelected() throws {
+        let dir = try makeTempDirectory()
+        defer { try? FileManager.default.removeItem(atPath: dir) }
+        let store = makeLocalStore(root: dir)
+        #expect(store.createTargetDirectory() == dir)
+    }
+
+    @Test func createTargetIsTheSelectedFolderItself() throws {
+        let dir = try makeTempDirectory()
+        defer { try? FileManager.default.removeItem(atPath: dir) }
+        let sub = (dir as NSString).appendingPathComponent("sub")
+        try FileManager.default.createDirectory(atPath: sub, withIntermediateDirectories: false)
+        let store = makeLocalStore(root: dir)
+        store.select(node: FileExplorerNode(name: "sub", path: sub, isDirectory: true))
+        #expect(store.createTargetDirectory() == sub)
+    }
+
+    @Test func createTargetIsTheParentOfASelectedFile() throws {
+        let dir = try makeTempDirectory()
+        defer { try? FileManager.default.removeItem(atPath: dir) }
+        let sub = (dir as NSString).appendingPathComponent("sub")
+        try FileManager.default.createDirectory(atPath: sub, withIntermediateDirectories: false)
+        let file = (sub as NSString).appendingPathComponent("a.txt")
+        #expect(FileManager.default.createFile(atPath: file, contents: nil))
+        let store = makeLocalStore(root: dir)
+        store.select(node: FileExplorerNode(name: "a.txt", path: file, isDirectory: false))
+        #expect(store.createTargetDirectory() == sub)
+    }
+
+    @Test func createTargetFallsBackToRootWhenSelectionIsStale() throws {
+        let dir = try makeTempDirectory()
+        defer { try? FileManager.default.removeItem(atPath: dir) }
+        let store = makeLocalStore(root: dir)
+        let gone = (dir as NSString).appendingPathComponent("deleted/child.txt")
+        store.select(node: FileExplorerNode(name: "child.txt", path: gone, isDirectory: false))
+        #expect(store.createTargetDirectory() == dir)
+    }
+
+    @Test func createTargetIsNilWithoutARoot() {
+        let store = FileExplorerStore()
+        #expect(store.createTargetDirectory() == nil)
+    }
+
+    // MARK: - Collapse-all signal
+
+    @Test func requestCollapseAllClearsExpandedPathsAndBumpsToken() throws {
+        let dir = try makeTempDirectory()
+        defer { try? FileManager.default.removeItem(atPath: dir) }
+        let sub = (dir as NSString).appendingPathComponent("sub")
+        try FileManager.default.createDirectory(atPath: sub, withIntermediateDirectories: false)
+        let store = makeLocalStore(root: dir)
+        store.expand(node: FileExplorerNode(name: "sub", path: sub, isDirectory: true))
+        #expect(store.expandedPaths.contains(sub))
+
+        let before = store.collapseAllRequestToken
+        store.requestCollapseAll()
+        #expect(store.expandedPaths.isEmpty)
+        #expect(store.collapseAllRequestToken == before &+ 1)
+    }
+
+    // MARK: - Reveal after create
+
+    @Test func revealSelectsThePathAndExpandsItsAncestors() throws {
+        let dir = try makeTempDirectory()
+        defer { try? FileManager.default.removeItem(atPath: dir) }
+        let deep = (dir as NSString).appendingPathComponent("a/b")
+        try FileManager.default.createDirectory(atPath: deep, withIntermediateDirectories: true)
+        let file = (deep as NSString).appendingPathComponent("new.txt")
+        #expect(FileManager.default.createFile(atPath: file, contents: nil))
+        let store = makeLocalStore(root: dir)
+
+        store.revealAndSelect(path: file)
+        #expect(store.selectedPath == file)
+        #expect(store.expandedPaths.contains((dir as NSString).appendingPathComponent("a")))
+        #expect(store.expandedPaths.contains(deep))
+        // The root itself is implicit and never stored as an expanded path.
+        #expect(!store.expandedPaths.contains(dir))
+    }
 }

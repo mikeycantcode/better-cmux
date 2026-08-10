@@ -84,6 +84,7 @@ struct FileExplorerPanelView: NSViewRepresentable {
         weak var outlineView: NSOutlineView?
         private var lastRootNodeCount: Int = -1
         private var lastFilterRevision: Int = 0
+        private var lastCollapseAllRequestToken: Int = 0
         private var observationCancellable: AnyCancellable?
         private var styleObserver: Any?
         private var isUpdatingOutlineProgrammatically = false
@@ -161,6 +162,12 @@ struct FileExplorerPanelView: NSViewRepresentable {
         @MainActor
         func reloadIfNeeded() {
             guard let outlineView else { return }
+
+            // Collapse-all arrives on the same store signal reloads travel on.
+            if store.collapseAllRequestToken != lastCollapseAllRequestToken {
+                lastCollapseAllRequestToken = store.collapseAllRequestToken
+                collapseAllNodes()
+            }
 
             // Update empty state vs tree visibility
             containerView?.updateVisibility(
@@ -720,6 +727,8 @@ final class FileExplorerContainerView: NSView {
     private var currentProviderIsLocal = false
     private var currentWorkspaceRootIdentity: UUID?
     private var currentContentRevision = 0
+    /// The store the header's action bundle is bound to; rebuilt only when it changes.
+    private weak var headerActionsStore: FileExplorerStore?
     private let searchDebounceSubject = PassthroughSubject<Int, Never>()
     private var searchDebounceCancellable: AnyCancellable?
     private var searchDebounceGeneration = 0
@@ -1078,7 +1087,9 @@ final class FileExplorerContainerView: NSView {
     }
 
     @objc private func collapseAllFromHeader(_ sender: Any?) {
-        coordinator.collapseAllNodes()
+        // Single collapse-all path: the store clears expansion state and signals the
+        // coordinator, exactly like the section header's collapse-all button.
+        coordinator.store.requestCollapseAll()
     }
 
     /// Whether the tree (and therefore the filter bar) currently has content to show.
@@ -1154,6 +1165,10 @@ final class FileExplorerContainerView: NSView {
         currentRootPath = nextRootPath; currentProviderIsLocal = nextProviderIsLocal
         currentWorkspaceRootIdentity = nextWorkspaceRootIdentity; currentContentRevision = nextContentRevision
         headerView.update(displayPath: store.displayRootPath)
+        if headerActionsStore !== store {
+            headerActionsStore = store
+            headerView.actions = FileExplorerHeaderActionRunner.actions(for: store)
+        }
         if workspaceRootChanged { cancelPendingSearchRefresh(); pendingSearchRefreshAfterSettled = false; searchController.cancel(clear: true); searchField.stringValue = ""; applySearchSnapshot(.empty) }
         if searchScopeChanged {
             pendingSearchRefreshAfterSettled = false
