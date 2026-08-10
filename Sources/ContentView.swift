@@ -10480,9 +10480,19 @@ struct VerticalTabsSidebar: View {
             draggedTabId: dragState.draggedTabId,
             isBonsplitWorkspaceDropActive: isBonsplitWorkspaceDropTargetCollectionActive
         )
+        // The herdr sidebar has no collapse affordance, so it ignores
+        // `WorkspaceGroup.isCollapsed` and always shows every workspace. The
+        // classic list keeps using `renderContext.workspaceRenderItems`
+        // (collapse honored) — hence a separate build here rather than a change
+        // to the shared render context.
+        let herdrRenderItems = SidebarWorkspaceRenderItem.renderItems(
+            tabs: renderContext.tabs,
+            groupsById: renderContext.workspaceGroupById,
+            includeCollapsed: true
+        )
         HerdrSidebarView(
             spaces: HerdrSidebarView.herdrSpaceItems(
-                renderItems: renderContext.workspaceRenderItems,
+                renderItems: herdrRenderItems,
                 rollups: agentsModel.workspaceRollups,
                 selectedWorkspaceId: tabManager.selectedTabId,
                 pinnedWorkspaceIds: Set(

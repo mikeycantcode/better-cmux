@@ -2359,9 +2359,22 @@ final class Workspace: Identifiable, ObservableObject {
     var agentPIDPanelIdsByKey: [String: UUID] = [:]
     var agentPIDKeysByPanelId: [UUID: Set<String>] = [:]
     var agentLifecycleStatesByPanelId: [UUID: [String: AgentHibernationLifecycleState]] = [:]
-    /// Bumped whenever `agentLifecycleStatesByPanelId` is mutated, so observers
-    /// (e.g. `AgentsSidebarModel`) can coalesce rebuilds without diffing the dict.
-    @Published private(set) var agentLifecycleRevision: Int = 0
+    /// Bumped whenever `agentLifecycleStatesByPanelId` actually changes, so
+    /// observers (e.g. `AgentsSidebarModel`) can coalesce rebuilds without
+    /// diffing the dict.
+    ///
+    /// Deliberately a `CurrentValueSubject`, not `@Published`: agent hooks write
+    /// lifecycle several times a second while an agent runs, and `@Published`
+    /// fired `Workspace.objectWillChange` on every one of those writes,
+    /// invalidating the entire workspace content subtree (`WorkspaceContentView`,
+    /// `BottomBarWorkspaceBridge`, `WorkspaceCanvasHostView`) for a value only
+    /// the sidebar reads. Same legacy-bridge pattern as `panelsPublisher` /
+    /// `TabManager.tabsPublisher`: replays on subscribe, no object-level
+    /// invalidation.
+    let agentLifecycleRevisionPublisher = CurrentValueSubject<Int, Never>(0)
+    private(set) var agentLifecycleRevision: Int = 0 {
+        didSet { agentLifecycleRevisionPublisher.send(agentLifecycleRevision) }
+    }
     var restoredTerminalScrollbackByPanelId: [UUID: String] = [:]
 #if DEBUG
     var debugSessionSnapshotScrollbackFallbackPanelIds: Set<UUID> = []
@@ -4312,6 +4325,10 @@ final class Workspace: Identifiable, ObservableObject {
     ) {
         let targetPanelId = panelId ?? focusedPanelId
         guard let targetPanelId, panels[targetPanelId] != nil else { return }
+        // Change-guard, mirroring `updatePanelShellActivityState`: hooks
+        // re-report the same lifecycle constantly, and a no-op write would
+        // still wake every subscriber.
+        guard agentLifecycleStatesByPanelId[targetPanelId]?[key] != lifecycle else { return }
         agentLifecycleStatesByPanelId[targetPanelId, default: [:]][key] = lifecycle
         recordAgentLifecycleChange(panelId: targetPanelId)
         agentLifecycleRevision &+= 1

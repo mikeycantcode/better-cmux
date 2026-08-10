@@ -39,9 +39,16 @@ enum SidebarWorkspaceRenderItem {
         }
     }
 
+    /// Builds the drawable sidebar items.
+    ///
+    /// - Parameter includeCollapsed: when `true`, members of collapsed groups
+    ///   are emitted anyway. The herdr sidebar has no collapse affordance, so it
+    ///   shows every workspace regardless of the group's persisted collapse
+    ///   state; the classic list keeps the default (`false`) and hides them.
     static func renderItems(
         tabs: [Workspace],
-        groupsById: [UUID: WorkspaceGroup]
+        groupsById: [UUID: WorkspaceGroup],
+        includeCollapsed: Bool = false
     ) -> [SidebarWorkspaceRenderItem] {
         guard !tabs.isEmpty else { return [] }
         var memberWorkspaceIdsByGroupId: [UUID: [UUID]] = [:]
@@ -66,7 +73,7 @@ enum SidebarWorkspaceRenderItem {
                         let memberWorkspaceIds = memberWorkspaceIdsByGroupId[groupId] ?? []
                         items.append(.groupHeader(group, memberWorkspaceIds: memberWorkspaceIds))
                         emittedHeaders.insert(groupId)
-                        collapsedByGroupId[groupId] = group.isCollapsed
+                        collapsedByGroupId[groupId] = includeCollapsed ? false : group.isCollapsed
                     }
                     // If legacy reorder paths ever leave a group's members in
                     // two runs, keep honoring the same collapse decision.

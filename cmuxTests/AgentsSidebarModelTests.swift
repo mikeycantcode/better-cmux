@@ -369,6 +369,53 @@ final class AgentsSidebarModelTests: XCTestCase {
         XCTAssertEqual(items.map(\.isPinned), [true, false, true])
     }
 
+    // Mike's ruling: the herdr sidebar has no collapse affordance, so a
+    // collapsed group's members stay visible. `includeCollapsed: true` is what
+    // the herdr branch passes; the classic default must still hide them.
+    @MainActor
+    func testCollapsedGroupMembersStayVisibleForHerdr() {
+        let manager = TabManager()
+        manager.addWorkspace(autoWelcomeIfNeeded: false)
+        manager.addWorkspace(autoWelcomeIfNeeded: false)
+        let children = manager.tabs.map(\.id)
+        guard let groupId = manager.createWorkspaceGroup(name: "Collapsed", childWorkspaceIds: children),
+              let index = manager.workspaceGroups.firstIndex(where: { $0.id == groupId }) else {
+            return XCTFail("group creation failed")
+        }
+        manager.workspaceGroups[index].isCollapsed = true
+        let groupsById = Dictionary(uniqueKeysWithValues: manager.workspaceGroups.map { ($0.id, $0) })
+
+        let collapsedItems = HerdrSidebarView.herdrSpaceItems(
+            renderItems: SidebarWorkspaceRenderItem.renderItems(
+                tabs: manager.tabs,
+                groupsById: groupsById
+            ),
+            rollups: [:],
+            selectedWorkspaceId: nil,
+            pinnedWorkspaceIds: []
+        )
+        let herdrItems = HerdrSidebarView.herdrSpaceItems(
+            renderItems: SidebarWorkspaceRenderItem.renderItems(
+                tabs: manager.tabs,
+                groupsById: groupsById,
+                includeCollapsed: true
+            ),
+            rollups: [:],
+            selectedWorkspaceId: nil,
+            pinnedWorkspaceIds: []
+        )
+
+        // Classic behavior: members hidden, only the header row survives.
+        for childId in children {
+            XCTAssertFalse(collapsedItems.contains { $0.id == childId })
+        }
+        // Herdr: every child is a row, plus the group's header row.
+        for childId in children {
+            XCTAssertTrue(herdrItems.contains { $0.id == childId })
+        }
+        XCTAssertEqual(herdrItems.count, collapsedItems.count + children.count)
+    }
+
     // A pin toggle must change the compared value, or the cached context menu
     // keeps its stale Pin/Unpin label.
     @MainActor

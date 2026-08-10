@@ -213,7 +213,7 @@ final class AgentsSidebarModel: ObservableObject {
     private func resubscribe(to workspaces: [Workspace]) {
         workspaceCancellables.removeAll()
         for workspace in workspaces {
-            let revisions = workspace.$agentLifecycleRevision.map { _ in () }
+            let revisions = workspace.agentLifecycleRevisionPublisher.map { _ in () }
             let titles = workspace.$title.map { _ in () }
             let cancellable = revisions
                 .merge(with: titles)

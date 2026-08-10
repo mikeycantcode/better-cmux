@@ -1,3 +1,4 @@
+import CmuxAppKitSupportUI
 import CmuxWorkspaces
 import Foundation
 import SwiftUI
@@ -70,6 +71,7 @@ struct HerdrSidebarView: View {
                 gatedSpaceRows
             }
             .scrollBounceBehavior(.basedOnSize)
+            .modifier(Self.SidebarScrollChrome())
             // Grow with content, then stop: a bare flexible ScrollView with
             // `layoutPriority(1)` would claim the whole sidebar and starve the
             // agents region. Capping at the intrinsic content height makes the
@@ -176,11 +178,30 @@ struct HerdrSidebarView: View {
                 }
             }
             .scrollBounceBehavior(.basedOnSize)
+            .modifier(Self.SidebarScrollChrome())
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     // MARK: - Shared
+
+    /// The sidebar scroll-chrome treatment the classic workspace list applies:
+    /// clear the SwiftUI/AppKit scroll backgrounds so the translucent sidebar
+    /// shows through, and use cmux's overlay scroller configuration. Store-free
+    /// — it only touches the enclosing `NSScrollView`.
+    private struct SidebarScrollChrome: ViewModifier {
+        func body(content: Content) -> some View {
+            content
+                .background(Color.clear)
+                .modifier(ClearScrollBackground())
+                .background(
+                    SidebarScrollViewResolver { scrollView in
+                        scrollView?.applySidebarOverlayScrollerConfiguration()
+                    }
+                    .frame(width: 0, height: 0)
+                )
+        }
+    }
 
     private func sectionHeader(_ title: String) -> some View {
         Text(title)
