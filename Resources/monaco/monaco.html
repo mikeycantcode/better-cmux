@@ -93,7 +93,10 @@
           { token: "invalid", foreground: "ff453a" }
         ],
         colors: {
-          "editor.background": "#1e1e1e",
+          // Transparent surface: the WKWebView draws no background, so the
+          // hosting panel's terminal-derived background shows through and the
+          // editor always matches the terminal theme (Mike: contrast mismatch).
+          "editor.background": "#00000000",
           "editor.foreground": "#ffffff",
           "editor.lineHighlightBackground": "#2a2a2a",
           "editor.selectionBackground": "#3f638b",
@@ -103,7 +106,7 @@
           "editorLineNumber.activeForeground": "#98989d",
           "editorIndentGuide.background1": "#2f2f2f",
           "editorWhitespace.foreground": "#3a3a3a",
-          "editorGutter.background": "#1e1e1e",
+          "editorGutter.background": "#00000000",
           "editorWidget.background": "#252525",
           "editorWidget.border": "#3a3a3a",
           "editorSuggestWidget.background": "#252525",
@@ -113,7 +116,7 @@
           "editorBracketMatch.border": "#0a84ff",
           "scrollbarSlider.background": "#4646467f",
           "scrollbarSlider.hoverBackground": "#5a5a5ea0",
-          "minimap.background": "#1e1e1e",
+          "minimap.background": "#00000000",
           "diffEditor.insertedTextBackground": "#32d74b22",
           "diffEditor.removedTextBackground": "#ff453a22"
         }
@@ -154,7 +157,8 @@
           { token: "invalid", foreground: "cc372e" }
         ],
         colors: {
-          "editor.background": "#feffff",
+          // Transparent like cmux-dark; the panel supplies the light background.
+          "editor.background": "#00000000",
           "editor.foreground": "#000000",
           "editor.lineHighlightBackground": "#f0f2f4",
           "editor.selectionBackground": "#abd8ff",
@@ -163,7 +167,7 @@
           "editorLineNumber.activeForeground": "#3c3c43",
           "editorBracketMatch.background": "#0869cb22",
           "editorBracketMatch.border": "#0869cb",
-          "minimap.background": "#feffff",
+          "minimap.background": "#00000000",
           "diffEditor.insertedTextBackground": "#26a43922",
           "diffEditor.removedTextBackground": "#cc372e22"
         }
