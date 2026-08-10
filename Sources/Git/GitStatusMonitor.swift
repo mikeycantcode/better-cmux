@@ -160,14 +160,22 @@ final class GitStatusMonitor: ObservableObject {
 
     static let debounceNanoseconds: UInt64 = 300_000_000
 
-    private static var instances: [String: GitStatusMonitor] = [:]
+    /// Weak values on purpose. The cache is keyed by a workspace root, and a
+    /// workspace root re-points on every shell `cd` — a strong cache would
+    /// accumulate one permanently-retained monitor (each holding whole-repo
+    /// dictionaries) per directory ever visited in a session. With weak values
+    /// a monitor lives exactly as long as some consumer holds it, and an
+    /// orphaned monitor's pending debounce resolves `self` to nil, so it cannot
+    /// fire a trailing `git status` either.
+    private static let instances = NSMapTable<NSString, GitStatusMonitor>.strongToWeakObjects()
 
-    /// One monitor per normalized repo root, shared by every consumer.
+    /// One monitor per normalized repo root, shared by every live consumer.
+    /// Consumers must hold their monitor strongly for as long as they use it.
     static func shared(forRepoRoot root: String) -> GitStatusMonitor {
-        let key = GitStatusFlattening.normalize(root)
-        if let existing = instances[key] { return existing }
-        let monitor = GitStatusMonitor(repoRoot: key)
-        instances[key] = monitor
+        let key = GitStatusFlattening.normalize(root) as NSString
+        if let existing = instances.object(forKey: key) { return existing }
+        let monitor = GitStatusMonitor(repoRoot: key as String)
+        instances.setObject(monitor, forKey: key)
         return monitor
     }
 
@@ -216,6 +224,12 @@ final class GitStatusMonitor: ObservableObject {
         case .success(let output):
             apply(GitPorcelainStatus.parse(output), base: base, errorLine: nil)
         case .failure(let message):
+            // The resolved base is a cached assumption, and a failed read is the
+            // one signal we get that it may no longer hold (worktree moved, a
+            // nested `git init`, a submodule checked out under us). Drop it so
+            // the next read re-resolves instead of mis-keying every path for the
+            // rest of the session.
+            cachedBase = nil
             applyEmpty(errorLine: message.isEmpty ? nil : message)
         }
     }
@@ -237,23 +251,29 @@ final class GitStatusMonitor: ObservableObject {
     // MARK: - Publishing
 
     /// Recomputes the derived maps and publishes only what actually changed.
-    func apply(_ newPorcelain: GitPorcelainStatus, base: String, errorLine: String?) {
+    ///
+    /// `lastErrorLine` is assigned **first**, and this ordering is load-bearing:
+    /// `@Published` emits in `willSet`, so a subscriber reacting to `$porcelain`
+    /// reads every *other* property at its post-assignment value. Assigning the
+    /// error last would hand every such subscriber the previous read's error.
+    private func apply(_ newPorcelain: GitPorcelainStatus, base: String, errorLine: String?) {
         let newStatusByPath = GitStatusFlattening.statusByPath(newPorcelain, base: base)
         let newDirectories = GitStatusFlattening.directoryHasChanges(
             paths: GitStatusFlattening.changedAbsolutePaths(newPorcelain, base: base),
             base: base
         )
 
+        if lastErrorLine != errorLine { lastErrorLine = errorLine }
         if porcelain != newPorcelain { porcelain = newPorcelain }
         if statusByPath != newStatusByPath { statusByPath = newStatusByPath }
         if directoryHasChanges != newDirectories { directoryHasChanges = newDirectories }
-        if lastErrorLine != errorLine { lastErrorLine = errorLine }
     }
 
+    /// Same ordering contract as ``apply(_:base:errorLine:)``: error first.
     private func applyEmpty(errorLine: String?) {
+        if lastErrorLine != errorLine { lastErrorLine = errorLine }
         if porcelain != .empty { porcelain = .empty }
         if !statusByPath.isEmpty { statusByPath = [:] }
         if !directoryHasChanges.isEmpty { directoryHasChanges = [] }
-        if lastErrorLine != errorLine { lastErrorLine = errorLine }
     }
 }

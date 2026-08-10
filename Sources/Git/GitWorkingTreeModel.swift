@@ -26,8 +26,11 @@ final class GitWorkingTreeModel: ObservableObject {
         }
     }
 
+    /// Strong on purpose: ``GitStatusMonitor.shared(forRepoRoot:)`` holds its
+    /// instances weakly, so a consumer's own reference is what keeps a monitor
+    /// alive.
     private var monitor: GitStatusMonitor
-    private var monitorCancellable: AnyCancellable?
+    private var monitorCancellables: Set<AnyCancellable> = []
 
     init(repoPath: String) {
         self.repoPath = repoPath
@@ -38,16 +41,19 @@ final class GitWorkingTreeModel: ObservableObject {
     /// Mirrors the monitor's porcelain into `status` so `GitPanelView` and the
     /// Changes webview keep reading this model unchanged.
     private func bindMonitor() {
-        monitorCancellable = nil
+        monitorCancellables = []
         monitor = GitStatusMonitor.shared(forRepoRoot: repoPath)
         status = monitor.porcelain
         lastErrorLine = monitor.lastErrorLine
-        monitorCancellable = monitor.$porcelain
-            .sink { [weak self] newStatus in
-                guard let self else { return }
-                self.status = newStatus
-                self.lastErrorLine = self.monitor.lastErrorLine
-            }
+        monitor.$porcelain
+            .sink { [weak self] newStatus in self?.status = newStatus }
+            .store(in: &monitorCancellables)
+        // A failed read leaves `porcelain` at `.empty`, which does not re-emit
+        // when it was already empty — so the error needs its own subscription
+        // or a repeated failure would never reach the UI.
+        monitor.$lastErrorLine
+            .sink { [weak self] line in self?.lastErrorLine = line }
+            .store(in: &monitorCancellables)
     }
 
     // MARK: - Refresh

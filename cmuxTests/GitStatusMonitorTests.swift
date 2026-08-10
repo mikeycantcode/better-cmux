@@ -155,6 +155,9 @@ struct GitStatusMonitorTests {
         let toplevel: String
         var statusOutputs: [String]
         private(set) var statusCallCount = 0
+        private(set) var revParseCallCount = 0
+        /// Status call indices that should fail instead of returning output.
+        var failStatusCalls: Set<Int> = []
         /// When true, the first status read blocks until ``openGate()``.
         var gateFirstCall = false
         private var gateIsOpen = false
@@ -168,9 +171,13 @@ struct GitStatusMonitorTests {
 
         func runner() -> GitStatusMonitor.GitRunner {
             { [self] args, _ in
-                if args.first == "rev-parse" { return .success(toplevel + "\n") }
+                if args.first == "rev-parse" {
+                    revParseCallCount += 1
+                    return .success(toplevel + "\n")
+                }
                 let index = statusCallCount
                 statusCallCount += 1
+                if failStatusCalls.contains(index) { return .failure("fatal: read \(index) failed") }
                 if gateFirstCall, index == 0 {
                     while !gateIsOpen { try? await Task.sleep(nanoseconds: 10_000_000) }
                 }
@@ -189,6 +196,77 @@ struct GitStatusMonitorTests {
         #expect(a === b)
         let other = GitStatusMonitor.shared(forRepoRoot: "/tmp/shared-root-2")
         #expect(a !== other)
+    }
+
+    /// The cache holds monitors weakly: a workspace root re-points on every
+    /// shell `cd`, so a strong cache would retain one monitor per directory
+    /// ever visited.
+    @Test func sharedDropsMonitorsWithNoLiveConsumer() {
+        let root = "/tmp/evictable-root-" + UUID().uuidString
+        weak var weakMonitor: GitStatusMonitor?
+        do {
+            let monitor = GitStatusMonitor.shared(forRepoRoot: root)
+            weakMonitor = monitor
+        }
+        // The cache holding it would keep this alive. (Deliberately not an
+        // ObjectIdentifier comparison against a rebuilt instance: the allocator
+        // reuses the freed address often enough to make that check meaningless.)
+        #expect(weakMonitor == nil, "no consumer holds it, so the cache must not retain it")
+
+        // A later request for the same root still works — it builds a fresh one.
+        let rebuilt = GitStatusMonitor.shared(forRepoRoot: root)
+        #expect(rebuilt.repoRoot == root)
+    }
+
+    /// While a consumer holds its monitor, the cache must keep vending it.
+    @Test func sharedKeepsVendingWhileAConsumerHoldsIt() {
+        let root = "/tmp/held-root-" + UUID().uuidString
+        let held = GitStatusMonitor.shared(forRepoRoot: root)
+        #expect(GitStatusMonitor.shared(forRepoRoot: root) === held)
+    }
+
+    /// A failed read drops the cached repo-root resolution, so a worktree that
+    /// moved (or a nested `git init`) is re-resolved instead of mis-keying every
+    /// path for the rest of the session.
+    @Test func failedReadReresolvesTheRepoRoot() async {
+        let git = FakeGit(toplevel: "/repo", statusOutputs: [Self.porcelainOutput(["? a.txt"])])
+        git.failStatusCalls = [0]
+        let monitor = GitStatusMonitor(repoRoot: "/repo", runGit: git.runner())
+
+        await monitor.refreshNow()
+        #expect(git.revParseCallCount == 1)
+        #expect(monitor.lastErrorLine != nil)
+
+        await monitor.refreshNow()
+        #expect(git.revParseCallCount == 2, "the failed read must invalidate the cached base")
+        #expect(monitor.statusByPath["/repo/a.txt"] == .untracked)
+        #expect(monitor.lastErrorLine == nil)
+    }
+
+    /// A successful read caches the resolution: one burst, one `rev-parse`.
+    @Test func successfulReadsReuseTheResolvedRoot() async {
+        let git = FakeGit(toplevel: "/repo", statusOutputs: [Self.porcelainOutput(["? a.txt"])])
+        let monitor = GitStatusMonitor(repoRoot: "/repo", runGit: git.runner())
+        await monitor.refreshNow()
+        await monitor.refreshNow()
+        #expect(git.revParseCallCount == 1)
+    }
+
+    /// `@Published` emits in `willSet`, so a `$porcelain` subscriber sees every
+    /// other property at its *new* value only if the error was assigned first.
+    @Test func errorLineIsVisibleToAPorcelainSubscriber() async {
+        let git = FakeGit(toplevel: "/repo", statusOutputs: [Self.porcelainOutput(["? a.txt"])])
+        let monitor = GitStatusMonitor(repoRoot: "/repo", runGit: git.runner())
+        await monitor.refreshNow()  // populate, so the failure actually changes porcelain
+
+        var seenAlongsidePorcelain: [String?] = []
+        let token = monitor.$porcelain.sink { _ in seenAlongsidePorcelain.append(monitor.lastErrorLine) }
+        defer { token.cancel() }
+        seenAlongsidePorcelain.removeAll()  // drop the subscribe-time replay
+
+        git.failStatusCalls = [1]
+        await monitor.refreshNow()
+        #expect(seenAlongsidePorcelain == ["fatal: read 1 failed"])
     }
 
     @Test func refreshPublishesStatusAndDirectoryRollup() async {
@@ -258,6 +336,40 @@ struct GitStatusMonitorTests {
 
         #expect(monitor.statusByPath["/repo/fresh.txt"] == .untracked)
         #expect(monitor.statusByPath["/repo/stale.txt"] == nil)
+    }
+
+    /// End-to-end through the real consumer: a watcher-style `scheduleRefresh()`
+    /// whose read fails must surface the error on the model, not swallow it.
+    /// Lives here rather than in `GitWorkingTreeModelTests` because it is a
+    /// monitor-contract test.
+    @Test func modelSurfacesAFailedScheduledReadsErrorLine() async throws {
+        let dir = NSTemporaryDirectory() + "cmux-monitor-err-" + UUID().uuidString
+        try FileManager.default.createDirectory(atPath: dir, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(atPath: dir) }
+        func git(_ args: [String]) {
+            let p = Process()
+            p.executableURL = URL(fileURLWithPath: "/usr/bin/git")
+            p.currentDirectoryURL = URL(fileURLWithPath: dir)
+            p.arguments = args
+            p.standardOutput = FileHandle.nullDevice
+            p.standardError = FileHandle.nullDevice
+            try? p.run()
+            p.waitUntilExit()
+        }
+        git(["init", "-b", "main"])
+
+        let model = GitWorkingTreeModel(repoPath: dir)
+        await model.refresh()
+        #expect(model.lastErrorLine == nil)
+
+        // A corrupt index fails `git status` while `rev-parse` still resolves.
+        try Data(repeating: 0x41, count: 8).write(to: URL(fileURLWithPath: dir + "/.git/index"))
+
+        model.scheduleDebouncedRefresh()
+        for _ in 0..<200 where model.lastErrorLine == nil {
+            try? await Task.sleep(nanoseconds: 20_000_000)
+        }
+        #expect(model.lastErrorLine != nil)
     }
 
     @Test func notARepoPublishesEmpty() async {
