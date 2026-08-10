@@ -238,10 +238,10 @@ final class TitlebarControlsSizingPolicyTests: XCTestCase {
         }
 
         let classic = TitlebarControlsLayoutMetrics.contentSize(cluster: .leading, config: TitlebarControlsStyle.classic.config)
-        XCTAssertEqual(classic.width, 86, accuracy: 0.001)
+        XCTAssertEqual(classic.width, 138, accuracy: 0.001)
 
         let compact = TitlebarControlsLayoutMetrics.contentSize(cluster: .leading, config: TitlebarControlsStyle.compact.config)
-        XCTAssertEqual(compact.width, 79, accuracy: 0.001)
+        XCTAssertEqual(compact.width, 125, accuracy: 0.001)
     }
 
     func testTitlebarControlsLeadingOffsetDoesNotDoubleApplyTrafficLightPosition() {

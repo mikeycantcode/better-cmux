@@ -499,7 +499,10 @@ enum TitlebarControlsCluster: String {
 
     var slots: [TitlebarShortcutHintActionSlot] {
         switch self {
-        case .leading: return [.toggleSidebar, .focusHistoryBack, .focusHistoryForward]
+        case .leading:
+            // New-workspace and notifications intentionally appear in BOTH edge
+            // clusters (Mike wants them reachable from either side).
+            return [.toggleSidebar, .focusHistoryBack, .focusHistoryForward, .newTab, .showNotifications]
         case .trailing: return [.newTab, .showNotifications, .toggleRightSidebar]
         case .minimalSidebarHost:
             return [.toggleSidebar, .showNotifications, .newTab, .focusHistoryBack, .focusHistoryForward]

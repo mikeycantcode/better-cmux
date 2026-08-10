@@ -9,7 +9,7 @@ import Testing
 
 @Suite struct TitlebarControlsClusterTests {
     @Test func clusterSlotMembership() {
-        #expect(TitlebarControlsCluster.leading.slots == [.toggleSidebar, .focusHistoryBack, .focusHistoryForward])
+        #expect(TitlebarControlsCluster.leading.slots == [.toggleSidebar, .focusHistoryBack, .focusHistoryForward, .newTab, .showNotifications])
         #expect(TitlebarControlsCluster.trailing.slots == [.newTab, .showNotifications, .toggleRightSidebar])
         let all = TitlebarControlsCluster.leading.slots + TitlebarControlsCluster.trailing.slots
         #expect(Set(all).count == TitlebarShortcutHintActionSlot.allCases.count)
@@ -31,9 +31,10 @@ import Testing
         // Annotated CGFloat so both sides of #expect are the same static type;
         // an inferred Double here fails the swift-testing comparison even when
         // the bit patterns are identical.
-        let expected: CGFloat = 3 * config.buttonSize + 2 * config.spacing
-        #expect(TitlebarControlsLayoutMetrics.buttonRowWidth(cluster: .leading, config: config) == expected)
-        #expect(TitlebarControlsLayoutMetrics.buttonRowWidth(cluster: .trailing, config: config) == expected)
+        let expectedLeading: CGFloat = 5 * config.buttonSize + 4 * config.spacing
+        let expectedTrailing: CGFloat = 3 * config.buttonSize + 2 * config.spacing
+        #expect(TitlebarControlsLayoutMetrics.buttonRowWidth(cluster: .leading, config: config) == expectedLeading)
+        #expect(TitlebarControlsLayoutMetrics.buttonRowWidth(cluster: .trailing, config: config) == expectedTrailing)
     }
 
     /// The minimal-mode hover host renders `TitlebarShortcutHintActionSlot`s, but its
