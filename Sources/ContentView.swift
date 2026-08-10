@@ -1952,6 +1952,7 @@ struct ContentView: View {
                 fileExplorerState: fileExplorerState,
                 gitModel: gitModel,
                 titlebarHeight: RightSidebarChromeMetrics.titlebarHeight,
+                showsCloseButton: isMinimalMode,
                 onOpenFilePreview: { filePath in
                     openFilePreviewFromSidebar(filePath: filePath)
                 },

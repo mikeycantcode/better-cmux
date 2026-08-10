@@ -62,6 +62,10 @@ struct RightSidebarPanelView: View {
     /// git status churn must not invalidate the whole right-sidebar body.
     let gitModel: GitWorkingTreeModel
     let titlebarHeight: CGFloat
+    /// The titlebar's trailing cluster carries a right-sidebar toggle in standard
+    /// and fullscreen modes, so the sidebar's own close button only appears when
+    /// that cluster is hidden (minimal presentation mode).
+    var showsCloseButton: Bool = true
     let onOpenFilePreview: (String) -> Void
     let onOpenAsPane: () -> Void
     let onClose: () -> Void
@@ -145,7 +149,9 @@ struct RightSidebarPanelView: View {
             HStack(spacing: RightSidebarChromeMetrics.headerControlSpacing) {
                 Spacer(minLength: 0)
                 openAsPaneButton
-                closeButton
+                if showsCloseButton {
+                    closeButton
+                }
             }
         }
         .rightSidebarChromeBar(leadingPadding: 4, trailingPadding: 6, height: titlebarHeight)
