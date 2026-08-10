@@ -79,7 +79,7 @@ final class FileExplorerCellView: NSTableCellView {
         nameLabelTrailingToLoadingConstraint.isActive = false
     }
 
-    func configure(with node: FileExplorerNode, gitStatus: GitFileStatus? = nil, isIgnored: Bool = false) {
+    func configure(with node: FileExplorerNode, gitStatus: GitEntryStatus? = nil, isIgnored: Bool = false) {
         assert(Thread.isMainThread, "AppKit image updates must run on the main thread")
         let style = FileExplorerStyle.current
         nameLabel.stringValue = node.name
@@ -97,10 +97,7 @@ final class FileExplorerCellView: NSTableCellView {
                 iconView.image = image
                 iconView.contentTintColor = nil
             } else {
-                let pathExtension = (node.name as NSString).pathExtension
-                let iconName = pathExtension.isEmpty ? node.name : pathExtension
-                let image = VSCodeFileIcon.icon(forExtension: iconName, size: iconSize)
-                    ?? VSCodeFileIcon.icon(forFileName: node.name, size: iconSize)
+                let image = VSCodeFileIcon.icon(forFileName: node.name, size: iconSize)
                     ?? NSImage(systemSymbolName: "doc", accessibilityDescription: nil)?
                         .withSymbolConfiguration(NSImage.SymbolConfiguration(pointSize: iconSize, weight: style.iconWeight))
                 iconView.image = image
