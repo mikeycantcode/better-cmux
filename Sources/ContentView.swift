@@ -10476,7 +10476,7 @@ struct VerticalTabsSidebar: View {
             draggedTabId: dragState.draggedTabId,
             isBonsplitWorkspaceDropActive: isBonsplitWorkspaceDropTargetCollectionActive
         )
-        let list = HerdrSidebarView(
+        HerdrSidebarView(
             spaces: HerdrSidebarView.herdrSpaceItems(
                 renderItems: renderContext.workspaceRenderItems,
                 rollups: agentsModel.workspaceRollups,
@@ -10506,21 +10506,37 @@ struct VerticalTabsSidebar: View {
                     )
                 )
             },
-            publishesRowFrameAnchors: shouldCollectWorkspaceDropTargets
+            // Bonsplit pane tabs can be dragged onto the sidebar to move into an
+            // existing workspace or spawn a new one. `workspaceScrollArea` used
+            // to be the only mount point for that capability, so the herdr
+            // branch re-creates it: the frame reader is handed *into* the list
+            // so the drag gate flips identity only on the inner LazyVStack —
+            // never on the ScrollView, the `.task` below, or the sidebar.
+            spaceRowFrameAnchorReader: shouldCollectWorkspaceDropTargets
+                ? { anchors in
+                    AnyView(
+                        GeometryReader { proxy in
+                            SidebarBonsplitTabWorkspaceDropOverlay.TargetWriter(
+                                targetBridge: bonsplitWorkspaceDropTargetBridge,
+                                targets: renderContext.tabs.compactMap { tab in
+                                    guard let anchor = anchors[tab.id] else { return nil }
+                                    return SidebarDropPlanner.WorkspaceDropTarget(
+                                        workspaceId: tab.id,
+                                        isPinned: tab.isPinned,
+                                        frame: proxy[anchor]
+                                    )
+                                }
+                            )
+                        }
+                    )
+                }
+                : nil
         )
         .padding(.top, SidebarWorkspaceScrollInsets.workspaceList.top)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .task { agentsModel.attach(tabManager: tabManager) }
-
-        // Bonsplit pane tabs can be dragged onto the sidebar to move into an
-        // existing workspace or spawn a new one. `workspaceScrollArea` used to
-        // be the only mount point for that capability, so the herdr branch
-        // re-mounts the same gated frame reader + drop-capture overlay pair.
-        rowsWithGatedDropTargetReader(
-            rows: list,
-            renderContext: renderContext,
-            shouldCollect: shouldCollectWorkspaceDropTargets
-        )
+        // Always mounted, outside every gate: flipping the drop NSView's
+        // identity mid-drag orphans the in-flight drag (#5325).
         .overlay {
             bonsplitWorkspaceDropOverlay()
                 .frame(maxWidth: .infinity, maxHeight: .infinity)

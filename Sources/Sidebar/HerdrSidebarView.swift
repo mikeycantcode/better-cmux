@@ -32,11 +32,18 @@ struct HerdrSidebarView: View {
     let onActivateAgent: (UUID, UUID) -> Void
     /// Receives the full item so menu content can be derived from compared state.
     let onSpaceContextMenu: (HerdrSidebarSpaceItem) -> AnyView
-    /// When true, each space row publishes its frame through
-    /// `SidebarWorkspaceRowFramePreferenceKey` so the host can compute Bonsplit
-    /// tab drop targets. The host gates this on an in-flight drag; the emit is
-    /// branchless (`[:]` when disabled) so toggling never re-identifies rows.
-    var publishesRowFrameAnchors: Bool = false
+    /// Non-nil only while a Bonsplit tab drag is collecting drop targets.
+    /// When set, space rows publish their frames through
+    /// `SidebarWorkspaceRowFramePreferenceKey` and this closure turns the
+    /// collected anchors into the host's target-writing overlay.
+    ///
+    /// The gate lives here, not around the whole sidebar: the `if` that mounts
+    /// the reader gives its content fresh SwiftUI identity every time the drag
+    /// gate flips, so it must sit *below* the `ScrollView` (which then keeps its
+    /// scroll offset mid-drag) — the same mount depth the classic workspace list
+    /// uses. Row frame emission is branchless (`[:]` when disabled), so toggling
+    /// never re-identifies the rows themselves.
+    var spaceRowFrameAnchorReader: (([UUID: Anchor<CGRect>]) -> AnyView)?
 
     var body: some View {
         VStack(spacing: 0) {
@@ -60,20 +67,7 @@ struct HerdrSidebarView: View {
                 String(localized: "herdr.section.spaces", defaultValue: "spaces")
             )
             ScrollView {
-                LazyVStack(spacing: Self.rowSpacing) {
-                    ForEach(spaces) { item in
-                        HerdrSpacesRowContainer(
-                            item: item,
-                            onSelect: onSelectSpace,
-                            contextMenuContent: onSpaceContextMenu
-                        )
-                        .equatable()
-                        .sidebarWorkspaceFrameAnchor(
-                            id: item.id,
-                            isEnabled: publishesRowFrameAnchors
-                        )
-                    }
-                }
+                gatedSpaceRows
             }
             .scrollBounceBehavior(.basedOnSize)
             // Grow with content, then stop: a bare flexible ScrollView with
@@ -84,6 +78,38 @@ struct HerdrSidebarView: View {
             .frame(maxHeight: Self.spacesContentHeight(rowCount: spaces.count))
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    /// The spaces `LazyVStack`, with the drop-target frame reader installed only
+    /// while a drag is collecting. Kept as the innermost gated node so the flip
+    /// never re-identifies the enclosing `ScrollView` or the sidebar around it.
+    @ViewBuilder
+    private var gatedSpaceRows: some View {
+        if let spaceRowFrameAnchorReader {
+            spaceRows
+                .overlayPreferenceValue(SidebarWorkspaceRowFramePreferenceKey.self) { anchors in
+                    spaceRowFrameAnchorReader(anchors)
+                }
+        } else {
+            spaceRows
+        }
+    }
+
+    private var spaceRows: some View {
+        LazyVStack(spacing: Self.rowSpacing) {
+            ForEach(spaces) { item in
+                HerdrSpacesRowContainer(
+                    item: item,
+                    onSelect: onSelectSpace,
+                    contextMenuContent: onSpaceContextMenu
+                )
+                .equatable()
+                .sidebarWorkspaceFrameAnchor(
+                    id: item.id,
+                    isEnabled: spaceRowFrameAnchorReader != nil
+                )
+            }
+        }
     }
 
     /// Single source of truth for `LazyVStack` row spacing in both regions;

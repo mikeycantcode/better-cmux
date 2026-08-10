@@ -267,30 +267,56 @@ final class AgentsSidebarModelTests: XCTestCase {
         XCTAssertGreaterThan(model.invalidationRevision, baseline)
     }
 
-    // No real change → no republish (equality guard; the CPU rules require it).
-    func testInvalidationKeyEqualityGuard() {
-        let workspaceId = UUID()
-        let panelId = UUID()
-        let key = AgentsSidebarInvalidationKey(
-            titlesByWorkspaceId: [workspaceId: "a"],
-            selectedWorkspaceId: workspaceId,
-            focusedPanelId: panelId
-        )
-        XCTAssertEqual(key, AgentsSidebarInvalidationKey(
-            titlesByWorkspaceId: [workspaceId: "a"],
-            selectedWorkspaceId: workspaceId,
-            focusedPanelId: panelId
-        ))
-        XCTAssertNotEqual(key, AgentsSidebarInvalidationKey(
-            titlesByWorkspaceId: [workspaceId: "b"],
-            selectedWorkspaceId: workspaceId,
-            focusedPanelId: panelId
-        ))
-        XCTAssertNotEqual(key, AgentsSidebarInvalidationKey(
-            titlesByWorkspaceId: [workspaceId: "a"],
-            selectedWorkspaceId: workspaceId,
-            focusedPanelId: UUID()
-        ))
+    // The focus notification drives the revision, and an identical refresh does
+    // not republish. Without the equality guard the second (unchanged) focus
+    // broadcast would bump again and re-render the sidebar for nothing.
+    func testFocusNotificationBumpsOnceAndIdenticalRefreshDoesNot() {
+        let manager = TabManager()
+        manager.addWorkspace(autoWelcomeIfNeeded: false)
+        manager.addWorkspace(autoWelcomeIfNeeded: false)
+        let model = AgentsSidebarModel()
+        model.attach(tabManager: manager)
+        // Freshly created workspaces settle their titles asynchronously; let
+        // that quiesce so the baseline reflects a steady state.
+        let baseline = drainUntilQuiescent(model)
+
+        // A focus broadcast with nothing changed must not republish.
+        postFocusBroadcastAndDrain()
+        XCTAssertEqual(model.invalidationRevision, baseline)
+
+        // Selection alone doesn't reach the model (no tabs emission); the focus
+        // broadcast is what carries the change into the key.
+        manager.selectedTabId = manager.tabs[1].id
+        XCTAssertEqual(model.invalidationRevision, baseline)
+
+        postFocusBroadcastAndDrain()
+        XCTAssertEqual(model.invalidationRevision, baseline + 1)
+
+        // Repeat with identical state: guarded, so still exactly one bump.
+        postFocusBroadcastAndDrain()
+        postFocusBroadcastAndDrain()
+        XCTAssertEqual(model.invalidationRevision, baseline + 1)
+    }
+
+    /// Spins the run loop until `invalidationRevision` stops moving, returning
+    /// the settled value.
+    private func drainUntilQuiescent(_ model: AgentsSidebarModel) -> Int {
+        var previous = model.invalidationRevision
+        for _ in 0..<20 {
+            RunLoop.current.run(until: Date().addingTimeInterval(0.1))
+            let current = model.invalidationRevision
+            if current == previous { return current }
+            previous = current
+        }
+        return previous
+    }
+
+    /// Posts `.ghosttyDidFocusSurface` and spins the run loop past the model's
+    /// 40ms debounce so the sink has certainly run.
+    private func postFocusBroadcastAndDrain() {
+        NotificationCenter.default.post(name: .ghosttyDidFocusSurface, object: nil)
+        let deadline = Date().addingTimeInterval(0.5)
+        RunLoop.current.run(until: deadline)
     }
 
     // Spaces items: flat ordered rows, rollups applied, selection flagged.
