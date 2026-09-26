@@ -909,6 +909,7 @@
 		BBC0DE0000000000000000A0 /* WeakMonacoScriptMessageHandler.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBC0DE0000000000000000A1 /* WeakMonacoScriptMessageHandler.swift */; };
 		A0DC18A5286E4D5C914A7197 /* WelcomePanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A49D15B13A3E4476930CFD77 /* WelcomePanel.swift */; };
 		CFC25D57E7C24E48A9E8AD7A /* WelcomePanelView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DA3FC359A1ED4212A02BCFA3 /* WelcomePanelView.swift */; };
+		5CA1E0000000000000000001 /* MoveToApplicationsPrompt.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5CA1E0000000000000000002 /* MoveToApplicationsPrompt.swift */; };
 		A500120C /* WindowAccessor.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5001222 /* WindowAccessor.swift */; };
 		063BC42CEE257D6213A2E30C /* WindowAndDragTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BEE83F8394D90ACACD8E19DD /* WindowAndDragTests.swift */; };
 		A59170000000000000000001 /* WindowAppearanceSnapshotPaneBackgroundTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A59170000000000000000002 /* WindowAppearanceSnapshotPaneBackgroundTests.swift */; };
@@ -1906,6 +1907,7 @@
 		BBC0DE0000000000000000A1 /* WeakMonacoScriptMessageHandler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Monaco/WeakMonacoScriptMessageHandler.swift"; sourceTree = "<group>"; };
 		A49D15B13A3E4476930CFD77 /* WelcomePanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Panels/WelcomePanel.swift; sourceTree = "<group>"; };
 		DA3FC359A1ED4212A02BCFA3 /* WelcomePanelView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Panels/WelcomePanelView.swift; sourceTree = "<group>"; };
+		5CA1E0000000000000000002 /* MoveToApplicationsPrompt.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Panels/MoveToApplicationsPrompt.swift; sourceTree = "<group>"; };
 		A5001222 /* WindowAccessor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WindowAccessor.swift; sourceTree = "<group>"; };
 		BEE83F8394D90ACACD8E19DD /* WindowAndDragTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WindowAndDragTests.swift; sourceTree = "<group>"; };
 		A59170000000000000000002 /* WindowAppearanceSnapshotPaneBackgroundTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WindowAppearanceSnapshotPaneBackgroundTests.swift; sourceTree = "<group>"; };
@@ -2728,6 +2730,7 @@
 				ED17ED17ED17ED17ED170014 /* EditReviewPanelView.swift */,
 				A49D15B13A3E4476930CFD77 /* WelcomePanel.swift */,
 				DA3FC359A1ED4212A02BCFA3 /* WelcomePanelView.swift */,
+				5CA1E0000000000000000002 /* MoveToApplicationsPrompt.swift */,
 			);
 			path = Sources;
 			sourceTree = "<group>";
@@ -4000,6 +4003,7 @@
 				BBC0DE0000000000000000A0 /* WeakMonacoScriptMessageHandler.swift in Sources */,
 				A0DC18A5286E4D5C914A7197 /* WelcomePanel.swift in Sources */,
 				CFC25D57E7C24E48A9E8AD7A /* WelcomePanelView.swift in Sources */,
+				5CA1E0000000000000000001 /* MoveToApplicationsPrompt.swift in Sources */,
 				A500120C /* WindowAccessor.swift in Sources */,
 				A5001900A1B2C3D4E5F60718 /* WindowBackgroundComposition.swift in Sources */,
 				B7F9A602B7F9A602B7F9A602 /* WindowChromeMetrics.swift in Sources */,

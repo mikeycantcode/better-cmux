@@ -49,26 +49,79 @@ export function DownloadConfirmation() {
     <main className="mx-auto w-full max-w-6xl px-6 py-16 sm:py-20">
       {/* Hero */}
       <div className="flex flex-col items-center text-center">
-        {/* Plain <img> (raw PNG), not next/image, on purpose. The 34 KB
-            256×256 logo shown at 48px gains nothing from the optimizer, and
-            routing it through /_next/image broke this hero in Safari while
-            Chrome rendered it (issue #5819): WebKit's HTTP cache mishandles the
-            optimizer's `Vary: Accept` responses (compounded by the `priority`
-            preload and `?dpl=`-pinned URLs across deploys), surfacing the
-            broken-image glyph. The site header already serves /logo.png as a
-            plain <img> and renders fine in Safari — this matches it.
-            fetchPriority="high" preserves the above-the-fold load hint that
-            `priority` provided. */}
-        <img
-          // Decorative: the heading below already names the product, so an
-          // empty alt avoids an untranslated string for screen readers.
-          src="/logo.png"
-          alt=""
-          width={48}
-          height={48}
-          className="rounded-xl"
-          fetchPriority="high"
-        />
+        {/* Inline SVG mark, not next/image (or even a plain <img> of
+            /logo.png), on purpose: routing /logo.png through the image
+            optimizer broke this hero in Safari (issue #5819), and rendering
+            the brand tile as inline SVG sidesteps the optimizer entirely —
+            there is no fetched image URL to cache. Decorative: the heading
+            below already names the product. */}
+        <svg
+          width={60}
+          height={60}
+          viewBox="0 0 1024 1024"
+          aria-hidden="true"
+          focusable="false"
+        >
+          <style>{`
+            .dc-stripe {
+              animation: dc-stripe-in 600ms cubic-bezier(0.22, 1, 0.36, 1) both;
+            }
+            .dc-stripe-1 { animation-delay: 90ms; }
+            .dc-stripe-2 { animation-delay: 180ms; }
+            @keyframes dc-stripe-in {
+              from { transform: translateY(6%); opacity: 0; }
+              to { transform: translateY(0); opacity: 1; }
+            }
+            .dc-sheen {
+              /* backwards: hold the off-tile start position during the 900ms
+                 delay instead of flashing the band across the tile center. */
+              animation: dc-sheen-sweep 3.5s ease-in-out 900ms infinite backwards;
+            }
+            @keyframes dc-sheen-sweep {
+              0% { transform: translateX(-520px); }
+              40% { transform: translateX(1520px); }
+              100% { transform: translateX(1520px); }
+            }
+            @media (prefers-reduced-motion: reduce) {
+              .dc-stripe { animation: none; }
+              .dc-sheen { animation: none; visibility: hidden; }
+            }
+          `}</style>
+          <defs>
+            <linearGradient id="dc-bg" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stopColor="#1B1B1F" />
+              <stop offset="1" stopColor="#101014" />
+            </linearGradient>
+            <linearGradient id="dc-sheen-fade" x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0" stopColor="#fff" stopOpacity="0" />
+              <stop offset="0.5" stopColor="#fff" stopOpacity="1" />
+              <stop offset="1" stopColor="#fff" stopOpacity="0" />
+            </linearGradient>
+            <clipPath id="dc-tile">
+              <rect x="0" y="0" width="1024" height="1024" rx="229" />
+            </clipPath>
+          </defs>
+          <rect x="0" y="0" width="1024" height="1024" rx="229" fill="url(#dc-bg)" />
+          <g stroke="#fff" strokeWidth="88" strokeLinecap="round">
+            {/* Stripes lean 18° clockwise from vertical (like ///): half-length
+                310 → dx = 310·sin18° ≈ 95.8, dy = 310·cos18° ≈ 294.8. */}
+            <line className="dc-stripe" x1="224.2" y1="806.8" x2="415.8" y2="217.2" />
+            <line className="dc-stripe dc-stripe-1" x1="416.2" y1="806.8" x2="607.8" y2="217.2" />
+            <line className="dc-stripe dc-stripe-2" x1="608.2" y1="806.8" x2="799.8" y2="217.2" />
+          </g>
+          <g clipPath="url(#dc-tile)">
+            <g transform="rotate(18 512 512)" opacity="0.35">
+              <rect
+                className="dc-sheen"
+                x="0"
+                y="-200"
+                width="200"
+                height="1424"
+                fill="url(#dc-sheen-fade)"
+              />
+            </g>
+          </g>
+        </svg>
         <h1 className="mt-6 text-2xl sm:text-3xl font-semibold tracking-tight">
           {t("heading")}
         </h1>

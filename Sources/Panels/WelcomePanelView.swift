@@ -60,3 +60,91 @@ struct WelcomePanelView: View {
         .background(Color(nsColor: appearance.backgroundColor))
     }
 }
+
+/// The brand mark: three parallel white capsules leaning right (///).
+///
+/// Proportions come from the shared brand contract on the 0–1024 canvas:
+/// stroke 88/1024 ≈ 8.6% of side, length 620/1024 ≈ 60.5%, center spacing
+/// 192/1024 = 18.75%, lean 18° clockwise from vertical.
+struct ThreeStripeMark: View {
+    var size: CGFloat
+    /// True when the mark should render in near-black (light backgrounds).
+    var monochrome: Bool
+
+    /// Seconds between gloss sweeps.
+    private static let sheenPeriod: TimeInterval = 3.2
+    /// Sweep duration and pre-sweep pause, derived from the period.
+    private static let sheenSweep: TimeInterval = 3.2 * 0.45
+    private static let sheenDelay: TimeInterval = 0.2
+
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var stripesIn = false
+    @State private var sheenProgress: CGFloat = -1
+
+    private var stripeWidth: CGFloat { size * 88 / 1024 }
+    private var stripeLength: CGFloat { size * 620 / 1024 }
+    private var stripeSpacing: CGFloat { size * 192 / 1024 }
+    private var stripeColor: Color {
+        monochrome ? Color(red: 0x11 / 255, green: 0x11 / 255, blue: 0x14 / 255) : .white
+    }
+
+    var body: some View {
+        Group {
+            if reduceMotion {
+                stripes(opacity: 1, yOffset: 0)
+            } else {
+                stripes(opacity: stripesIn ? 1 : 0, yOffset: stripesIn ? 0 : -14)
+                    .overlay {
+                        // Gloss sweep: a full-strength copy of the mark, revealed
+                        // only where a narrow band crosses it. The band parks fully
+                        // off-content between cycles, so the mark itself never blinks.
+                        TimelineView(.periodic(from: .now, by: Self.sheenPeriod)) { context in
+                            stripes(opacity: 1, yOffset: 0)
+                                .opacity(stripesIn ? 1 : 0)
+                                .mask {
+                                    LinearGradient(
+                                        colors: [.clear, .white.opacity(0.9), .clear],
+                                        startPoint: .leading,
+                                        endPoint: .trailing
+                                    )
+                                    .frame(width: size * 0.7)
+                                    .offset(x: sheenProgress * size * 1.5)
+                                }
+                                .task(id: context.date) {
+                                    var instant = Transaction()
+                                    instant.disablesAnimations = true
+                                    withTransaction(instant) { sheenProgress = -1 }
+                                    withAnimation(.linear(duration: Self.sheenSweep).delay(Self.sheenDelay)) {
+                                        sheenProgress = 1
+                                    }
+                                }
+                        }
+                        .allowsHitTesting(false)
+                    }
+                    .onAppear {
+                        stripesIn = true
+                    }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func stripes(opacity: Double, yOffset: CGFloat) -> some View {
+        ZStack {
+            ForEach(0..<3, id: \.self) { i in
+                Capsule()
+                    .fill(stripeColor)
+                    .frame(width: stripeWidth, height: stripeLength)
+                    .rotationEffect(.degrees(18))
+                    .offset(x: CGFloat(i - 1) * stripeSpacing, y: yOffset)
+                    .animation(
+                        reduceMotion ? nil :
+                            .spring(response: 0.5, dampingFraction: 0.8)
+                            .delay(Double(i) * 0.09),
+                        value: stripesIn
+                    )
+            }
+        }
+    }
+}
+

@@ -1122,6 +1122,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
         }
         StartupBreadcrumbLog.append("appDelegate.didFinish.activationPolicy.synced")
 
+        // Offer to move a freshly downloaded (quarantined) bundle into
+        // /Applications before session restore spins up windows behind it.
+        if !isRunningUnderXCTest {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
+                MoveToApplicationsPrompt.presentIfNeeded()
+            }
+        }
+
         // Prewarm the shared restorable-agent index off the main thread so the first
         // tab/workspace/window close after launch reads a warm cache instead of paying a
         // synchronous RestorableAgentSessionIndex.load() on the main thread. See
