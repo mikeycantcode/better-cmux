@@ -239,6 +239,7 @@ struct WorkspaceContentView: View {
                         },
                         onTriggerFlash: { workspace.triggerDebugFlash(panelId: panel.id) }
                     )
+                    .stagePaneContent(isStage: workspace.isStagePane(paneId))
                     .onTapGesture {
                         workspace.bonsplitController.focusPane(paneId)
                     }

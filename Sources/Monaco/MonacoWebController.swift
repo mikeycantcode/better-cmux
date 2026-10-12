@@ -69,6 +69,16 @@ final class MonacoWebController: NSObject, WKNavigationDelegate, WKScriptMessage
     /// The hosted web view, created lazily by ``makeWebView()``.
     private(set) var webView: WKWebView?
 
+    /// The shell page under `cmux-monaco://app/`. Monaco by default; the
+    /// markdown live-preview editor (`markdown-live.html`) speaks the same
+    /// bridge, so this controller drives it unchanged.
+    private let shellPath: String
+
+    init(shellPath: String = "monaco.html") {
+        self.shellPath = shellPath
+        super.init()
+    }
+
     private var isReady = false
     private var pendingLoad: (text: String, language: String, theme: String)?
     private var pendingDiff: (original: String, modified: String, language: String, theme: String)?
@@ -159,7 +169,7 @@ final class MonacoWebController: NSObject, WKNavigationDelegate, WKScriptMessage
     }
 
     private func shellRequest() -> URLRequest {
-        URLRequest(url: URL(string: "\(MonacoAssetURLSchemeHandler.scheme)://app/monaco.html")!)
+        URLRequest(url: URL(string: "\(MonacoAssetURLSchemeHandler.scheme)://app/\(shellPath)")!)
     }
 
     private func load(request: URLRequest) {
@@ -229,6 +239,19 @@ final class MonacoWebController: NSObject, WKNavigationDelegate, WKScriptMessage
             "window.cmuxMonaco && window.cmuxMonaco.applyExternalChange(\(args)[0]);",
             completionHandler: nil
         )
+    }
+
+    /// Keeps the editor in sync with a panel's text without clobbering edits:
+    /// the first call loads normally; later calls whose text differs from what
+    /// the editor holds (an on-disk change) are applied in place, preserving
+    /// the cursor, instead of `setContent` resetting cursor and undo history.
+    func syncText(_ text: String, language: String, theme: String) {
+        guard isReady, let last = lastAppliedContent else {
+            load(text: text, language: language, theme: theme)
+            return
+        }
+        guard last.text != text else { return }
+        applyExternalChange(text)
     }
 
     /// Sets the Monaco theme (`"cmux-light"` / `"cmux-dark"`).

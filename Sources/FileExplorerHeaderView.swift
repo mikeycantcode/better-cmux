@@ -44,6 +44,10 @@ final class FileExplorerHeaderView: NSView {
     private var quickSearchQuery: String?
     private var isSectionExpanded = true
     private var isHovering = false
+    /// The title runs to the trailing edge at rest and yields to the action
+    /// buttons only while they are revealed on hover.
+    private var titleToEdgeConstraint: NSLayoutConstraint?
+    private var titleToButtonsConstraint: NSLayoutConstraint?
     private var trackingArea: NSTrackingArea?
     /// Keeps the row height and label font tracking magnification changes on their
     /// own, so the header is correct wherever it is mounted (the right sidebar's
@@ -72,7 +76,7 @@ final class FileExplorerHeaderView: NSView {
 
         titleLabel.translatesAutoresizingMaskIntoConstraints = false
         titleLabel.textColor = .secondaryLabelColor
-        titleLabel.lineBreakMode = .byTruncatingMiddle
+        titleLabel.lineBreakMode = .byTruncatingTail
         titleLabel.maximumNumberOfLines = 1
         titleLabel.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
 
@@ -133,12 +137,15 @@ final class FileExplorerHeaderView: NSView {
             ]
             previous = button
         }
+        titleToEdgeConstraint = titleLabel.trailingAnchor.constraint(
+            lessThanOrEqualTo: trailingAnchor,
+            constant: -8
+        )
+        constraints.append(titleToEdgeConstraint!)
         if let leadingMostButton = previous {
-            constraints.append(
-                titleLabel.trailingAnchor.constraint(
-                    lessThanOrEqualTo: leadingMostButton.leadingAnchor,
-                    constant: -6
-                )
+            titleToButtonsConstraint = titleLabel.trailingAnchor.constraint(
+                lessThanOrEqualTo: leadingMostButton.leadingAnchor,
+                constant: -6
             )
         }
 
@@ -260,6 +267,7 @@ final class FileExplorerHeaderView: NSView {
         for button in actionButtons {
             button.alphaValue = alpha
         }
+        titleToButtonsConstraint?.isActive = isHovering
     }
 
     override func mouseDown(with event: NSEvent) {

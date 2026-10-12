@@ -78,7 +78,29 @@ struct MarkdownPanelView: View {
 
     @ViewBuilder
     private var markdownBody: some View {
-        ZStack {
+        switch panel.displayMode {
+        case .live:
+            // Not stacked over the preview renderer: a second WKWebView beneath
+            // it (even at opacity 0) kept the live editor from painting. The
+            // renderer's web view is session-owned, so Preview reattaches it
+            // without reloading.
+            MarkdownLiveEditorView(
+                controller: panel.liveEditorController,
+                text: panel.content,
+                isDark: !themeBackgroundColor.isLightColor
+            )
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+        case .text:
+            FilePreviewTextEditor(
+                panel: panel,
+                isVisibleInUI: isVisibleInUI,
+                themeBackgroundColor: appearance.contentBackgroundColor,
+                themeForegroundColor: themeForegroundColor,
+                drawsBackground: appearance.drawsContentBackground,
+                wordWrap: fileEditorWordWrap
+            )
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+        case .preview, .diagram:
             MarkdownWebRenderer(
                 markdown: panel.content,
                 theme: MarkdownWebTheme.resolve(backgroundColor: themeBackgroundColor),
@@ -94,21 +116,6 @@ struct MarkdownPanelView: View {
                 onRequestPanelFocus: onRequestPanelFocus
             )
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .opacity(panel.displayMode != .text ? 1 : 0)
-            .allowsHitTesting(panel.displayMode != .text)
-            .accessibilityHidden(panel.displayMode == .text)
-
-            if panel.displayMode == .text {
-                FilePreviewTextEditor(
-                    panel: panel,
-                    isVisibleInUI: isVisibleInUI,
-                    themeBackgroundColor: appearance.contentBackgroundColor,
-                    themeForegroundColor: themeForegroundColor,
-                    drawsBackground: appearance.drawsContentBackground,
-                    wordWrap: fileEditorWordWrap
-                )
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-            }
         }
     }
 
@@ -118,7 +125,7 @@ struct MarkdownPanelView: View {
             filePath: panel.filePath,
             foregroundColor: themeForegroundColor
         ) {
-            if panel.displayMode == .text {
+            if panel.displayMode.showsTextEditor {
                 PanelHeaderIconButton(
                     systemName: "arrow.counterclockwise",
                     label: String(localized: "markdown.toolbar.revert", defaultValue: "Revert"),
@@ -133,10 +140,17 @@ struct MarkdownPanelView: View {
                     action: { panel.saveTextContent() }
                 )
             }
-            if panel.displayMode == .preview {
+            if panel.displayMode.showsRenderedPreview {
                 MarkdownTypographyControl(panel: panel)
             }
-            markdownModeButton
+            if panel.isDiagramFile {
+                markdownModeButton
+            } else {
+                MarkdownModePicker(
+                    selection: panel.displayMode,
+                    onSelect: { panel.setDisplayMode($0) }
+                )
+            }
             MarkdownPanelToolbar(
                 confirmation: copyConfirmation?.label,
                 onCopyMarkdown: { copyAsMarkdown() },
@@ -149,9 +163,11 @@ struct MarkdownPanelView: View {
         }
     }
 
+    /// Diagram files toggle between the canvas and their source.
+    @ViewBuilder
     private var markdownModeButton: some View {
         switch panel.displayMode {
-        case .preview:
+        case .preview, .live:
             PanelHeaderIconButton(
                 systemName: "doc.plaintext",
                 label: String(localized: "markdown.mode.showTextEdit", defaultValue: "Show TextEdit"),
@@ -314,5 +330,38 @@ private struct MarkdownPanelToolbar: View {
             label: title,
             action: action
         )
+    }
+}
+
+/// Live / Preview / Source switch for markdown files.
+private struct MarkdownModePicker: View {
+    let selection: MarkdownPanelDisplayMode
+    let onSelect: (MarkdownPanelDisplayMode) -> Void
+
+    private static let modes: [(MarkdownPanelDisplayMode, String, String)] = [
+        (.live, "pencil.line", String(localized: "markdown.mode.live", defaultValue: "Edit with Live Preview")),
+        (.preview, "eye", String(localized: "markdown.mode.showPreview", defaultValue: "Show Preview")),
+        (.text, "doc.plaintext", String(localized: "markdown.mode.source", defaultValue: "Edit Source Only")),
+    ]
+
+    var body: some View {
+        HStack(spacing: 0) {
+            ForEach(Self.modes, id: \.0) { mode, symbol, label in
+                Button {
+                    onSelect(mode)
+                } label: {
+                    PanelHeaderIconGlyph(systemName: symbol)
+                        .foregroundStyle(selection == mode ? Color.primary : Color.secondary)
+                        .background(
+                            RoundedRectangle(cornerRadius: 4, style: .continuous)
+                                .fill(selection == mode ? Color.primary.opacity(0.10) : Color.clear)
+                        )
+                }
+                .buttonStyle(.plain)
+                .help(label)
+                .accessibilityLabel(label)
+                .accessibilityAddTraits(selection == mode ? .isSelected : [])
+            }
+        }
     }
 }

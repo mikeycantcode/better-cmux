@@ -5132,7 +5132,14 @@ class TerminalController {
             var createdSplit = true
             var placementStrategy = "split_right"
             let createdPanel: BrowserPanel?
-            if let targetPane = ws.preferredRightSideTargetPane(fromPanelId: sourceSurfaceId) {
+            let usesStage = v2Bool(params, "stage") == true
+            let stagePlacement = usesStage
+                ? ws.stageSplitPlacement
+                : StageSplitPlacement(orientation: .horizontal, insertFirst: false)
+            let reuseTargetPane = usesStage
+                ? ws.liveStagePaneId
+                : ws.preferredRightSideTargetPane(fromPanelId: sourceSurfaceId)
+            if let targetPane = reuseTargetPane {
                 createdPanel = ws.newBrowserSurface(
                     inPane: targetPane,
                     url: url,
@@ -5143,11 +5150,13 @@ class TerminalController {
                     transparentBackground: transparentBackground
                 )
                 createdSplit = false
-                placementStrategy = "reuse_right_sibling"
+                placementStrategy = usesStage ? "reuse_stage" : "reuse_right_sibling"
             } else {
+                if usesStage { placementStrategy = stagePlacement.insertFirst ? "stage_split_up" : "stage_split_right" }
                 createdPanel = ws.newBrowserSplit(
                     from: sourceSurfaceId,
-                    orientation: .horizontal,
+                    orientation: stagePlacement.orientation,
+                    insertFirst: stagePlacement.insertFirst,
                     url: url,
                     focus: focus,
                     creationPolicy: .automationPreload,

@@ -110,6 +110,10 @@ final class FileExplorerNSOutlineView: NSOutlineView {
     }
 
     override func frameOfOutlineCell(atRow row: Int) -> NSRect {
+        // `.vscode` draws its own chevron in the cell; a zero frame hides the
+        // stock triangle without hiding the outline cell from AppKit (which
+        // would make folders impossible to collapse).
+        if FileExplorerStyle.cachedCurrent.usesCustomChevron { return .zero }
         var frame = super.frameOfOutlineCell(atRow: row)
         frame.origin.x += Self.leadingMargin
         return frame

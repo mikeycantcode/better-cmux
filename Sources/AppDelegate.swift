@@ -8133,7 +8133,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
         cmuxConfigStore.wireDirectoryTracking(tabManager: tabManager)
         cmuxConfigStore.loadAll()
 
-        let fileExplorerState = FileExplorerState()
+        let fileExplorerState = FileExplorerState(canBecomeVisible: false)
 #if DEBUG
         if ProcessInfo.processInfo.environment["CMUX_UI_TEST_BONSPLIT_SHOW_RIGHT_SIDEBAR"] == "1" {
             FilesGitTab.select(.files)

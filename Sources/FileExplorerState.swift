@@ -37,16 +37,26 @@ final class FileExplorerState: ObservableObject {
         storedCustomSidebarName
     }
 
-    init(persistenceKeyPrefix: String = "fileExplorer", defaultVisible: Bool = false) {
+    /// `false` pins `isVisible` off. The main window's right sidebar is retired:
+    /// every toggle path (shortcut, menu, palette, CLI) funnels through
+    /// `setVisible`, so clamping here disables all of them at once.
+    let canBecomeVisible: Bool
+
+    init(
+        persistenceKeyPrefix: String = "fileExplorer",
+        defaultVisible: Bool = false,
+        canBecomeVisible: Bool = true
+    ) {
         self.persistenceKeyPrefix = persistenceKeyPrefix
+        self.canBecomeVisible = canBecomeVisible
         // The right sidebar used to persist a `RightSidebarMode` raw value here
         // (default instance under "rightSidebar.mode"). Files|Git replaced modes,
         // so the key is only read to be migrated away.
         self.legacyModeKey = persistenceKeyPrefix == "fileExplorer" ? "rightSidebar.mode" : "\(persistenceKeyPrefix).mode"
         let defaults = UserDefaults.standard
-        self.isVisible = defaults.object(forKey: "\(persistenceKeyPrefix).isVisible") == nil
+        self.isVisible = canBecomeVisible && (defaults.object(forKey: "\(persistenceKeyPrefix).isVisible") == nil
             ? defaultVisible
-            : defaults.bool(forKey: "\(persistenceKeyPrefix).isVisible")
+            : defaults.bool(forKey: "\(persistenceKeyPrefix).isVisible"))
         let storedWidth = defaults.double(forKey: "\(persistenceKeyPrefix).width")
         self.width = storedWidth > 0 ? CGFloat(storedWidth) : 220
         let storedPosition = defaults.double(forKey: "\(persistenceKeyPrefix).dividerPosition")
@@ -85,7 +95,8 @@ final class FileExplorerState: ObservableObject {
         setVisible(!isVisible)
     }
 
-    func setVisible(_ nextValue: Bool) {
+    func setVisible(_ requestedValue: Bool) {
+        let nextValue = requestedValue && canBecomeVisible
         guard isVisible != nextValue else { return }
 
         // Suppress both SwiftUI transactions and AppKit/Core Animation implicit layout changes.

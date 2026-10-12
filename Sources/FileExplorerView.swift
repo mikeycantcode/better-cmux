@@ -290,9 +290,10 @@ struct FileExplorerPanelView: NSViewRepresentable {
 
         func outlineView(_ outlineView: NSOutlineView, shouldShowOutlineCellForItem item: Any) -> Bool {
             guard let node = item as? FileExplorerNode else { return false }
-            // `.vscode` draws its own chevron inside the cell, so the stock
-            // disclosure triangle is suppressed for that style only.
-            guard !FileExplorerStyle.cachedCurrent.usesCustomChevron else { return false }
+            // Always `true` for folders: AppKit treats an item whose outline cell
+            // is hidden as permanently expanded and silently ignores
+            // `collapseItem` on it. `.vscode` hides the stock triangle by giving
+            // it a zero frame instead (`FileExplorerNSOutlineView`).
             return node.isDirectory
         }
 
@@ -326,16 +327,6 @@ struct FileExplorerPanelView: NSViewRepresentable {
                 decoration: decoration,
                 isExpanded: outlineView.isItemExpanded(node)
             )
-            cellView.onToggleExpansion = { [weak outlineView] in
-                guard let outlineView else { return }
-                if outlineView.isItemExpanded(node) {
-                    outlineView.collapseItem(node)
-                } else {
-                    outlineView.expandItem(node)
-                }
-                // Re-runs `viewFor:` so the chevron and folder icon pick up the new state.
-                outlineView.reloadItem(node)
-            }
             cellView.onHover = { [weak self] isHovering in
                 guard let self else { return }
                 if isHovering {
@@ -618,7 +609,37 @@ struct FileExplorerPanelView: NSViewRepresentable {
         @MainActor
         @objc func handleDoubleClick(_ sender: NSOutlineView) {
             let row = sender.clickedRow >= 0 ? sender.clickedRow : sender.selectedRow
+            // Folders already toggled on the first click (`handleClick`); a
+            // second toggle here would undo it.
+            if let node = sender.item(atRow: row) as? FileExplorerNode, node.isDirectory { return }
             openNode(in: sender, at: row)
+        }
+
+        /// VS Code behavior: a plain single click on a folder row toggles it.
+        /// Modified clicks (shift/cmd) stay pure selection.
+        @MainActor
+        @objc func handleClick(_ sender: NSOutlineView) {
+            let row = sender.clickedRow
+            guard row >= 0,
+                  let node = sender.item(atRow: row) as? FileExplorerNode,
+                  node.isDirectory,
+                  let event = NSApp.currentEvent,
+                  event.clickCount == 1,
+                  event.modifierFlags.intersection([.shift, .command, .option, .control]).isEmpty else { return }
+            toggleExpansion(of: node, in: sender)
+        }
+
+        /// The single expand/collapse path for row clicks (chevron included)
+        /// and keyboard open.
+        @MainActor
+        func toggleExpansion(of node: FileExplorerNode, in outlineView: NSOutlineView) {
+            if outlineView.isItemExpanded(node) {
+                outlineView.collapseItem(node)
+            } else if outlineView.isExpandable(node) {
+                outlineView.expandItem(node)
+            }
+            // Re-runs `viewFor:` so the chevron and folder icon pick up the new state.
+            outlineView.reloadItem(node)
         }
 
         // MARK: - Context Menu (NSMenuDelegate)
@@ -706,7 +727,14 @@ struct FileExplorerPanelView: NSViewRepresentable {
 final class FileExplorerContainerView: NSView {
     private let headerView: FileExplorerHeaderView
     private let filterBarView: NSView
-    private let filterField: NSSearchField
+    /// Plain text field (not `NSSearchField`): a borderless search field lays
+    /// its icon over the text and its cancel button clears without telling the
+    /// store. The icon and clear button here are ordinary siblings.
+    private let filterField: NSTextField
+    /// Flat rounded backdrop for the borderless filter field.
+    private let filterBackgroundView: NSView
+    private let filterIconView: NSImageView
+    private let filterClearButton: NSButton
     private let revealButton: NSButton
     private let collapseAllButton: NSButton
     private var filterBarHeightConstraint: NSLayoutConstraint!
@@ -763,7 +791,10 @@ final class FileExplorerContainerView: NSView {
     ) {
         headerView = FileExplorerHeaderView()
         filterBarView = NSView()
-        filterField = NSSearchField()
+        filterField = NSTextField()
+        filterBackgroundView = NSView()
+        filterIconView = NSImageView()
+        filterClearButton = NSButton()
         revealButton = NSButton()
         collapseAllButton = NSButton()
         searchBarView = NSView()
@@ -794,7 +825,41 @@ final class FileExplorerContainerView: NSView {
         filterBarView.isHidden = true
         addSubview(filterBarView)
 
+        filterBackgroundView.translatesAutoresizingMaskIntoConstraints = false
+        filterBackgroundView.wantsLayer = true
+        filterBackgroundView.layer?.cornerRadius = 6
+        filterBackgroundView.layer?.cornerCurve = .continuous
+        filterBackgroundView.layer?.borderWidth = 0.5
+        applyFilterBackgroundColors()
+        filterBarView.addSubview(filterBackgroundView)
+
+        filterIconView.translatesAutoresizingMaskIntoConstraints = false
+        filterIconView.image = NSImage(systemSymbolName: "magnifyingglass", accessibilityDescription: nil)?
+            .withSymbolConfiguration(NSImage.SymbolConfiguration(pointSize: 11, weight: .regular))
+        filterIconView.contentTintColor = .tertiaryLabelColor
+        filterBarView.addSubview(filterIconView)
+
+        filterClearButton.translatesAutoresizingMaskIntoConstraints = false
+        filterClearButton.isBordered = false
+        filterClearButton.bezelStyle = .regularSquare
+        filterClearButton.imagePosition = .imageOnly
+        filterClearButton.image = NSImage(systemSymbolName: "xmark.circle.fill", accessibilityDescription: nil)?
+            .withSymbolConfiguration(NSImage.SymbolConfiguration(pointSize: 11, weight: .regular))
+        filterClearButton.contentTintColor = .tertiaryLabelColor
+        filterClearButton.target = self
+        filterClearButton.action = #selector(clearFilterFromButton(_:))
+        filterClearButton.isHidden = true
+        filterClearButton.setAccessibilityLabel(
+            String(localized: "filesPanel.filter.clear", defaultValue: "Clear Filter")
+        )
+        filterBarView.addSubview(filterClearButton)
+
         filterField.translatesAutoresizingMaskIntoConstraints = false
+        filterField.isBezeled = false
+        filterField.isBordered = false
+        filterField.drawsBackground = false
+        filterField.isEditable = true
+        filterField.isSelectable = true
         filterField.setAccessibilityIdentifier("FileExplorerFilterField")
         filterField.placeholderString = String(
             localized: "filesPanel.filter.placeholder",
@@ -901,7 +966,10 @@ final class FileExplorerContainerView: NSView {
         outlineView.rowSizeStyle = .default
         outlineView.indentationPerLevel = FileExplorerStyle.cachedCurrent.indentation
         outlineView.allowsMultipleSelection = true
-        outlineView.autoresizesOutlineColumn = true
+        // Keep the tree exactly as wide as the sidebar: an auto-growing outline
+        // column made deep trees wider than the view and horizontally scrollable.
+        outlineView.autoresizesOutlineColumn = false
+        outlineView.columnAutoresizingStyle = .firstColumnOnlyAutoresizingStyle
         outlineView.floatsGroupRows = false
         outlineView.backgroundColor = .clear
         outlineView.onQuickSearchChanged = { [weak self] query in
@@ -917,6 +985,7 @@ final class FileExplorerContainerView: NSView {
         outlineView.dataSource = coordinator
         outlineView.delegate = coordinator
         outlineView.target = coordinator
+        outlineView.action = #selector(FileExplorerPanelView.Coordinator.handleClick(_:))
         outlineView.doubleAction = #selector(FileExplorerPanelView.Coordinator.handleDoubleClick(_:))
         outlineView.setDraggingSourceOperationMask(.move, forLocal: true)
         coordinator.outlineView = outlineView
@@ -931,6 +1000,7 @@ final class FileExplorerContainerView: NSView {
         scrollView.hasVerticalScroller = true
         scrollView.hasHorizontalScroller = false
         scrollView.horizontalScrollElasticity = .none
+        scrollView.verticalScrollElasticity = .none
         scrollView.autohidesScrollers = true
         scrollView.borderType = .noBorder
         scrollView.drawsBackground = false
@@ -1008,21 +1078,34 @@ final class FileExplorerContainerView: NSView {
             filterBarView.trailingAnchor.constraint(equalTo: trailingAnchor),
             filterBarHeightConstraint,
 
-            filterField.leadingAnchor.constraint(equalTo: filterBarView.leadingAnchor, constant: 8),
-            filterField.centerYAnchor.constraint(equalTo: filterBarView.centerYAnchor),
-            filterField.heightAnchor.constraint(equalToConstant: 22),
+            filterBackgroundView.leadingAnchor.constraint(equalTo: filterBarView.leadingAnchor, constant: 8),
+            filterBackgroundView.centerYAnchor.constraint(equalTo: filterBarView.centerYAnchor),
+            filterBackgroundView.heightAnchor.constraint(equalToConstant: 24),
+            filterBackgroundView.trailingAnchor.constraint(equalTo: revealButton.leadingAnchor, constant: -4),
 
-            collapseAllButton.trailingAnchor.constraint(equalTo: filterBarView.trailingAnchor, constant: -8),
+            filterIconView.leadingAnchor.constraint(equalTo: filterBackgroundView.leadingAnchor, constant: 7),
+            filterIconView.centerYAnchor.constraint(equalTo: filterBackgroundView.centerYAnchor),
+            filterIconView.widthAnchor.constraint(equalToConstant: 13),
+            filterIconView.heightAnchor.constraint(equalToConstant: 13),
+
+            filterClearButton.trailingAnchor.constraint(equalTo: filterBackgroundView.trailingAnchor, constant: -4),
+            filterClearButton.centerYAnchor.constraint(equalTo: filterBackgroundView.centerYAnchor),
+            filterClearButton.widthAnchor.constraint(equalToConstant: 16),
+            filterClearButton.heightAnchor.constraint(equalToConstant: 16),
+
+            filterField.leadingAnchor.constraint(equalTo: filterIconView.trailingAnchor, constant: 5),
+            filterField.trailingAnchor.constraint(equalTo: filterClearButton.leadingAnchor, constant: -2),
+            filterField.centerYAnchor.constraint(equalTo: filterBackgroundView.centerYAnchor),
+
+            collapseAllButton.trailingAnchor.constraint(equalTo: filterBarView.trailingAnchor, constant: -6),
             collapseAllButton.centerYAnchor.constraint(equalTo: filterBarView.centerYAnchor),
             collapseAllButton.widthAnchor.constraint(equalToConstant: 20),
             collapseAllButton.heightAnchor.constraint(equalToConstant: 20),
 
-            revealButton.trailingAnchor.constraint(equalTo: collapseAllButton.leadingAnchor, constant: -2),
+            revealButton.trailingAnchor.constraint(equalTo: collapseAllButton.leadingAnchor, constant: 0),
             revealButton.centerYAnchor.constraint(equalTo: filterBarView.centerYAnchor),
             revealButton.widthAnchor.constraint(equalToConstant: 20),
             revealButton.heightAnchor.constraint(equalToConstant: 20),
-
-            filterField.trailingAnchor.constraint(equalTo: revealButton.leadingAnchor, constant: -6),
         ])
 
         let searchBarTopConstraint = searchBarView.topAnchor.constraint(equalTo: filterBarView.bottomAnchor)
@@ -1073,12 +1156,41 @@ final class FileExplorerContainerView: NSView {
         button.bezelStyle = .regularSquare
         button.imagePosition = .imageOnly
         button.image = NSImage(systemSymbolName: symbolName, accessibilityDescription: tooltip)?
-            .withSymbolConfiguration(NSImage.SymbolConfiguration(pointSize: 12, weight: .regular))
+            .withSymbolConfiguration(NSImage.SymbolConfiguration(pointSize: 11, weight: .regular))
         button.contentTintColor = .secondaryLabelColor
         button.toolTip = tooltip
         button.target = target
         button.action = action
         button.setAccessibilityLabel(tooltip)
+    }
+
+    /// Layer colors are resolved CGColors, so re-resolve them per appearance.
+    private func applyFilterBackgroundColors() {
+        effectiveAppearance.performAsCurrentDrawingAppearance {
+            filterBackgroundView.layer?.backgroundColor = NSColor.labelColor.withAlphaComponent(0.06).cgColor
+            filterBackgroundView.layer?.borderColor = NSColor.labelColor.withAlphaComponent(0.08).cgColor
+        }
+    }
+
+    override func viewDidChangeEffectiveAppearance() {
+        super.viewDidChangeEffectiveAppearance()
+        applyFilterBackgroundColors()
+    }
+
+    /// The single path every filter edit and clear goes through.
+    private func applyFilterText(_ text: String) {
+        coordinator.store.filterText = text
+        filterClearButton.isHidden = text.isEmpty
+    }
+
+    private func clearFilter() {
+        filterField.stringValue = ""
+        applyFilterText("")
+    }
+
+    @objc private func clearFilterFromButton(_ sender: Any?) {
+        clearFilter()
+        _ = window?.makeFirstResponder(filterField)
     }
 
     @objc private func revealCurrentFileFromHeader(_ sender: Any?) {
@@ -1097,7 +1209,7 @@ final class FileExplorerContainerView: NSView {
 
     private func updateFilterBarVisibility() {
         let shouldShow = filterBarContentAvailable
-        filterBarHeightConstraint?.constant = shouldShow ? 32 : 0
+        filterBarHeightConstraint?.constant = shouldShow ? 30 : 0
         applyHidden(filterBarView, !shouldShow)
     }
 
@@ -1677,7 +1789,7 @@ final class FileExplorerContainerView: NSView {
 extension FileExplorerContainerView: NSSearchFieldDelegate, NSTableViewDataSource, NSTableViewDelegate, NSMenuDelegate {
     func controlTextDidChange(_ notification: Notification) {
         if notification.object as? NSTextField === filterField {
-            coordinator.store.filterText = filterField.stringValue
+            applyFilterText(filterField.stringValue)
             return
         }
         guard notification.object as? NSTextField === searchField else { return }
@@ -1711,6 +1823,10 @@ extension FileExplorerContainerView: NSSearchFieldDelegate, NSTableViewDataSourc
     }
 
     func control(_ control: NSControl, textView: NSTextView, doCommandBy commandSelector: Selector) -> Bool {
+        if control === filterField, commandSelector == #selector(NSResponder.cancelOperation(_:)) {
+            clearFilter()
+            return true
+        }
         guard control === searchField, !textView.hasMarkedText() else { return false }
         if let event = NSApp.currentEvent, searchField.handleOpenSelectionShortcut(event) { return true }
         switch commandSelector {

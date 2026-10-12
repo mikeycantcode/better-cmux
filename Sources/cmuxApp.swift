@@ -939,23 +939,6 @@ struct cmuxApp: App {
                 }
             }
 
-            splitCommandButton(title: String(localized: "menu.view.toggleRightSidebar", defaultValue: "Toggle Right Sidebar"), shortcut: menuShortcut(for: .toggleRightSidebar)) {
-                if AppDelegate.shared?.toggleRightSidebarInActiveMainWindow(
-                    preferredWindow: NSApp.keyWindow ?? NSApp.mainWindow
-                ) != true {
-                    NSSound.beep()
-                }
-            }
-
-            splitCommandButton(title: String(localized: "menu.view.focusRightSidebar", defaultValue: "Toggle Right Sidebar Focus"), shortcut: menuShortcut(for: .focusRightSidebar)) {
-                if AppDelegate.shared?.toggleRightSidebarKeyboardFocusInActiveMainWindow() != true {
-                    if AppDelegate.shared?.focusRightSidebarInActiveMainWindow(
-                        preferredWindow: NSApp.keyWindow ?? NSApp.mainWindow
-                    ) != true {
-                        NSSound.beep()
-                    }
-                }
-            }
             Divider()
             splitCommandButton(title: String(localized: "menu.view.nextSurface", defaultValue: "Next Surface"), shortcut: menuShortcut(for: .nextSurface)) {
                 activeTabManager.selectNextSurface()

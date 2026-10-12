@@ -2818,7 +2818,7 @@ class TabManager: ObservableObject {
         guard let tab = selectedWorkspace,
               let panelId = tab.focusedPanelId,
               let panel = tab.panels[panelId] as? MarkdownPanel,
-              panel.displayMode == .preview else { return nil }
+              panel.displayMode.showsRenderedPreview else { return nil }
         return panel
     }
 

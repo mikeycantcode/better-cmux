@@ -871,6 +871,8 @@ extension CMUXCLI {
             pendingFiles.removeAll()
 
             var params: [String: Any] = ["paths": files, "focus": focus]
+            // Bare opens (no pane/surface destination) land in the stage pane.
+            if useSmartPlacement && !parsedArgs.forceHere { params["stage"] = true }
             if let windowHandle { params["window_id"] = windowHandle }
             if let workspaceHandle { params["workspace_id"] = workspaceHandle }
             if let surfaceHandle { params["surface_id"] = surfaceHandle }
@@ -941,14 +943,30 @@ extension CMUXCLI {
                 overrides: overrides
             )
 
-            let payload = try executePlacement(
-                placement,
-                path: path,
-                focus: focus,
-                windowHandle: windowHandle,
-                workspaceHandle: workspaceHandle,
-                client: client
-            )
+            let payload: [String: Any]
+            switch placement {
+            case .reuse, .here:
+                payload = try executePlacement(
+                    placement,
+                    path: path,
+                    focus: focus,
+                    windowHandle: windowHandle,
+                    workspaceHandle: workspaceHandle,
+                    client: client
+                )
+            case .newTab, .splitRight:
+                // Everything else goes to the stage: the app reuses the live
+                // stage pane or splits a new one (right, or on top in tall windows).
+                var params: [String: Any] = [
+                    "paths": [path],
+                    "focus": focus,
+                    "stage": true,
+                    "surface_id": anchorSurfaceId,
+                ]
+                if let windowHandle { params["window_id"] = windowHandle }
+                if let workspaceHandle { params["workspace_id"] = workspaceHandle }
+                payload = try client.sendV2(method: "file.open", params: params)
+            }
             payloads.append(["kind": "file", "payload": payload])
             fileCount += 1
         }
@@ -971,6 +989,7 @@ extension CMUXCLI {
             case .url(let url):
                 try flushPendingFiles()
                 var params: [String: Any] = ["url": url, "focus": focus]
+                if useSmartPlacement { params["stage"] = true }
                 if let windowHandle { params["window_id"] = windowHandle }
                 if let workspaceHandle { params["workspace_id"] = workspaceHandle }
                 if let surfaceHandle { params["surface_id"] = surfaceHandle }
@@ -8376,6 +8395,9 @@ extension CMUXCLI {
         Open files, directories, or URLs in cmux.
         Markdown files open in markdown preview tabs; other files open in file preview tabs.
         Multiple files open as tabs in the same target pane.
+        Without --pane/--surface/--here/--split, files and URLs land in the stage: the
+        rounded pane beside you (above you when the window is taller than wide), reused
+        across opens.
 
         Options:
           --workspace <id|ref|index>   Target workspace (default: $CMUX_WORKSPACE_ID)

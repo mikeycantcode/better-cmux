@@ -7799,6 +7799,16 @@ struct WebViewRepresentable: NSViewRepresentable {
         return portalHostAccepted && !shouldPreserveExternalFullscreenHost
     }
 
+    /// The portal slot hosting `webView`, which owns its clipping layer.
+    private static func enclosingPortalSlot(of webView: WKWebView) -> WindowBrowserSlotView? {
+        var current = webView.superview
+        while let view = current {
+            if let slot = view as? WindowBrowserSlotView { return slot }
+            current = view.superview
+        }
+        return nil
+    }
+
     func updateNSView(_ nsView: NSView, context: Context) {
         let webView = panel.webView
         let coordinator = context.coordinator
@@ -7817,6 +7827,9 @@ struct WebViewRepresentable: NSViewRepresentable {
             : updateUsingWindowPortal(nsView, context: context, webView: webView)
         if hostOwnsPortal {
             panel.releaseBackgroundPreloadHostIfAttachedToRealWindow(reason: "representable.update")
+        }
+        if let slot = Self.enclosingPortalSlot(of: webView) {
+            StagePortalStyling.apply(cornerRadius: context.environment.stagePortalCornerRadius, to: slot)
         }
         Self.applyWebViewFirstResponderPolicy(
             panel: panel,

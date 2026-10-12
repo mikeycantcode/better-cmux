@@ -32,11 +32,7 @@ extension FileExplorerPanelView.Coordinator {
               let node = outlineView.item(atRow: row) as? FileExplorerNode else { return }
 
         if node.isDirectory {
-            if outlineView.isItemExpanded(node) {
-                outlineView.collapseItem(node)
-            } else if outlineView.isExpandable(node) {
-                outlineView.expandItem(node)
-            }
+            toggleExpansion(of: node, in: outlineView)
             return
         }
 

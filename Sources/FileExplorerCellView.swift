@@ -7,15 +7,16 @@ final class FileExplorerCellView: NSTableCellView {
     private let nameLabel = NSTextField(labelWithString: "")
     private let loadingIndicator = NSProgressIndicator()
     /// `.vscode` only: replaces the outline view's stock disclosure triangle.
-    private let chevronButton = NSButton()
+    /// A plain image, not a button: clicks fall through to the outline view,
+    /// whose single-click action toggles the folder. A button here toggled on
+    /// its own *and* let the row action toggle back, so collapsing was a no-op.
+    private let chevronButton = NSImageView()
     /// `.vscode` only: trailing "M"/"A"/"D"/"R"/"U" for files.
     private let badgeLabel = NSTextField(labelWithString: "")
     /// `.vscode` only: trailing filled dot for directories with dirty descendants.
     private let folderDotView = FileExplorerFolderDotView()
     private var trackingArea: NSTrackingArea?
     var onHover: ((Bool) -> Void)?
-    /// Invoked when the custom chevron is clicked.
-    var onToggleExpansion: (() -> Void)?
     private var nameLabelTrailingToLoadingConstraint: NSLayoutConstraint!
     private var nameLabelTrailingToContainerConstraint: NSLayoutConstraint!
     private var nameLabelTrailingToBadgeConstraint: NSLayoutConstraint!
@@ -47,11 +48,14 @@ final class FileExplorerCellView: NSTableCellView {
         scale(14)
     }
 
+    /// Gap between the chevron column and the file/folder icon.
+    private static let chevronToIconSpacing: CGFloat = 3
+
     /// The two chevron glyphs, built once instead of per configure (i.e. per
-    /// scroll-recycle). Fixed 16pt medium, independent of font magnification, so
-    /// there is nothing to invalidate.
+    /// scroll-recycle). A light 10pt glyph centered in the 16pt column, like
+    /// VS Code's twistie; independent of font magnification.
     private static let chevronImages: [Bool: NSImage] = {
-        let config = NSImage.SymbolConfiguration(pointSize: 16, weight: .medium)
+        let config = NSImage.SymbolConfiguration(pointSize: 10, weight: .semibold)
         var images: [Bool: NSImage] = [:]
         for expanded in [false, true] {
             if let image = NSImage(
@@ -80,16 +84,10 @@ final class FileExplorerCellView: NSTableCellView {
         loadingIndicator.setAccessibilityIdentifier("FileExplorerLoadingIndicator")
 
         chevronButton.translatesAutoresizingMaskIntoConstraints = false
-        chevronButton.isBordered = false
-        chevronButton.bezelStyle = .regularSquare
-        chevronButton.imagePosition = .imageOnly
+        chevronButton.imageScaling = .scaleNone
         chevronButton.contentTintColor = .secondaryLabelColor
-        chevronButton.target = self
-        chevronButton.action = #selector(chevronClicked)
         chevronButton.isHidden = true
-        chevronButton.setAccessibilityLabel(
-            String(localized: "fileExplorer.chevron.accessibility", defaultValue: "Toggle folder")
-        )
+        chevronButton.setAccessibilityElement(false)
 
         badgeLabel.translatesAutoresizingMaskIntoConstraints = false
         badgeLabel.alignment = .center
@@ -127,7 +125,7 @@ final class FileExplorerCellView: NSTableCellView {
             folderDotView.centerXAnchor.constraint(equalTo: badgeLabel.centerXAnchor),
             folderDotView.centerYAnchor.constraint(equalTo: centerYAnchor),
 
-            iconView.leadingAnchor.constraint(equalTo: chevronButton.trailingAnchor, constant: 0),
+            iconView.leadingAnchor.constraint(equalTo: chevronButton.trailingAnchor, constant: Self.chevronToIconSpacing),
             iconView.centerYAnchor.constraint(equalTo: centerYAnchor),
             iconWidthConstraint,
             iconHeightConstraint,
@@ -159,10 +157,6 @@ final class FileExplorerCellView: NSTableCellView {
         ])
         nameLabelTrailingToLoadingConstraint.isActive = false
         nameLabelTrailingToBadgeConstraint.isActive = false
-    }
-
-    @objc private func chevronClicked() {
-        onToggleExpansion?()
     }
 
     func configure(

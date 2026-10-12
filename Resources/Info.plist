@@ -244,6 +244,8 @@
 	<false/>
 	<key>SUSendProfileInfo</key>
 	<false/>
+	<key>CmuxUpstreamBase</key>
+	<string>0.64.16+315 (a9cd035)</string>
 	<key>SUPublicEDKey</key>
 	<string>$(SPARKLE_PUBLIC_KEY)</string>
 </dict>

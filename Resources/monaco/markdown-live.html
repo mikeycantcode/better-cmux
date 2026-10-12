@@ -1,0 +1,94 @@
+<!doctype html>
+<html data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!-- Live-preview markdown editor. Source: webviews/markdown-live (bun run build). -->
+  <style>
+    :root {
+      --lp-font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif;
+      --lp-mono: ui-monospace, "SF Mono", Menlo, monospace;
+      --lp-fg: #e6e1d8;
+      --lp-muted: #9a958c;
+      --lp-syntax: #6f6a62;
+      --lp-link: #7cb7ff;
+      --lp-quote: #b9b3a8;
+      --lp-quote-bar: #4a463f;
+      --lp-code-bg: rgba(255, 255, 255, 0.06);
+      --lp-code-border: rgba(255, 255, 255, 0.08);
+      --lp-rule: rgba(255, 255, 255, 0.14);
+      --lp-caret: #f2efe9;
+      --lp-selection: rgba(124, 183, 255, 0.28);
+      --lp-accent: #7cb7ff;
+    }
+    :root[data-theme="light"] {
+      --lp-fg: #1f2328;
+      --lp-muted: #59636e;
+      --lp-syntax: #9aa4ae;
+      --lp-link: #0969da;
+      --lp-quote: #59636e;
+      --lp-quote-bar: #d1d9e0;
+      --lp-code-bg: rgba(0, 0, 0, 0.05);
+      --lp-code-border: rgba(0, 0, 0, 0.08);
+      --lp-rule: rgba(0, 0, 0, 0.14);
+      --lp-caret: #1f2328;
+      --lp-selection: rgba(9, 105, 218, 0.2);
+      --lp-accent: #0969da;
+    }
+    html, body { margin: 0; height: 100%; background: transparent; }
+    #container { height: 100%; }
+
+    /* Headings keep their size on the active line too, so the cursor never
+       makes the document jump. */
+    .cm-lp-h { font-weight: 650; letter-spacing: -0.01em; }
+    .cm-lp-h1 { font-size: 1.9em; line-height: 1.3; padding-top: 0.5em !important; }
+    .cm-lp-h2 { font-size: 1.5em; line-height: 1.35; padding-top: 0.45em !important; }
+    .cm-lp-h3 { font-size: 1.25em; padding-top: 0.35em !important; }
+    .cm-lp-h4 { font-size: 1.1em; padding-top: 0.25em !important; }
+    .cm-lp-h5, .cm-lp-h6 { font-size: 1em; color: var(--lp-muted); }
+
+    .cm-lp-strong { font-weight: 650; }
+    .cm-lp-em { font-style: italic; }
+    .cm-lp-strike { text-decoration: line-through; color: var(--lp-muted); }
+    .cm-lp-done { text-decoration: line-through; color: var(--lp-muted); }
+    .cm-lp-link { color: var(--lp-link); text-decoration: underline; text-decoration-color: color-mix(in srgb, var(--lp-link) 40%, transparent); text-underline-offset: 2px; }
+    .cm-lp-code {
+      font-family: var(--lp-mono); font-size: 0.88em;
+      background: var(--lp-code-bg); border-radius: 4px; padding: 0.1em 0.3em;
+    }
+
+    .cm-lp-quote {
+      color: var(--lp-quote);
+      border-left: 3px solid var(--lp-quote-bar);
+      padding-left: 14px !important;
+    }
+
+    .cm-lp-bullet { color: var(--lp-muted); display: inline-block; width: 1ch; text-align: center; }
+    .cm-lp-ordinal { color: var(--lp-muted); }
+    .cm-lp-checkbox {
+      margin: 0 0.45em 0 0; vertical-align: -0.12em; cursor: pointer;
+      accent-color: var(--lp-accent); width: 0.95em; height: 0.95em;
+    }
+    .cm-lp-hr {
+      display: inline-block; width: 100%; height: 1px; vertical-align: middle;
+      background: var(--lp-rule);
+    }
+
+    .cm-lp-codeblock {
+      font-family: var(--lp-mono); font-size: 0.88em; line-height: 1.55;
+      background: var(--lp-code-bg);
+      padding-left: 14px !important; padding-right: 14px !important;
+      border-left: 1px solid var(--lp-code-border); border-right: 1px solid var(--lp-code-border);
+    }
+    .cm-lp-codeblock-first { border-top: 1px solid var(--lp-code-border); border-radius: 6px 6px 0 0; padding-top: 6px !important; }
+    .cm-lp-codeblock-last { border-bottom: 1px solid var(--lp-code-border); border-radius: 0 0 6px 6px; padding-bottom: 6px !important; }
+    .cm-lp-fence-label { color: var(--lp-muted); font-size: 0.85em; font-family: var(--lp-font); }
+
+    .cm-lp-table { font-family: var(--lp-mono); font-size: 0.9em; }
+  </style>
+</head>
+<body>
+  <div id="container"></div>
+  <script src="markdown-live.js"></script>
+</body>
+</html>

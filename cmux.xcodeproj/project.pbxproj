@@ -489,6 +489,8 @@
 		C0DE9A11000000000006 /* git-changes in Resources */ = {isa = PBXBuildFile; fileRef = C0DE9A11000000000005 /* git-changes */; };
 		C0DE9A11000000000002 /* GitChangesPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0DE9A11000000000001 /* GitChangesPanel.swift */; };
 		C0DE9A11000000000004 /* GitChangesPanelView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0DE9A11000000000003 /* GitChangesPanelView.swift */; };
+		76E09F508B8D625FE0B685BD /* GitCommitGraph.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4A094CE7A91F911C3A74DFC /* GitCommitGraph.swift */; };
+		303D2E9F6C8F7CB9D049E59C /* GitCommitGraphModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = D70824CBA3EA6C2B7E119A9A /* GitCommitGraphModel.swift */; };
 		G17A00000000000000000016 /* GitPanelView.swift in Sources */ = {isa = PBXBuildFile; fileRef = G17A00000000000000000015 /* GitPanelView.swift */; };
 		G17A00000000000000000018 /* GitPanelViewTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = G17A00000000000000000017 /* GitPanelViewTests.swift */; };
 		G17A00000000000000000002 /* GitPorcelainStatus.swift in Sources */ = {isa = PBXBuildFile; fileRef = G17A00000000000000000001 /* GitPorcelainStatus.swift */; };
@@ -545,6 +547,7 @@
 		F5168A040000000000000001 /* MarkdownFontFamily.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5168A040000000000000002 /* MarkdownFontFamily.swift */; };
 		F5168A070000000000000001 /* MarkdownFontFamilyCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5168A070000000000000002 /* MarkdownFontFamilyCache.swift */; };
 		F5168A030000000000000001 /* MarkdownFontSizeSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5168A030000000000000002 /* MarkdownFontSizeSettings.swift */; };
+		406C11EE76454C3E508F02A1 /* MarkdownLiveEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 43BD0891F3765FEA3CD31C1A /* MarkdownLiveEditorView.swift */; };
 		F5168A050000000000000001 /* MarkdownMaxWidthSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5168A050000000000000002 /* MarkdownMaxWidthSettings.swift */; };
 		D6069002D6069002D6069002 /* MarkdownMermaidZoomTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D6069001D6069001D6069001 /* MarkdownMermaidZoomTests.swift */; };
 		A5001420 /* MarkdownPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5001418 /* MarkdownPanel.swift */; };
@@ -592,6 +595,7 @@
 		BBC0DE00000000000000000C /* MonacoLanguageMap.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBC0DE00000000000000000B /* MonacoLanguageMap.swift */; };
 		BBC0DE00000000000000001C /* MonacoLanguageMapTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBC0DE00000000000000001B /* MonacoLanguageMapTests.swift */; };
 		BBC0DE00000000000000000E /* MonacoWebController.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBC0DE00000000000000000D /* MonacoWebController.swift */; };
+		5CA1E0000000000000000001 /* MoveToApplicationsPrompt.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5CA1E0000000000000000002 /* MoveToApplicationsPrompt.swift */; };
 		B9000015A1B2C3D4E5F60719 /* MultiWindowNotificationsUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B9000016A1B2C3D4E5F60719 /* MultiWindowNotificationsUITests.swift */; };
 		596100000000000000000003 /* NativeNotificationDeliveryHooks.swift in Sources */ = {isa = PBXBuildFile; fileRef = 596100000000000000000004 /* NativeNotificationDeliveryHooks.swift */; };
 		596100000000000000000001 /* NativeNotificationFallbackCommandTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 596100000000000000000002 /* NativeNotificationFallbackCommandTests.swift */; };
@@ -758,10 +762,12 @@
 		C9A57513C9A57513C9A57513 /* SidebarScrollViewConfiguratorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C9A57514C9A57514C9A57514 /* SidebarScrollViewConfiguratorTests.swift */; };
 		E62155868BB29FEB5DAAAF25 /* SidebarSelectionState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9AD52285508B1D6A9875E7B3 /* SidebarSelectionState.swift */; };
 		CFD5DD2B74E345E995C1642E /* SidebarShortcutDefaultsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F009FF9106D24F12BC71E7D3 /* SidebarShortcutDefaultsTests.swift */; };
+		5C2077E0C31E5CD58BD24F64 /* SidebarSourceControlGraphPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = D9AE98C40904E1617A1C5CC4 /* SidebarSourceControlGraphPanel.swift */; };
 		F57072635F25EBCA741E125D /* SidebarState.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1614EAD3CCF70A177A51BD1 /* SidebarState.swift */; };
 		75F60E61082C422B8B0B49B2 /* SidebarStateTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E977DA255C0747409A85F2BF /* SidebarStateTests.swift */; };
 		D7AB34300000000000000105 /* SidebarTabDropIndicatorPredicateTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D7AB34300000000000000106 /* SidebarTabDropIndicatorPredicateTests.swift */; };
 		CA39C0304FE351A21C372429 /* SidebarWidthPolicyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE0171AF1F49F7547191CEE5 /* SidebarWidthPolicyTests.swift */; };
+		3467DBE986C969C54D3F377A /* SidebarWorkbenchSections.swift in Sources */ = {isa = PBXBuildFile; fileRef = 588849FCAF67E3A71DEB626A /* SidebarWorkbenchSections.swift */; };
 		D7AB34300000000000000005 /* SidebarWorkspaceDropPlannerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D7AB34300000000000000006 /* SidebarWorkspaceDropPlannerTests.swift */; };
 		C9A57103C9A57103C9A57103 /* SidebarWorkspaceGroupConfigOpener.swift in Sources */ = {isa = PBXBuildFile; fileRef = C9A57104C9A57104C9A57104 /* SidebarWorkspaceGroupConfigOpener.swift */; };
 		C135190000000000000000B1 /* SidebarWorkspaceGroupConfigOpenerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C135190000000000000000B2 /* SidebarWorkspaceGroupConfigOpenerTests.swift */; };
@@ -786,6 +792,7 @@
 		BB57A7000000000000000005 /* StagedDiffProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB57A7000000000000000006 /* StagedDiffProvider.swift */; };
 		BB57A7000000000000000001 /* StagedDiffStats.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB57A7000000000000000002 /* StagedDiffStats.swift */; };
 		BB57A7000000000000000003 /* StagedDiffStatsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB57A7000000000000000004 /* StagedDiffStatsTests.swift */; };
+		637D56EEDBB2095BD5453803 /* StagePaneCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33B80291A6B352F17CED270 /* StagePaneCard.swift */; };
 		C0DE70500000000000000002 /* start-cmux-profiling in Copy CLI */ = {isa = PBXBuildFile; fileRef = C0DE70500000000000000001 /* start-cmux-profiling */; };
 		D35B71010000000000000001 /* StartupBreadcrumbLog.swift in Sources */ = {isa = PBXBuildFile; fileRef = D35B71010000000000000002 /* StartupBreadcrumbLog.swift */; };
 		C0DE70530000000000000002 /* submit-cmux-profile in Copy CLI */ = {isa = PBXBuildFile; fileRef = C0DE70530000000000000001 /* submit-cmux-profile */; };
@@ -909,7 +916,6 @@
 		BBC0DE0000000000000000A0 /* WeakMonacoScriptMessageHandler.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBC0DE0000000000000000A1 /* WeakMonacoScriptMessageHandler.swift */; };
 		A0DC18A5286E4D5C914A7197 /* WelcomePanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A49D15B13A3E4476930CFD77 /* WelcomePanel.swift */; };
 		CFC25D57E7C24E48A9E8AD7A /* WelcomePanelView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DA3FC359A1ED4212A02BCFA3 /* WelcomePanelView.swift */; };
-		5CA1E0000000000000000001 /* MoveToApplicationsPrompt.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5CA1E0000000000000000002 /* MoveToApplicationsPrompt.swift */; };
 		A500120C /* WindowAccessor.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5001222 /* WindowAccessor.swift */; };
 		063BC42CEE257D6213A2E30C /* WindowAndDragTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BEE83F8394D90ACACD8E19DD /* WindowAndDragTests.swift */; };
 		A59170000000000000000001 /* WindowAppearanceSnapshotPaneBackgroundTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A59170000000000000000002 /* WindowAppearanceSnapshotPaneBackgroundTests.swift */; };
@@ -935,6 +941,7 @@
 		D7AB00000000000000000015 /* Workspace+DetachedSurfaceTransfer.swift in Sources */ = {isa = PBXBuildFile; fileRef = D7AB00000000000000000016 /* Workspace+DetachedSurfaceTransfer.swift */; };
 		E3309A05 /* Workspace+EqualizeSplitsSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = E3309A06 /* Workspace+EqualizeSplitsSupport.swift */; };
 		C3744E010000000000000001 /* Workspace+PanelLifecycle.swift in Sources */ = {isa = PBXBuildFile; fileRef = C3744E020000000000000001 /* Workspace+PanelLifecycle.swift */; };
+		D6D736F8EA1530A98AD401D2 /* Workspace+Stage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4EAEDB6270FA7C3E1E38D0C2 /* Workspace+Stage.swift */; };
 		E3B7A400000000000000020A /* Workspace+WorkspaceSurfaceTreeReading.swift in Sources */ = {isa = PBXBuildFile; fileRef = E3B7A400000000000000020B /* Workspace+WorkspaceSurfaceTreeReading.swift */; };
 		A5001406 /* Workspace.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5001416 /* Workspace.swift */; };
 		7D77A0EBBE3D8E05CDC16229 /* WorkspaceActionDispatcher.swift in Sources */ = {isa = PBXBuildFile; fileRef = C5CC15CEAA80B779ADEE78AA /* WorkspaceActionDispatcher.swift */; };
@@ -1490,6 +1497,8 @@
 		C0DE9A11000000000005 /* git-changes */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = folder; path = "git-changes"; sourceTree = "<group>"; };
 		C0DE9A11000000000001 /* GitChangesPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Panels/GitChangesPanel.swift; sourceTree = "<group>"; };
 		C0DE9A11000000000003 /* GitChangesPanelView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Panels/GitChangesPanelView.swift; sourceTree = "<group>"; };
+		C4A094CE7A91F911C3A74DFC /* GitCommitGraph.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Git/GitCommitGraph.swift"; sourceTree = "<group>"; };
+		D70824CBA3EA6C2B7E119A9A /* GitCommitGraphModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Git/GitCommitGraphModel.swift"; sourceTree = "<group>"; };
 		G17A00000000000000000015 /* GitPanelView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Git/GitPanelView.swift"; sourceTree = "<group>"; };
 		G17A00000000000000000017 /* GitPanelViewTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GitPanelViewTests.swift; sourceTree = "<group>"; };
 		G17A00000000000000000001 /* GitPorcelainStatus.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Git/GitPorcelainStatus.swift"; sourceTree = "<group>"; };
@@ -1545,6 +1554,7 @@
 		F5168A040000000000000002 /* MarkdownFontFamily.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Panels/MarkdownFontFamily.swift; sourceTree = "<group>"; };
 		F5168A070000000000000002 /* MarkdownFontFamilyCache.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Panels/MarkdownFontFamilyCache.swift; sourceTree = "<group>"; };
 		F5168A030000000000000002 /* MarkdownFontSizeSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Panels/MarkdownFontSizeSettings.swift; sourceTree = "<group>"; };
+		43BD0891F3765FEA3CD31C1A /* MarkdownLiveEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Panels/MarkdownLiveEditorView.swift; sourceTree = "<group>"; };
 		F5168A050000000000000002 /* MarkdownMaxWidthSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Panels/MarkdownMaxWidthSettings.swift; sourceTree = "<group>"; };
 		D6069001D6069001D6069001 /* MarkdownMermaidZoomTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MarkdownMermaidZoomTests.swift; sourceTree = "<group>"; };
 		A5001418 /* MarkdownPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Panels/MarkdownPanel.swift; sourceTree = "<group>"; };
@@ -1591,6 +1601,7 @@
 		BBC0DE00000000000000000B /* MonacoLanguageMap.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Monaco/MonacoLanguageMap.swift"; sourceTree = "<group>"; };
 		BBC0DE00000000000000001B /* MonacoLanguageMapTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MonacoLanguageMapTests.swift; sourceTree = "<group>"; };
 		BBC0DE00000000000000000D /* MonacoWebController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Monaco/MonacoWebController.swift"; sourceTree = "<group>"; };
+		5CA1E0000000000000000002 /* MoveToApplicationsPrompt.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Panels/MoveToApplicationsPrompt.swift; sourceTree = "<group>"; };
 		B9000016A1B2C3D4E5F60719 /* MultiWindowNotificationsUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MultiWindowNotificationsUITests.swift; sourceTree = "<group>"; };
 		596100000000000000000004 /* NativeNotificationDeliveryHooks.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeNotificationDeliveryHooks.swift; sourceTree = "<group>"; };
 		596100000000000000000002 /* NativeNotificationFallbackCommandTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeNotificationFallbackCommandTests.swift; sourceTree = "<group>"; };
@@ -1757,10 +1768,12 @@
 		C9A57514C9A57514C9A57514 /* SidebarScrollViewConfiguratorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SidebarScrollViewConfiguratorTests.swift; sourceTree = "<group>"; };
 		9AD52285508B1D6A9875E7B3 /* SidebarSelectionState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SidebarSelectionState.swift; sourceTree = "<group>"; };
 		F009FF9106D24F12BC71E7D3 /* SidebarShortcutDefaultsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SidebarShortcutDefaultsTests.swift; sourceTree = "<group>"; };
+		D9AE98C40904E1617A1C5CC4 /* SidebarSourceControlGraphPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sidebar/SidebarSourceControlGraphPanel.swift; sourceTree = "<group>"; };
 		D1614EAD3CCF70A177A51BD1 /* SidebarState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sidebar/SidebarState.swift; sourceTree = "<group>"; };
 		E977DA255C0747409A85F2BF /* SidebarStateTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SidebarStateTests.swift; sourceTree = "<group>"; };
 		D7AB34300000000000000106 /* SidebarTabDropIndicatorPredicateTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SidebarTabDropIndicatorPredicateTests.swift; sourceTree = "<group>"; };
 		EE0171AF1F49F7547191CEE5 /* SidebarWidthPolicyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SidebarWidthPolicyTests.swift; sourceTree = "<group>"; };
+		588849FCAF67E3A71DEB626A /* SidebarWorkbenchSections.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sidebar/SidebarWorkbenchSections.swift; sourceTree = "<group>"; };
 		D7AB34300000000000000006 /* SidebarWorkspaceDropPlannerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SidebarWorkspaceDropPlannerTests.swift; sourceTree = "<group>"; };
 		C9A57104C9A57104C9A57104 /* SidebarWorkspaceGroupConfigOpener.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SidebarWorkspaceGroupConfigOpener.swift; sourceTree = "<group>"; };
 		C135190000000000000000B2 /* SidebarWorkspaceGroupConfigOpenerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SidebarWorkspaceGroupConfigOpenerTests.swift; sourceTree = "<group>"; };
@@ -1784,6 +1797,7 @@
 		BB57A7000000000000000006 /* StagedDiffProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatusBar/StagedDiffProvider.swift; sourceTree = "<group>"; };
 		BB57A7000000000000000002 /* StagedDiffStats.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatusBar/StagedDiffStats.swift; sourceTree = "<group>"; };
 		BB57A7000000000000000004 /* StagedDiffStatsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StagedDiffStatsTests.swift; sourceTree = "<group>"; };
+		D33B80291A6B352F17CED270 /* StagePaneCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StagePaneCard.swift; sourceTree = "<group>"; };
 		C0DE70500000000000000001 /* start-cmux-profiling */ = {isa = PBXFileReference; lastKnownFileType = text.script.sh; path = "Resources/bin/start-cmux-profiling"; sourceTree = SOURCE_ROOT; };
 		D35B71010000000000000002 /* StartupBreadcrumbLog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = App/StartupBreadcrumbLog.swift; sourceTree = "<group>"; };
 		C0DE70530000000000000001 /* submit-cmux-profile */ = {isa = PBXFileReference; lastKnownFileType = text.script.sh; path = "Resources/bin/submit-cmux-profile"; sourceTree = SOURCE_ROOT; };
@@ -1907,7 +1921,6 @@
 		BBC0DE0000000000000000A1 /* WeakMonacoScriptMessageHandler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Monaco/WeakMonacoScriptMessageHandler.swift"; sourceTree = "<group>"; };
 		A49D15B13A3E4476930CFD77 /* WelcomePanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Panels/WelcomePanel.swift; sourceTree = "<group>"; };
 		DA3FC359A1ED4212A02BCFA3 /* WelcomePanelView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Panels/WelcomePanelView.swift; sourceTree = "<group>"; };
-		5CA1E0000000000000000002 /* MoveToApplicationsPrompt.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Panels/MoveToApplicationsPrompt.swift; sourceTree = "<group>"; };
 		A5001222 /* WindowAccessor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WindowAccessor.swift; sourceTree = "<group>"; };
 		BEE83F8394D90ACACD8E19DD /* WindowAndDragTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WindowAndDragTests.swift; sourceTree = "<group>"; };
 		A59170000000000000000002 /* WindowAppearanceSnapshotPaneBackgroundTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WindowAppearanceSnapshotPaneBackgroundTests.swift; sourceTree = "<group>"; };
@@ -1933,6 +1946,7 @@
 		D7AB00000000000000000016 /* Workspace+DetachedSurfaceTransfer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Workspace+DetachedSurfaceTransfer.swift"; sourceTree = "<group>"; };
 		E3309A06 /* Workspace+EqualizeSplitsSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Workspace+EqualizeSplitsSupport.swift"; sourceTree = "<group>"; };
 		C3744E020000000000000001 /* Workspace+PanelLifecycle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Workspace+PanelLifecycle.swift"; sourceTree = "<group>"; };
+		4EAEDB6270FA7C3E1E38D0C2 /* Workspace+Stage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Workspace+Stage.swift"; sourceTree = "<group>"; };
 		E3B7A400000000000000020B /* Workspace+WorkspaceSurfaceTreeReading.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Workspace+WorkspaceSurfaceTreeReading.swift"; sourceTree = "<group>"; };
 		A5001416 /* Workspace.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Workspace.swift; sourceTree = "<group>"; };
 		C5CC15CEAA80B779ADEE78AA /* WorkspaceActionDispatcher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkspaceActionDispatcher.swift; sourceTree = "<group>"; };
@@ -2276,6 +2290,8 @@
 				12DC04990DF5011FC071AF0C /* AgentsSidebarModel.swift */,
 				A43B85748F08AFFCE52AA21B /* HerdrSidebarRows.swift */,
 				2B98D07C4E51A3F6C9D8B240 /* HerdrSidebarView.swift */,
+				588849FCAF67E3A71DEB626A /* SidebarWorkbenchSections.swift */,
+				D9AE98C40904E1617A1C5CC4 /* SidebarSourceControlGraphPanel.swift */,
 				D1614EAD3CCF70A177A51BD1 /* SidebarState.swift */,
 				80AA3D446C3C40608134B994 /* SidebarFloatingPanelMetrics.swift */,
 				C0DEFF200000000000000002 /* CommandPaletteOverlay.swift */,
@@ -2371,6 +2387,8 @@
 				D0B10005A1B2C3D4E5F60001 /* WorkspacePortalPaneDrop.swift */,
 				C0DE32470000000000000004 /* WorkspaceSurfaceIdentifierClipboardText.swift */,
 				A5001417 /* WorkspaceContentView.swift */,
+				D33B80291A6B352F17CED270 /* StagePaneCard.swift */,
+				4EAEDB6270FA7C3E1E38D0C2 /* Workspace+Stage.swift */,
 				E30760000000000000000001 /* TmuxWorkspacePaneOverlayView.swift */,
 				A5001014 /* GhosttyConfig.swift */,
 				C4041001000000000000001A /* CommandClickFileOpenRouter.swift */,
@@ -2579,6 +2597,7 @@
 				F5168A060000000000000002 /* MarkdownTypographyDefaults.swift */,
 				F5168A020000000000000002 /* MarkdownTypographyControl.swift */,
 				A5001419 /* MarkdownPanelView.swift */,
+				43BD0891F3765FEA3CD31C1A /* MarkdownLiveEditorView.swift */,
 				A50014F4 /* MarkdownWebRenderer.swift */,
 				A50014F6 /* MarkdownRemoteImageLoader.swift */,
 				A50014F8 /* MarkdownWebSupport.swift */,
@@ -2717,6 +2736,8 @@
 				G17A00000000000000000005 /* GitWorkingTreeModel.swift */,
 				60ACCE9D051F0E283CDE347A /* GitStatusMonitor.swift */,
 				G17A00000000000000000015 /* GitPanelView.swift */,
+				D70824CBA3EA6C2B7E119A9A /* GitCommitGraphModel.swift */,
+				C4A094CE7A91F911C3A74DFC /* GitCommitGraph.swift */,
 				BBC0DE00000000000000000D /* MonacoWebController.swift */,
 				BBC0DE0000000000000000A1 /* WeakMonacoScriptMessageHandler.swift */,
 				BBC0DE00000000000000000F /* MonacoEditorView.swift */,
@@ -3743,6 +3764,8 @@
 				D7C6F5010000000000000000 /* GhosttyTitleChangeSubscription.swift in Sources */,
 				C0DE9A11000000000002 /* GitChangesPanel.swift in Sources */,
 				C0DE9A11000000000004 /* GitChangesPanelView.swift in Sources */,
+				76E09F508B8D625FE0B685BD /* GitCommitGraph.swift in Sources */,
+				303D2E9F6C8F7CB9D049E59C /* GitCommitGraphModel.swift in Sources */,
 				G17A00000000000000000016 /* GitPanelView.swift in Sources */,
 				G17A00000000000000000002 /* GitPorcelainStatus.swift in Sources */,
 				AAD8A9928D5109B3DD5A797B /* GitStatusMonitor.swift in Sources */,
@@ -3772,6 +3795,7 @@
 				F5168A040000000000000001 /* MarkdownFontFamily.swift in Sources */,
 				F5168A070000000000000001 /* MarkdownFontFamilyCache.swift in Sources */,
 				F5168A030000000000000001 /* MarkdownFontSizeSettings.swift in Sources */,
+				406C11EE76454C3E508F02A1 /* MarkdownLiveEditorView.swift in Sources */,
 				F5168A050000000000000001 /* MarkdownMaxWidthSettings.swift in Sources */,
 				A5001420 /* MarkdownPanel.swift in Sources */,
 				A50014F2 /* MarkdownPanelFileLinkResolver.swift in Sources */,
@@ -3804,6 +3828,7 @@
 				BBC0DE000000000000000010 /* MonacoEditorView.swift in Sources */,
 				BBC0DE00000000000000000C /* MonacoLanguageMap.swift in Sources */,
 				BBC0DE00000000000000000E /* MonacoWebController.swift in Sources */,
+				5CA1E0000000000000000001 /* MoveToApplicationsPrompt.swift in Sources */,
 				596100000000000000000003 /* NativeNotificationDeliveryHooks.swift in Sources */,
 				C06552010000000000000003 /* NotificationBurstCoalescer.swift in Sources */,
 				B7F00002 /* NotificationSoundSettings.swift in Sources */,
@@ -3898,7 +3923,9 @@
 				C0DEF0A30000000000000001 /* SidebarPortDisplayText.swift in Sources */,
 				C0DE35010000000000000001 /* SidebarScrim.swift in Sources */,
 				E62155868BB29FEB5DAAAF25 /* SidebarSelectionState.swift in Sources */,
+				5C2077E0C31E5CD58BD24F64 /* SidebarSourceControlGraphPanel.swift in Sources */,
 				F57072635F25EBCA741E125D /* SidebarState.swift in Sources */,
+				3467DBE986C969C54D3F377A /* SidebarWorkbenchSections.swift in Sources */,
 				C9A57103C9A57103C9A57103 /* SidebarWorkspaceGroupConfigOpener.swift in Sources */,
 				C9A57105C9A57105C9A57105 /* SidebarWorkspaceGroupContextMenuRunner.swift in Sources */,
 				C9A57107C9A57107C9A57107 /* SidebarWorkspaceGroupDialogs.swift in Sources */,
@@ -3912,6 +3939,7 @@
 				A5001226 /* SocketControlMode+Display.swift in Sources */,
 				BB57A7000000000000000005 /* StagedDiffProvider.swift in Sources */,
 				BB57A7000000000000000001 /* StagedDiffStats.swift in Sources */,
+				637D56EEDBB2095BD5453803 /* StagePaneCard.swift in Sources */,
 				D35B71010000000000000001 /* StartupBreadcrumbLog.swift in Sources */,
 				F6572000A1B2C3D4E5F60718 /* SurfaceResumeCommandCanonicalizer+PortableAgentExecutable.swift in Sources */,
 				A5001303 /* SurfaceSearchOverlay.swift in Sources */,
@@ -4003,7 +4031,6 @@
 				BBC0DE0000000000000000A0 /* WeakMonacoScriptMessageHandler.swift in Sources */,
 				A0DC18A5286E4D5C914A7197 /* WelcomePanel.swift in Sources */,
 				CFC25D57E7C24E48A9E8AD7A /* WelcomePanelView.swift in Sources */,
-				5CA1E0000000000000000001 /* MoveToApplicationsPrompt.swift in Sources */,
 				A500120C /* WindowAccessor.swift in Sources */,
 				A5001900A1B2C3D4E5F60718 /* WindowBackgroundComposition.swift in Sources */,
 				B7F9A602B7F9A602B7F9A602 /* WindowChromeMetrics.swift in Sources */,
@@ -4023,6 +4050,7 @@
 				D7AB00000000000000000015 /* Workspace+DetachedSurfaceTransfer.swift in Sources */,
 				E3309A05 /* Workspace+EqualizeSplitsSupport.swift in Sources */,
 				C3744E010000000000000001 /* Workspace+PanelLifecycle.swift in Sources */,
+				D6D736F8EA1530A98AD401D2 /* Workspace+Stage.swift in Sources */,
 				E3B7A400000000000000020A /* Workspace+WorkspaceSurfaceTreeReading.swift in Sources */,
 				A5001406 /* Workspace.swift in Sources */,
 				7D77A0EBBE3D8E05CDC16229 /* WorkspaceActionDispatcher.swift in Sources */,
@@ -4463,7 +4491,7 @@
 				CURRENT_PROJECT_VERSION = 98;
 				GENERATE_INFOPLIST_FILE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				MARKETING_VERSION = 0.64.16;
+				MARKETING_VERSION = 1.0.0;
 				ONLY_ACTIVE_ARCH = NO;
 				PRODUCT_BUNDLE_IDENTIFIER = com.cmuxterm.appuitests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -4552,7 +4580,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 0.64.16;
+				MARKETING_VERSION = 1.0.0;
 				OTHER_LDFLAGS = (
 					"-lc++",
 					"-framework",
@@ -4598,7 +4626,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 0.64.16;
+				MARKETING_VERSION = 1.0.0;
 				ONLY_ACTIVE_ARCH = NO;
 				OTHER_LDFLAGS = (
 					"-lc++",
@@ -4668,7 +4696,7 @@
 				CURRENT_PROJECT_VERSION = 98;
 				GENERATE_INFOPLIST_FILE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				MARKETING_VERSION = 0.64.16;
+				MARKETING_VERSION = 1.0.0;
 				ONLY_ACTIVE_ARCH = YES;
 				PRODUCT_BUNDLE_IDENTIFIER = com.cmuxterm.appuitests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -4692,7 +4720,7 @@
 				INFOPLIST_KEY_NSPrincipalClass = "";
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Bundles";
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				MARKETING_VERSION = 0.64.16;
+				MARKETING_VERSION = 1.0.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.cmuxterm.app.docktileplugin.debug;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
@@ -4717,7 +4745,7 @@
 				INFOPLIST_KEY_NSPrincipalClass = "";
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Bundles";
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				MARKETING_VERSION = 0.64.16;
+				MARKETING_VERSION = 1.0.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.cmuxterm.app.docktileplugin;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
@@ -4735,7 +4763,7 @@
 				CURRENT_PROJECT_VERSION = 98;
 				GENERATE_INFOPLIST_FILE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				MARKETING_VERSION = 0.64.16;
+				MARKETING_VERSION = 1.0.0;
 				ONLY_ACTIVE_ARCH = YES;
 				PRODUCT_BUNDLE_IDENTIFIER = com.cmuxterm.apptests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -4754,7 +4782,7 @@
 				CURRENT_PROJECT_VERSION = 98;
 				GENERATE_INFOPLIST_FILE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				MARKETING_VERSION = 0.64.16;
+				MARKETING_VERSION = 1.0.0;
 				ONLY_ACTIVE_ARCH = NO;
 				PRODUCT_BUNDLE_IDENTIFIER = com.cmuxterm.apptests;
 				PRODUCT_NAME = "$(TARGET_NAME)";

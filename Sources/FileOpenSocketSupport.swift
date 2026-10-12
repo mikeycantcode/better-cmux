@@ -133,12 +133,23 @@ extension TerminalController {
                 return
             }
 
-            let openedPanels = ws.openFileSurfaces(
-                inPane: paneId,
-                filePaths: filePaths,
-                focus: shouldFocus,
-                reuseExisting: filePaths.count == 1 && !hasExplicitPaneDestination
-            )
+            // `stage: true` (bare `cmux open <file>`) lands in the stage pane;
+            // the resolved pane is only the anchor a new stage splits from.
+            let openedPanels: [any Panel]
+            if v2Bool(params, "stage") == true && requestedPaneUUID == nil {
+                openedPanels = ws.openFilesInStage(
+                    filePaths: filePaths,
+                    anchorPaneId: paneId,
+                    focus: shouldFocus
+                )
+            } else {
+                openedPanels = ws.openFileSurfaces(
+                    inPane: paneId,
+                    filePaths: filePaths,
+                    focus: shouldFocus,
+                    reuseExisting: filePaths.count == 1 && !hasExplicitPaneDestination
+                )
+            }
             guard !openedPanels.isEmpty else {
                 result = .err(code: "internal_error", message: "Failed to open file", data: nil)
                 return

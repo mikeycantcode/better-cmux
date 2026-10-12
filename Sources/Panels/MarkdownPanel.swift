@@ -4,6 +4,10 @@ import Combine
 import Foundation
 
 enum MarkdownPanelDisplayMode: String, CaseIterable, Identifiable {
+    /// Obsidian-style live preview: one editable surface where markdown renders
+    /// in place and raw syntax shows only on the cursor's lines. The default
+    /// for markdown files.
+    case live
     case preview
     case text
     /// Single-diagram canvas for standalone `.mmd`/`.mermaid` files. Renders
@@ -12,6 +16,13 @@ enum MarkdownPanelDisplayMode: String, CaseIterable, Identifiable {
     case diagram
 
     var id: String { rawValue }
+
+    /// Whether the read-only rendered preview is on screen (zoom and
+    /// typography apply).
+    var showsRenderedPreview: Bool { self == .preview }
+
+    /// Whether an editor (live or raw source) is on screen.
+    var showsTextEditor: Bool { self == .live || self == .text }
 }
 
 /// A panel that renders a markdown file with live file-watching.
@@ -41,7 +52,7 @@ final class MarkdownPanel: Panel, ObservableObject, FilePreviewTextEditingPanel 
 
     /// The current view mode for this markdown panel. Markdown files default to
     /// preview; standalone diagram files default to the diagram canvas.
-    @Published private(set) var displayMode: MarkdownPanelDisplayMode = .preview
+    @Published private(set) var displayMode: MarkdownPanelDisplayMode = .live
 
     /// True when this panel was opened on a standalone mermaid source file.
     /// Diagram files never enter `.preview` — their two modes are `.diagram`
@@ -81,6 +92,23 @@ final class MarkdownPanel: Panel, ObservableObject, FilePreviewTextEditingPanel 
     /// Stable markdown renderer state. Keep this panel-owned so split/tab
     /// layout churn does not recreate the WKWebView and flash existing content.
     let rendererSession = MarkdownRendererSession()
+
+    /// Drives the live-preview editor web view (`markdown-live.html`). It speaks
+    /// the Monaco bridge, so the Monaco controller hosts it unchanged.
+    private(set) lazy var liveEditorController: MonacoWebController = {
+        hasLiveEditorController = true
+        let controller = MonacoWebController(shellPath: "markdown-live.html")
+        controller.onChange = { [weak self] content in
+            self?.updateTextContent(content)
+        }
+        controller.onRequestSave = { [weak self] content in
+            guard let self else { return }
+            self.updateTextContent(content)
+            self.saveTextContent()
+        }
+        return controller
+    }()
+    private var hasLiveEditorController = false
 
     // MARK: - File watching
 
@@ -247,7 +275,11 @@ final class MarkdownPanel: Panel, ObservableObject, FilePreviewTextEditingPanel 
     // MARK: - Panel protocol
 
     func focus() {
-        guard displayMode == .text else { return }
+        if displayMode == .live {
+            liveEditorController.focus()
+            return
+        }
+        guard displayMode.showsTextEditor else { return }
         _ = textView?.window?.makeFirstResponder(textView)
         applyPendingSearchNeedleIfPossible()
     }
@@ -258,6 +290,10 @@ final class MarkdownPanel: Panel, ObservableObject, FilePreviewTextEditingPanel 
 
     func close() {
         isClosed = true
+        autosaveTask?.cancel()
+        if hasLiveEditorController {
+            liveEditorController.dismantle()
+        }
         rendererSession.close()
         GlobalSearchCoordinator.shared.purgePanel(id: id)
         textView = nil
@@ -277,7 +313,7 @@ final class MarkdownPanel: Panel, ObservableObject, FilePreviewTextEditingPanel 
     func setDisplayMode(_ mode: MarkdownPanelDisplayMode) {
         guard displayMode != mode else { return }
         displayMode = mode
-        if mode == .text {
+        if mode.showsTextEditor {
             focus()
         }
     }
@@ -294,7 +330,9 @@ final class MarkdownPanel: Panel, ObservableObject, FilePreviewTextEditingPanel 
         let trimmed = needle.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
         pendingSearchNeedle = trimmed
-        setDisplayMode(.text)
+        if !displayMode.showsTextEditor {
+            setDisplayMode(.text)
+        }
         applyPendingSearchNeedleIfPossible()
     }
 
@@ -304,6 +342,21 @@ final class MarkdownPanel: Panel, ObservableObject, FilePreviewTextEditingPanel 
         content = nextContent
         isDirty = nextContent != originalTextContent
         GlobalSearchCoordinator.shared.captureMarkdownPanel(self)
+        scheduleAutosave()
+    }
+
+    /// Saves one second after typing stops, so live editing needs no Save step.
+    private var autosaveTask: Task<Void, Never>?
+    static let autosaveDelayNanoseconds: UInt64 = 1_000_000_000
+
+    private func scheduleAutosave() {
+        autosaveTask?.cancel()
+        guard isDirty else { return }
+        autosaveTask = Task { @MainActor [weak self] in
+            try? await Task.sleep(nanoseconds: Self.autosaveDelayNanoseconds)
+            guard let self, !Task.isCancelled, !self.isClosed, self.isDirty else { return }
+            self.saveTextContent()
+        }
     }
 
     @discardableResult
@@ -315,7 +368,10 @@ final class MarkdownPanel: Panel, ObservableObject, FilePreviewTextEditingPanel 
     @discardableResult
     func saveTextContent() -> Task<Void, Never>? {
         guard !isSaving else { return nil }
-        let currentContent = textView?.string ?? textContent
+        // The source editor's text view stays attached after switching to live
+        // mode; only trust it while it is the active editor, or a save from live
+        // mode would write its stale buffer over the live edits.
+        let currentContent = (displayMode == .text ? textView?.string : nil) ?? textContent
         guard currentContent != originalTextContent else {
             textContent = currentContent
             content = currentContent

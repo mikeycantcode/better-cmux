@@ -503,7 +503,7 @@ enum TitlebarControlsCluster: String {
             // New-workspace and notifications intentionally appear in BOTH edge
             // clusters (Mike wants them reachable from either side).
             return [.toggleSidebar, .focusHistoryBack, .focusHistoryForward, .newTab, .showNotifications]
-        case .trailing: return [.newTab, .showNotifications, .toggleRightSidebar]
+        case .trailing: return [.newTab, .showNotifications]
         case .minimalSidebarHost:
             return [.toggleSidebar, .showNotifications, .newTab, .focusHistoryBack, .focusHistoryForward]
         }

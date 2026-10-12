@@ -2199,6 +2199,25 @@ final class Workspace: Identifiable, ObservableObject {
     /// workspace row so a noisy or capturing background pane is discoverable.
     private(set) var browserMediaActivity = BrowserMediaActivity()
 
+    /// Panes created by a split, oldest first. They render as the floating
+    /// "stage" card where `cmux open` content and new terminals land; the last
+    /// live one is where the next `cmux open` goes. See `Workspace+Stage.swift`.
+    @Published private(set) var stagePaneIds: [UUID] = []
+
+    /// The live stage pane's window frame, for the translucent root backdrop.
+    let stageRegionModel = StageRegionModel()
+
+    func markStagePane(_ paneId: PaneID) {
+        stagePaneIds.removeAll { $0 == paneId.id }
+        stagePaneIds.append(paneId.id)
+        syncStagePaneDecorations()
+    }
+
+    func unmarkStagePane(_ paneId: PaneID) {
+        stagePaneIds.removeAll { $0 == paneId.id }
+        syncStagePaneDecorations()
+    }
+
     /// When true, suppresses auto-creation in didSplitPane (programmatic splits handle their own panels);
     /// stored in the split-layout sub-model.
     var isProgrammaticSplit: Bool {
@@ -8873,7 +8892,7 @@ final class Workspace: Identifiable, ObservableObject {
     }
 
     @discardableResult
-    private func splitPaneWithFileSurface(
+    func splitPaneWithFileSurface(
         targetPane paneId: PaneID,
         orientation: SplitOrientation,
         insertFirst: Bool,
@@ -10023,6 +10042,7 @@ extension Workspace: BonsplitDelegate {
     }
 
     func splitTabBar(_ controller: BonsplitController, didClosePane paneId: PaneID) {
+        unmarkStagePane(paneId)
         let closedPanelIds = pendingPaneClosePanelIds.removeValue(forKey: paneId.id) ?? []
         let closedHistoryEntries = pendingPaneCloseHistoryEntries.removeValue(forKey: paneId.id) ?? []
         let shouldScheduleFocusReconcile = !isDetachingCloseTransaction
@@ -10103,6 +10123,7 @@ extension Workspace: BonsplitDelegate {
     }
 
     func splitTabBar(_ controller: BonsplitController, didSplitPane originalPane: PaneID, newPane: PaneID, orientation: SplitOrientation) {
+        markStagePane(newPane)
 #if DEBUG
         let panelKindForTab: (TabID) -> String = { tabId in
             guard let panelId = self.panelIdFromSurfaceId(tabId),
@@ -10592,6 +10613,7 @@ extension Workspace: BonsplitDelegate {
 
     func splitTabBar(_ controller: BonsplitController, didChangeGeometry snapshot: LayoutSnapshot) {
         tmuxLayoutSnapshot = snapshot
+        refreshStageRegion(snapshot: snapshot)
         // Every order/membership mutation (same-pane reorder, cross-pane move,
         // split, close) routes through here. A pure reorder mutates only
         // bonsplit's internal state, which is not `@Published`, so observers

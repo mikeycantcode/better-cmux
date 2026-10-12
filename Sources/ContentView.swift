@@ -946,6 +946,11 @@ struct ContentView: View {
     @State private var sidebarWidth: CGFloat = CGFloat(SessionPersistencePolicy.defaultSidebarWidth)
     @State private var hoveredResizerHandles: Set<SidebarResizerHandle> = []
     @State private var isResizerDragging = false
+    /// True while the selected workspace shows a stage pane: the window goes
+    /// transparent so the stage side of the root backdrop can turn to glass.
+    @State private var stageTranslucencyActive = false
+    /// Stand-in region for windows with no selected workspace.
+    private static let noStageRegionModel = StageRegionModel()
     @State private var sidebarDragStartWidth: CGFloat?
     @State private var selectedTabIds: Set<UUID> = []
     @State private var mountedWorkspaceIds: [UUID] = []
@@ -2608,7 +2613,16 @@ struct ContentView: View {
         let appearance = windowAppearanceSnapshot
         var view = AnyView(
             ZStack(alignment: .topLeading) {
-                WindowBackdropLayer(role: .windowRoot, snapshot: appearance)
+                StageTranslucentRootBackdrop(
+                    regionModel: tabManager.selectedWorkspace?.stageRegionModel ?? Self.noStageRegionModel,
+                    appearance: appearance,
+                    isEnabled: !isFullScreen,
+                    onTranslucencyChange: { translucent in
+                        if stageTranslucencyActive != translucent {
+                            stageTranslucencyActive = translucent
+                        }
+                    }
+                )
                     .ignoresSafeArea()
                     .allowsHitTesting(false)
 
@@ -3258,7 +3272,13 @@ struct ContentView: View {
         let appKitWindowMutationID = appearance.appKitWindowMutationID(
             windowBackgroundPolicy: windowChrome.windowBackgroundPolicy
         )
-        let mainWindowAccessor = WindowAccessor(refreshID: appKitWindowMutationID) { [appearance, commandPaletteOverlayView] window in
+        // Folding stage translucency into the refresh ID re-runs the chrome
+        // configuration (and the backdrop plan) when a stage appears or goes.
+        let forcesStageTranslucency = stageTranslucencyActive
+        let mainWindowAccessor = WindowAccessor(
+            refreshID: "\(appKitWindowMutationID)|stage=\(forcesStageTranslucency)"
+        ) { [appearance, commandPaletteOverlayView] window in
+            window.cmuxForcesTransparentRootBackdrop = forcesStageTranslucency
             configureMainWindowChrome(
                 window,
                 appearance: appearance,
@@ -6328,7 +6348,7 @@ struct ContentView: View {
             // the zoom commands when the panel is in raw text-edit mode.
             snapshot.setBool(
                 CommandPaletteContextKeys.panelIsMarkdown,
-                (panelContext.panel as? MarkdownPanel)?.displayMode == .preview
+                (panelContext.panel as? MarkdownPanel)?.displayMode.showsRenderedPreview == true
             )
             snapshot.setBool(
                 CommandPaletteContextKeys.panelBrowserOmnibarVisible,
@@ -10188,25 +10208,13 @@ struct SidebarWorkspaceTopDropIndicator: View {
 struct VerticalTabsSidebar: View {
     var updateViewModel: UpdateStateModel
     @ObservedObject var fileExplorerState: FileExplorerState
-    // Deliberately NOT `@ObservedObject`. Neither sidebar branch renders the
-    // left file explorer any more (the herdr layout replaced the split, and the
-    // extension branch never had it), but `FileExplorerStore` keeps publishing
-    // as the workspace root is applied on every selection change. Observing it
-    // here re-evaluated the whole sidebar body — including the workspace/space
-    // list — on every file-tree publish, for output nobody renders. They stay
-    // as plain references so the still-compiled split code (`explorerSplitDivider`)
-    // can read and write them; whichever view actually renders the explorer owns
-    // the observation.
+    // Deliberately NOT `@ObservedObject`. `FileExplorerStore` publishes on every
+    // tree change; observing it here would re-evaluate the whole sidebar body —
+    // including the space list — on every publish. `SidebarWorkbenchSections`
+    // and `SidebarFileExplorerPanel` own the observation.
     let leftFileExplorerStore: FileExplorerStore
     let leftFileExplorerState: FileExplorerState
     let onOpenFileInEditor: (String) -> Void
-    @State private var explorerSplitDragStartFraction: CGFloat?
-    @State private var isExplorerSplitDragging = false
-
-    private static let fixedExplorerSplitCursor = NSCursor(
-        image: NSCursor.resizeUpDown.image,
-        hotSpot: NSCursor.resizeUpDown.hotSpot
-    )
     let windowId: UUID
     let onSendFeedback: () -> Void
     let onToggleSidebar: () -> Void
@@ -10231,7 +10239,7 @@ struct VerticalTabsSidebar: View {
         initialSidebarFontSize: GhosttyConfig.load().sidebarFontSize
     )
     @ObservedObject private var keyboardShortcutSettingsObserver = KeyboardShortcutSettingsObserver.shared
-    /// Agent projection backing the herdr sidebar's agents region. Owned here so
+    /// Agent projection backing the space rows' status dots. Owned here so
     /// it lives exactly as long as the sidebar; `attach` is idempotent.
     @StateObject private var agentsModel = AgentsSidebarModel()
     @State var dragState = SidebarDragState()
@@ -10495,18 +10503,9 @@ struct VerticalTabsSidebar: View {
                     tabManager.tabs.lazy.filter(\.isPinned).map(\.id)
                 )
             ),
-            agents: agentsModel.agentRows,
-            selectedPanelId: tabManager.selectedWorkspace?.focusedPanelId,
             onSelectSpace: { workspaceId in
                 guard let workspace = tabManager.tabs.first(where: { $0.id == workspaceId }) else { return }
                 tabManager.selectWorkspace(workspace)
-            },
-            onActivateAgent: { workspaceId, panelId in
-                if let workspace = tabManager.tabs.first(where: { $0.id == workspaceId }) {
-                    tabManager.selectWorkspace(workspace)
-                }
-                tabManager.focusPanel(workspaceId: workspaceId, panelId: panelId)
-                tabManager.triggerFocusFlash(workspaceId: workspaceId, panelId: panelId)
             },
             onSpaceContextMenu: { item in
                 AnyView(
@@ -10556,7 +10555,14 @@ struct VerticalTabsSidebar: View {
                         }
                     )
                 }
-                : nil
+                : nil,
+            lowerContent: AnyView(
+                SidebarWorkbenchSections(
+                    explorerStore: leftFileExplorerStore,
+                    explorerState: leftFileExplorerState,
+                    onOpenFile: onOpenFileInEditor
+                )
+            )
         )
         .padding(.top, SidebarWorkspaceScrollInsets.workspaceList.top)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -10938,47 +10944,6 @@ struct VerticalTabsSidebar: View {
             frozenShortcutHintsTabId = nil
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-    }
-
-    private func explorerSplitDivider(availableHeight: CGFloat) -> some View {
-        Rectangle()
-            .fill(Color.clear)
-            .frame(height: 8)
-            .contentShape(Rectangle())
-            .overlay(
-                Rectangle()
-                    .fill(Color.primary.opacity(0.08))
-                    .frame(height: 1)
-            )
-            .onHover { hovering in
-                if hovering {
-                    Self.fixedExplorerSplitCursor.set()
-                } else if !isExplorerSplitDragging {
-                    NSCursor.arrow.set()
-                }
-            }
-            .gesture(
-                DragGesture(minimumDistance: 0)
-                    .onChanged { value in
-                        if !isExplorerSplitDragging {
-                            isExplorerSplitDragging = true
-                            explorerSplitDragStartFraction = leftFileExplorerState.dividerPosition
-                        }
-                        let start = explorerSplitDragStartFraction ?? leftFileExplorerState.dividerPosition
-                        let next = SidebarExplorerSplit.clampedSessionFraction(
-                            start + (value.translation.height / max(1, availableHeight)),
-                            availableHeight: availableHeight
-                        )
-                        withTransaction(Transaction(animation: nil)) {
-                            leftFileExplorerState.dividerPosition = next
-                        }
-                    }
-                    .onEnded { _ in
-                        isExplorerSplitDragging = false
-                        explorerSplitDragStartFraction = nil
-                        NSCursor.arrow.set()
-                    }
-            )
     }
 
     private func workspaceScrollArea(renderContext: WorkspaceListRenderContext) -> some View {
@@ -13120,14 +13085,23 @@ private struct SidebarFooterIconButtonStyleBody: View {
 }
 
 private struct SidebarVersionFooter: View {
-    private var cmuxVersion: String {
+    /// better cmux's own version (`MARKETING_VERSION`).
+    private var appVersion: String {
         Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? ""
+    }
+
+    /// The upstream cmux code this build sits on: the last merged release tag,
+    /// commits merged past it, and the merge-base. Update `CmuxUpstreamBase` in
+    /// Info.plist whenever upstream is merged.
+    private var upstreamBase: String {
+        Bundle.main.infoDictionary?["CmuxUpstreamBase"] as? String ?? ""
     }
 
     var body: some View {
         Text(String.localizedStringWithFormat(
-            String(localized: "sidebar.versionFooter", defaultValue: "bettercmux v1.0.0 · built on cmux v%@"),
-            cmuxVersion
+            String(localized: "sidebar.versionFooter", defaultValue: "bettercmux v%1$@ · built on cmux v%2$@"),
+            appVersion,
+            upstreamBase
         ))
         .font(.system(size: 11, weight: .medium))
         .foregroundStyle(.secondary)

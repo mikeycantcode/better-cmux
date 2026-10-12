@@ -36,8 +36,15 @@ public final class WindowBackdropController {
         switch plan.hostingPhase {
         case .opaqueWindowFill:
             didChangeGlassRoot = dependencies.glassEffect.remove(from: window)
-            window.backgroundColor = plan.windowBackgroundColor
-            window.isOpaque = plan.windowIsOpaque
+            if window.cmuxForcesTransparentRootBackdrop {
+                // The host masks part of the root backdrop (e.g. translucency
+                // behind a floating pane), so the window itself must stay clear.
+                window.backgroundColor = .clear
+                window.isOpaque = false
+            } else {
+                window.backgroundColor = plan.windowBackgroundColor
+                window.isOpaque = plan.windowIsOpaque
+            }
             dependencies.resetCompositorBackgroundBlur(windowNumber: window.windowNumber)
         case .transparentRootBackdrop:
             didChangeGlassRoot = dependencies.glassEffect.remove(from: window)
@@ -72,5 +79,24 @@ public final class WindowBackdropController {
     /// Updates the glass tint for a window.
     public func updateGlassTint(to window: NSWindow, color: NSColor?) {
         dependencies.glassEffect.updateTint(to: window, color: color)
+    }
+}
+
+private nonisolated(unsafe) var forcesTransparentRootBackdropKey: UInt8 = 0
+
+extension NSWindow {
+    /// When `true`, an otherwise opaque window is kept transparent so the host
+    /// can make regions of its SwiftUI root backdrop translucent. Read by
+    /// ``WindowBackdropController/apply(plan:to:)``; set it, then re-apply.
+    public var cmuxForcesTransparentRootBackdrop: Bool {
+        get { (objc_getAssociatedObject(self, &forcesTransparentRootBackdropKey) as? Bool) ?? false }
+        set {
+            objc_setAssociatedObject(
+                self,
+                &forcesTransparentRootBackdropKey,
+                newValue,
+                .OBJC_ASSOCIATION_RETAIN_NONATOMIC
+            )
+        }
     }
 }
